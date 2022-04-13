@@ -24,11 +24,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 
-	"perun.network/go-perun/backend/ethereum/bindings"
-	"perun.network/go-perun/backend/ethereum/bindings/adjudicator"
-	cherrors "perun.network/go-perun/backend/ethereum/channel/errors"
-	"perun.network/go-perun/backend/ethereum/subscription"
-	"perun.network/go-perun/backend/ethereum/wallet"
+	"github.com/perun-network/perun-eth-backend/bindings"
+	"github.com/perun-network/perun-eth-backend/bindings/adjudicator"
+	cherrors "github.com/perun-network/perun-eth-backend/channel/errors"
+	"github.com/perun-network/perun-eth-backend/subscription"
+	"github.com/perun-network/perun-eth-backend/wallet"
 	"perun.network/go-perun/channel"
 )
 

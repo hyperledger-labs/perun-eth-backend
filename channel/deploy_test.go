@@ -19,9 +19,9 @@ import (
 	"testing"
 	"time"
 
+	ethchannel "github.com/perun-network/perun-eth-backend/channel"
+	"github.com/perun-network/perun-eth-backend/channel/test"
 	"github.com/stretchr/testify/assert"
-	ethchannel "perun.network/go-perun/backend/ethereum/channel"
-	"perun.network/go-perun/backend/ethereum/channel/test"
 	pkgtest "polycry.pt/poly-go/test"
 )
 

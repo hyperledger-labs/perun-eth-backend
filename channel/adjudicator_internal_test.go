@@ -18,8 +18,8 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/perun-network/perun-eth-backend/bindings/adjudicator"
 	"github.com/stretchr/testify/assert"
-	"perun.network/go-perun/backend/ethereum/bindings/adjudicator"
 	"perun.network/go-perun/channel"
 	channeltest "perun.network/go-perun/channel/test"
 	pkgtest "polycry.pt/poly-go/test"

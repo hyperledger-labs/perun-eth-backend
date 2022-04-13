@@ -21,9 +21,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 
-	"perun.network/go-perun/backend/ethereum/bindings/assetholdererc20"
-	"perun.network/go-perun/backend/ethereum/bindings/peruntoken"
-	cherrors "perun.network/go-perun/backend/ethereum/channel/errors"
+	"github.com/perun-network/perun-eth-backend/bindings/assetholdererc20"
+	"github.com/perun-network/perun-eth-backend/bindings/peruntoken"
+	cherrors "github.com/perun-network/perun-eth-backend/channel/errors"
 )
 
 // ERC20Depositor deposits tokens into the `AssetHolderERC20` contract.

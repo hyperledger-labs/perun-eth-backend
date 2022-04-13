@@ -17,4 +17,4 @@
 // A simple wallet can be instantiated directly from a list of secret keys. It
 // is meant to be used for testing and demonstration purposes only. It should
 // not be used in production.
-package simple // import "perun.network/go-perun/backend/ethereum/wallet/simple"
+package simple // import "github.com/perun-network/perun-eth-backend/wallet/simple"

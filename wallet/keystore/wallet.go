@@ -25,7 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 	"github.com/pkg/errors"
 
-	ethwallet "perun.network/go-perun/backend/ethereum/wallet"
+	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
 	"perun.network/go-perun/log"
 	"perun.network/go-perun/wallet"
 )

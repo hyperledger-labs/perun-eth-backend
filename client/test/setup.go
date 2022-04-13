@@ -17,8 +17,8 @@ package test
 import (
 	"time"
 
-	ethctest "perun.network/go-perun/backend/ethereum/channel/test"
-	ethwtest "perun.network/go-perun/backend/ethereum/wallet/test"
+	ethctest "github.com/perun-network/perun-eth-backend/channel/test"
+	ethwtest "github.com/perun-network/perun-eth-backend/wallet/test"
 	clienttest "perun.network/go-perun/client/test"
 	"perun.network/go-perun/watcher/local"
 	"perun.network/go-perun/wire"

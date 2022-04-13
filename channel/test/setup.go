@@ -23,9 +23,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 
-	ethchannel "perun.network/go-perun/backend/ethereum/channel"
-	ethwallet "perun.network/go-perun/backend/ethereum/wallet"
-	"perun.network/go-perun/backend/ethereum/wallet/keystore"
+	ethchannel "github.com/perun-network/perun-eth-backend/channel"
+	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
+	"github.com/perun-network/perun-eth-backend/wallet/keystore"
 	"perun.network/go-perun/wallet"
 	wallettest "perun.network/go-perun/wallet/test"
 )

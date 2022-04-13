@@ -25,8 +25,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"perun.network/go-perun/backend/ethereum/bindings/adjudicator"
-	ethwallet "perun.network/go-perun/backend/ethereum/wallet"
+	"github.com/perun-network/perun-eth-backend/bindings/adjudicator"
+	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
 )

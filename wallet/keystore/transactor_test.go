@@ -24,10 +24,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/require"
 
-	"perun.network/go-perun/backend/ethereum/channel/test"
-	"perun.network/go-perun/backend/ethereum/wallet"
-	"perun.network/go-perun/backend/ethereum/wallet/keystore"
-	_ "perun.network/go-perun/backend/ethereum/wallet/test"
+	"github.com/perun-network/perun-eth-backend/channel/test"
+	"github.com/perun-network/perun-eth-backend/wallet"
+	"github.com/perun-network/perun-eth-backend/wallet/keystore"
+	_ "github.com/perun-network/perun-eth-backend/wallet/test"
 	wallettest "perun.network/go-perun/wallet/test"
 	pkgtest "polycry.pt/poly-go/test"
 )

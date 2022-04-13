@@ -25,9 +25,9 @@ import (
 	hdwallet "github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/stretchr/testify/require"
 
-	"perun.network/go-perun/backend/ethereum/channel/test"
-	"perun.network/go-perun/backend/ethereum/wallet"
-	"perun.network/go-perun/backend/ethereum/wallet/hd"
+	"github.com/perun-network/perun-eth-backend/channel/test"
+	"github.com/perun-network/perun-eth-backend/wallet"
+	"github.com/perun-network/perun-eth-backend/wallet/hd"
 	pkgtest "polycry.pt/poly-go/test"
 )
 

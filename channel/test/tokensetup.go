@@ -28,10 +28,10 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/stretchr/testify/require"
 
-	"perun.network/go-perun/backend/ethereum/bindings"
-	"perun.network/go-perun/backend/ethereum/bindings/peruntoken"
-	ethchannel "perun.network/go-perun/backend/ethereum/channel"
-	"perun.network/go-perun/backend/ethereum/wallet/keystore"
+	"github.com/perun-network/perun-eth-backend/bindings"
+	"github.com/perun-network/perun-eth-backend/bindings/peruntoken"
+	ethchannel "github.com/perun-network/perun-eth-backend/channel"
+	"github.com/perun-network/perun-eth-backend/wallet/keystore"
 	channeltest "perun.network/go-perun/channel/test"
 	wallettest "perun.network/go-perun/wallet/test"
 )

@@ -20,7 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 
-	"perun.network/go-perun/backend/ethereum/wallet"
+	"github.com/perun-network/perun-eth-backend/wallet"
 
 	perun "perun.network/go-perun/wallet"
 )

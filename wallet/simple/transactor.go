@@ -23,7 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 
-	ethwallet "perun.network/go-perun/backend/ethereum/wallet"
+	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
 )
 
 // Transactor can be used to make TransactOpts for accounts stored in a wallet.

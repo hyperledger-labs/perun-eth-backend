@@ -14,4 +14,4 @@
 
 // Package test contains utilities for testing the Ethereum channel backend,
 // such as a simulated blockchain backend and a custom Adjudicator.
-package test // import "perun.network/go-perun/backend/ethereum/channel/test"
+package test // import "github.com/perun-network/perun-eth-backend/channel/test"

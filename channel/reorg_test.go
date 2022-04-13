@@ -22,7 +22,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/require"
 
-	"perun.network/go-perun/backend/ethereum/channel/test"
+	"github.com/perun-network/perun-eth-backend/channel/test"
 	pkgtest "polycry.pt/poly-go/test"
 )
 

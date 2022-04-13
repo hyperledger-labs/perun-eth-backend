@@ -14,4 +14,4 @@
 
 // Package keystore contains perun wallet and accounts implementation for accessing
 // accounts stored in ethereum keystore.
-package keystore // import "perun.network/go-perun/backend/ethereum/wallet/keystore"
+package keystore // import "github.com/perun-network/perun-eth-backend/wallet/keystore"

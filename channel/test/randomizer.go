@@ -18,8 +18,8 @@ import (
 	"math/rand"
 
 	"github.com/ethereum/go-ethereum/common"
-	ethchannel "perun.network/go-perun/backend/ethereum/channel"
-	ethwtest "perun.network/go-perun/backend/ethereum/wallet/test"
+	ethchannel "github.com/perun-network/perun-eth-backend/channel"
+	ethwtest "github.com/perun-network/perun-eth-backend/wallet/test"
 	"perun.network/go-perun/channel"
 )
 

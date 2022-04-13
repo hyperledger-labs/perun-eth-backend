@@ -51,7 +51,7 @@ generate() {
     $SOLC --bin-runtime --optimize --allow-paths ../contracts/vendor, ../contracts/contracts/$FILE.sol -o $PKG/
     BIN_RUNTIME=`cat ${PKG}/${CONTRACT}.bin-runtime`
     OUT_FILE="$PKG/${CONTRACT}BinRuntime.go"
-    echo "package $PKG // import \"perun.network/go-perun/backend/ethereum/bindings/$PKG\"" > $OUT_FILE
+    echo "package $PKG // import \"github.com/perun-network/perun-eth-backend/bindings/$PKG\"" > $OUT_FILE
     echo >> $OUT_FILE
     echo "// ${CONTRACT}BinRuntime is the runtime part of the compiled bytecode used for deploying new contracts." >> $OUT_FILE
     echo "var ${CONTRACT}BinRuntime = \"$BIN_RUNTIME\"" >> $OUT_FILE

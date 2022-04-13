@@ -13,4 +13,4 @@
 // limitations under the License.
 
 // Package channel contains the Ethereum channel backend implementation.
-package channel // import "perun.network/go-perun/backend/ethereum/channel"
+package channel // import "github.com/perun-network/perun-eth-backend/channel"

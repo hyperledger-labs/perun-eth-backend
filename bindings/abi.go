@@ -20,12 +20,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 
-	"perun.network/go-perun/backend/ethereum/bindings/adjudicator"
-	"perun.network/go-perun/backend/ethereum/bindings/assetholder"
-	"perun.network/go-perun/backend/ethereum/bindings/assetholdererc20"
-	"perun.network/go-perun/backend/ethereum/bindings/assetholdereth"
-	"perun.network/go-perun/backend/ethereum/bindings/peruntoken"
-	"perun.network/go-perun/backend/ethereum/bindings/trivialapp"
+	"github.com/perun-network/perun-eth-backend/bindings/adjudicator"
+	"github.com/perun-network/perun-eth-backend/bindings/assetholder"
+	"github.com/perun-network/perun-eth-backend/bindings/assetholdererc20"
+	"github.com/perun-network/perun-eth-backend/bindings/assetholdereth"
+	"github.com/perun-network/perun-eth-backend/bindings/peruntoken"
+	"github.com/perun-network/perun-eth-backend/bindings/trivialapp"
 )
 
 // ABI contains all the parsed ABI definitions of our contracts.

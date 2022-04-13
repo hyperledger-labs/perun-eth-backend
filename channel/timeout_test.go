@@ -21,8 +21,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	ethchannel "perun.network/go-perun/backend/ethereum/channel"
-	"perun.network/go-perun/backend/ethereum/channel/test"
+	ethchannel "github.com/perun-network/perun-eth-backend/channel"
+	"github.com/perun-network/perun-eth-backend/channel/test"
 )
 
 func TestBlockTimeout_IsElapsed(t *testing.T) {

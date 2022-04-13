@@ -22,9 +22,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/require"
 
-	"perun.network/go-perun/backend/ethereum/bindings/peruntoken"
-	"perun.network/go-perun/backend/ethereum/channel/test"
-	"perun.network/go-perun/backend/ethereum/subscription"
+	"github.com/perun-network/perun-eth-backend/bindings/peruntoken"
+	"github.com/perun-network/perun-eth-backend/channel/test"
+	"github.com/perun-network/perun-eth-backend/subscription"
 	"perun.network/go-perun/log"
 	pctx "polycry.pt/poly-go/context"
 	pkgtest "polycry.pt/poly-go/test"

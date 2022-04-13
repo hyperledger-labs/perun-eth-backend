@@ -13,4 +13,4 @@
 // limitations under the License.
 
 // Package errors contains error checking and wrapping functions.
-package errors // import "perun.network/go-perun/backend/ethereum/channel/errors"
+package errors // import "github.com/perun-network/perun-eth-backend/channel/errors"

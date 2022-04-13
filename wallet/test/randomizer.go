@@ -22,8 +22,8 @@ import (
 	accsKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 
-	ethwallet "perun.network/go-perun/backend/ethereum/wallet"
-	"perun.network/go-perun/backend/ethereum/wallet/keystore"
+	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
+	"github.com/perun-network/perun-eth-backend/wallet/keystore"
 	"perun.network/go-perun/wallet"
 	wtest "perun.network/go-perun/wallet/test"
 )

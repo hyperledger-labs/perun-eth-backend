@@ -25,8 +25,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"perun.network/go-perun/backend/ethereum/channel"
-	"perun.network/go-perun/backend/ethereum/wallet"
+	"github.com/perun-network/perun-eth-backend/channel"
+	"github.com/perun-network/perun-eth-backend/wallet"
 )
 
 // TxType is a transaction type, specifying how it is hashed for signing and how

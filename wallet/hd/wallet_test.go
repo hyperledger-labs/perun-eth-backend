@@ -24,9 +24,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	ethwallet "perun.network/go-perun/backend/ethereum/wallet"
-	"perun.network/go-perun/backend/ethereum/wallet/hd"
-	ethwallettest "perun.network/go-perun/backend/ethereum/wallet/test"
+	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
+	"github.com/perun-network/perun-eth-backend/wallet/hd"
+	ethwallettest "github.com/perun-network/perun-eth-backend/wallet/test"
 	"perun.network/go-perun/wallet/test"
 	pkgtest "polycry.pt/poly-go/test"
 )

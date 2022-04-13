@@ -14,4 +14,4 @@
 
 // Package hd contains perun wallet and accounts implementation for accessing
 // accounts stored in an ethereum hierarchial deterministic (HD) wallet.
-package hd // import "perun.network/go-perun/backend/ethereum/wallet/hd"
+package hd // import "github.com/perun-network/perun-eth-backend/wallet/hd"

@@ -23,11 +23,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 
-	"perun.network/go-perun/backend/ethereum/bindings/assetholder"
-	"perun.network/go-perun/backend/ethereum/bindings/assetholdererc20"
-	"perun.network/go-perun/backend/ethereum/bindings/assetholdereth"
-	cherrors "perun.network/go-perun/backend/ethereum/channel/errors"
-	"perun.network/go-perun/backend/ethereum/wallet"
+	"github.com/perun-network/perun-eth-backend/bindings/assetholder"
+	"github.com/perun-network/perun-eth-backend/bindings/assetholdererc20"
+	"github.com/perun-network/perun-eth-backend/bindings/assetholdereth"
+	cherrors "github.com/perun-network/perun-eth-backend/channel/errors"
+	"github.com/perun-network/perun-eth-backend/wallet"
 	"perun.network/go-perun/channel"
 )
 

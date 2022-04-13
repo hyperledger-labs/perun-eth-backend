@@ -23,7 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 
-	ethchannel "perun.network/go-perun/backend/ethereum/channel"
+	ethchannel "github.com/perun-network/perun-eth-backend/channel"
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/log"
 )

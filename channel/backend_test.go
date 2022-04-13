@@ -24,9 +24,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"perun.network/go-perun/backend/ethereum/bindings/adjudicator"
-	"perun.network/go-perun/backend/ethereum/channel"
-	ethchanneltest "perun.network/go-perun/backend/ethereum/channel/test"
+	"github.com/perun-network/perun-eth-backend/bindings/adjudicator"
+	"github.com/perun-network/perun-eth-backend/channel"
+	ethchanneltest "github.com/perun-network/perun-eth-backend/channel/test"
 	perunchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/channel/test"
 	perunwallet "perun.network/go-perun/wallet"

@@ -24,9 +24,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 
-	"perun.network/go-perun/backend/ethereum/bindings"
-	"perun.network/go-perun/backend/ethereum/bindings/adjudicator"
-	cherrors "perun.network/go-perun/backend/ethereum/channel/errors"
+	"github.com/perun-network/perun-eth-backend/bindings"
+	"github.com/perun-network/perun-eth-backend/bindings/adjudicator"
+	cherrors "github.com/perun-network/perun-eth-backend/channel/errors"
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/client"
 	"perun.network/go-perun/log"

@@ -13,4 +13,4 @@
 // limitations under the License.
 
 // Package subscription contains generic event subscriptions.
-package subscription // import "perun.network/go-perun/backend/ethereum/subscription"
+package subscription // import "github.com/perun-network/perun-eth-backend/subscription"

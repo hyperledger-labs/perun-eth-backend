@@ -24,7 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 
-	cherrors "perun.network/go-perun/backend/ethereum/channel/errors"
+	cherrors "github.com/perun-network/perun-eth-backend/channel/errors"
 	"perun.network/go-perun/log"
 	pkgsync "polycry.pt/poly-go/sync"
 )

@@ -13,4 +13,4 @@
 // limitations under the License.
 
 // Package test contains utilities for running client tests for Ethereum.
-package test // import "perun.network/go-perun/backend/ethereum/client/test"
+package test // import "github.com/perun-network/perun-eth-backend/client/test"

@@ -14,4 +14,4 @@
 
 // Package test contains utilities for generating random ethereum accounts and
 // addresses.
-package test // import "perun.network/go-perun/backend/ethereum/wallet/test"
+package test // import "github.com/perun-network/perun-eth-backend/wallet/test"

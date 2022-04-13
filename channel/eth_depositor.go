@@ -20,8 +20,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 
-	"perun.network/go-perun/backend/ethereum/bindings/assetholdereth"
-	cherrors "perun.network/go-perun/backend/ethereum/channel/errors"
+	"github.com/perun-network/perun-eth-backend/bindings/assetholdereth"
+	cherrors "github.com/perun-network/perun-eth-backend/channel/errors"
 )
 
 // ETHDepositor deposits funds into the `AssetHolderETH` contract.

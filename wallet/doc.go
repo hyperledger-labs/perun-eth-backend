@@ -15,4 +15,4 @@
 // Package wallet implements go-perun's wallet interface for the ethereum
 // backend. It makes use of go-ethereum's keystore module for storing, reading,
 // and generating keys, as well as signing.
-package wallet // import "perun.network/go-perun/backend/ethereum/wallet"
+package wallet // import "github.com/perun-network/perun-eth-backend/wallet"
