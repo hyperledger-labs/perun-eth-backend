@@ -26,6 +26,7 @@ import (
 	ethchannel "perun.network/go-perun/backend/ethereum/channel"
 	"perun.network/go-perun/backend/ethereum/channel/test"
 	ethwallettest "perun.network/go-perun/backend/ethereum/wallet/test"
+	wiretest "perun.network/go-perun/wire/test"
 	pkgtest "polycry.pt/poly-go/test"
 )
 
@@ -101,4 +102,12 @@ func testValidateAssetHolder(t *testing.T,
 		require.NoError(t, err)
 		require.NoError(t, validator(ctx, s.CB, assetHolderAddr, adjudicatorAddr))
 	})
+}
+
+func Test_Asset_GenericMarshaler(t *testing.T) {
+	rng := pkgtest.Prng(t)
+	for i := 0; i < 10; i++ {
+		asset := ethwallettest.NewRandomAddress(rng)
+		wiretest.GenericMarshalerTest(t, &asset)
+	}
 }
