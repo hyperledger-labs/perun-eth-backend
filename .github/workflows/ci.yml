@@ -6,6 +6,9 @@ on:
   pull_request:
   release:
 
+env:
+  go-version: 1.17
+
 jobs:
   lint:
     name: Lint
@@ -14,8 +17,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.go-version }}
+
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v3
         with:
           version: v1.43
 
@@ -26,7 +34,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
-          go-version: ^1.17
+          go-version: ${{ env.go-version }}
 
       - name: Checkout
         uses: actions/checkout@v2
@@ -51,7 +59,7 @@ jobs:
       - name: Set up Golang
         uses: actions/setup-go@v2
         with:
-          go-version: ^1.17
+          go-version: ${{ env.go-version }}
 
       - name: Checkout
         uses: actions/checkout@v2
