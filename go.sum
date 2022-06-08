@@ -653,6 +653,8 @@ honnef.co/go/tools v0.0.1-2019.2.3/go.mod h1:a3bituU0lyd329TUQxRnasdCoJDkEUEAqEt
 honnef.co/go/tools v0.1.3/go.mod h1:NgwopIslSNH47DimFoV78dnkksY2EFtX0ajyb3K/las=
 perun.network/go-perun v0.9.0 h1:IAGIR/ktytMo2rZjck+69Eaz1qnaOXLvHoRuExMGwJ4=
 perun.network/go-perun v0.9.0/go.mod h1:4aGqubL05HJCvPcBltMyJekrqLYwxBaDmHHS7p1BBHc=
+perun.network/go-perun v0.10.0 h1:3xdHyEYt8oy63uqTh4+yNahndjhKbmLMK0PIUKPUlr8=
+perun.network/go-perun v0.10.0/go.mod h1:BGBZC3npkX457u87pjDd0NEIXr1a4dsH4H/YpLdGGe8=
 polycry.pt/poly-go v0.0.0-20211115212618-87069dfa360f/go.mod h1:XUBrNtqgEhN3EEOP/5gh7IBd3xVHKidCjXDZfl9+kMU=
 polycry.pt/poly-go v0.0.0-20220301085937-fb9d71b45a37 h1:iA5GzEa/hHfVlQpimEjPV09NATwHXxSjWNB0VVodtew=
 polycry.pt/poly-go v0.0.0-20220301085937-fb9d71b45a37/go.mod h1:XUBrNtqgEhN3EEOP/5gh7IBd3xVHKidCjXDZfl9+kMU=
