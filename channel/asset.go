@@ -17,6 +17,7 @@ package channel
 import (
 	"context"
 	"encoding/hex"
+	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -28,17 +29,45 @@ import (
 	"github.com/perun-network/perun-eth-backend/bindings/assetholdereth"
 	cherrors "github.com/perun-network/perun-eth-backend/channel/errors"
 	"github.com/perun-network/perun-eth-backend/wallet"
+
 	"perun.network/go-perun/channel"
+	"perun.network/go-perun/channel/multi"
 )
+
+type LedgerID struct {
+	*big.Int
+}
+
+func MakeLedgerID(id *big.Int) LedgerID {
+	if id.Sign() < 0 {
+		panic("must not be smaller than zero")
+	}
+	return LedgerID{id}
+}
+
+func (id *LedgerID) UnmarshalBinary(data []byte) error {
+	id.Int = new(big.Int).SetBytes(data)
+	return nil
+}
+
+func (id *LedgerID) MarshalBinary() (data []byte, err error) {
+	return id.Bytes(), nil
+}
+
+func (id *LedgerID) MapKey() multi.LedgerIDMapKey {
+	return multi.LedgerIDMapKey(id.Int.String())
+}
 
 // Asset is an Ethereum asset.
 type Asset struct {
+	ChainID LedgerID
 	wallet.Address
 }
 
-// NewAssetFromAddress creates a new asset from an Ethereum address.
-func NewAssetFromAddress(a common.Address) *Asset {
-	return &Asset{*wallet.AsWalletAddr(a)}
+// NewAssetFromAddress creates a new asset from an chainID and Ethereum address.
+func NewAssetFromAddress(chainID *big.Int, a common.Address) *Asset {
+	id := MakeLedgerID(chainID)
+	return &Asset{id, *wallet.AsWalletAddr(a)}
 }
 
 // EthAddress returns the Ethereum address representation of the asset.

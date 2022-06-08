@@ -27,6 +27,7 @@ import (
 
 	"github.com/perun-network/perun-eth-backend/bindings/adjudicator"
 	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
+
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
 )
@@ -187,7 +188,7 @@ func ToEthState(s *channel.State) adjudicator.ChannelState {
 		locked[i] = adjudicator.ChannelSubAlloc{ID: sub.ID, Balances: sub.Bals, IndexMap: indexMap}
 	}
 	outcome := adjudicator.ChannelAllocation{
-		Assets:   assetsToCommonAddresses(s.Allocation.Assets),
+		Assets:   toEthAssets(s.Allocation.Assets),
 		Balances: s.Balances,
 		Locked:   locked,
 	}
