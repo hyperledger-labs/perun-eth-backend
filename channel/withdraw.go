@@ -28,6 +28,7 @@ import (
 	cherrors "github.com/perun-network/perun-eth-backend/channel/errors"
 	"github.com/perun-network/perun-eth-backend/subscription"
 	"github.com/perun-network/perun-eth-backend/wallet"
+
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/client"
 	"perun.network/go-perun/log"
@@ -114,7 +115,7 @@ func withdrawnEventType(fundingID [32]byte) subscription.EventFactory {
 func bindAssetHolder(cb ContractBackend, asset channel.Asset, assetIndex channel.Index) assetHolder {
 	// Decode and set the asset address.
 	assetAddr := asset.(*Asset).EthAddress()
-	ctr, err := assetholder.NewAssetHolder(assetAddr, cb)
+	ctr, err := assetholder.NewAssetholder(assetAddr, cb)
 	if err != nil {
 		log.Panic("Invalid AssetHolder ABI definition.")
 	}

@@ -34,6 +34,7 @@ import (
 	"github.com/perun-network/perun-eth-backend/channel/test"
 	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
 	"github.com/perun-network/perun-eth-backend/wallet/keystore"
+
 	"perun.network/go-perun/channel"
 	channeltest "perun.network/go-perun/channel/test"
 	"perun.network/go-perun/wallet"
@@ -489,7 +490,7 @@ func onChainAllocation(ctx context.Context, cb *ethchannel.ContractBackend, para
 
 	for k, asset := range _assets {
 		alloc[k] = make([]channel.Bal, len(params.Parts))
-		contract, err := assetholder.NewAssetHolder(asset.(*ethchannel.Asset).EthAddress(), cb)
+		contract, err := assetholder.NewAssetholder(asset.(*ethchannel.Asset).EthAddress(), cb)
 		if err != nil {
 			return nil, err
 		}

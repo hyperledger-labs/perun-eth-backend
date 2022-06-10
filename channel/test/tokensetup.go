@@ -32,6 +32,7 @@ import (
 	"github.com/perun-network/perun-eth-backend/bindings/peruntoken"
 	ethchannel "github.com/perun-network/perun-eth-backend/channel"
 	"github.com/perun-network/perun-eth-backend/wallet/keystore"
+
 	channeltest "perun.network/go-perun/channel/test"
 	wallettest "perun.network/go-perun/wallet/test"
 )
@@ -81,7 +82,7 @@ func NewTokenSetup(ctx context.Context, t *testing.T, rng *rand.Rand, txFinality
 	require.NoError(t, err)
 	token, err := peruntoken.NewERC20(tokenAddr, cb)
 	require.NoError(t, err)
-	contract := bind.NewBoundContract(tokenAddr, bindings.ABI.ERC20Token, cb, cb, cb)
+	contract := bind.NewBoundContract(tokenAddr, bindings.ABI.PerunToken, cb, cb, cb)
 
 	return &TokenSetup{
 		SB:       sb,
