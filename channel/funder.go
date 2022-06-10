@@ -31,6 +31,7 @@ import (
 	"github.com/perun-network/perun-eth-backend/bindings/assetholder"
 	"github.com/perun-network/perun-eth-backend/subscription"
 	"github.com/perun-network/perun-eth-backend/wallet"
+
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/client"
 	"perun.network/go-perun/log"
@@ -40,7 +41,7 @@ import (
 )
 
 type assetHolder struct {
-	*assetholder.AssetHolder
+	*assetholder.Assetholder
 	*common.Address
 	contract   *bind.BoundContract
 	assetIndex channel.Index
@@ -262,7 +263,7 @@ func (f *Funder) checkFunded(ctx context.Context, amount *big.Int, asset assetHo
 
 	left := new(big.Int).Set(amount)
 	for _event := range deposited {
-		event, ok := _event.Data.(*assetholder.AssetHolderDeposited)
+		event, ok := _event.Data.(*assetholder.AssetholderDeposited)
 		if !ok {
 			log.Panic("wrong event type")
 		}
@@ -279,7 +280,7 @@ func (f *Funder) depositedSub(ctx context.Context, contract *bind.BoundContract,
 	event := func() *subscription.Event {
 		return &subscription.Event{
 			Name:   bindings.Events.AhDeposited,
-			Data:   new(assetholder.AssetHolderDeposited),
+			Data:   new(assetholder.AssetholderDeposited),
 			Filter: [][]interface{}{filter},
 		}
 	}
@@ -313,7 +314,7 @@ func (f *Funder) waitForFundingConfirmation(ctx context.Context, request channel
 	for N > 0 {
 		select {
 		case rawEvent := <-deposited:
-			event, ok := rawEvent.Data.(*assetholder.AssetHolderDeposited)
+			event, ok := rawEvent.Data.(*assetholder.AssetholderDeposited)
 			if !ok {
 				log.Panic("wrong event type")
 			}

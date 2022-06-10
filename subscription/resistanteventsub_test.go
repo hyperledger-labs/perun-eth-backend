@@ -25,6 +25,7 @@ import (
 	"github.com/perun-network/perun-eth-backend/bindings/peruntoken"
 	"github.com/perun-network/perun-eth-backend/channel/test"
 	"github.com/perun-network/perun-eth-backend/subscription"
+
 	"perun.network/go-perun/log"
 	pctx "polycry.pt/poly-go/context"
 	pkgtest "polycry.pt/poly-go/test"
@@ -33,7 +34,7 @@ import (
 var event = func() *subscription.Event {
 	return &subscription.Event{
 		Name: "Approval",
-		Data: new(peruntoken.PerunTokenApproval),
+		Data: new(peruntoken.PeruntokenApproval),
 	}
 }
 
