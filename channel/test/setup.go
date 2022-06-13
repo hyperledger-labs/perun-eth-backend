@@ -26,6 +26,7 @@ import (
 	ethchannel "github.com/perun-network/perun-eth-backend/channel"
 	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
 	"github.com/perun-network/perun-eth-backend/wallet/keystore"
+
 	"perun.network/go-perun/wallet"
 	wallettest "perun.network/go-perun/wallet/test"
 )
@@ -105,9 +106,9 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 	defer cancel()
 	adjudicator, err := ethchannel.DeployAdjudicator(ctx, *s.CB, s.TxSender.Account)
 	require.NoError(t, err)
-	ethAsset, err := ethchannel.DeployETHAssetholder(ctx, *s.CB, adjudicator, s.TxSender.Account)
+	assetHolder, err := ethchannel.DeployETHAssetholder(ctx, *s.CB, adjudicator, s.TxSender.Account)
 	require.NoError(t, err)
-	s.Asset = ethchannel.NewAssetFromAddress(ethAsset)
+	s.Asset = ethchannel.NewAsset(s.SimBackend.Blockchain().Config().ChainID, assetHolder)
 
 	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
 	require.NoErrorf(t, err, "initializing wallet from test keystore")

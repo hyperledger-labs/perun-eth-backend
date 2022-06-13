@@ -15,8 +15,10 @@
 package channel
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
+	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -28,22 +30,84 @@ import (
 	"github.com/perun-network/perun-eth-backend/bindings/assetholdereth"
 	cherrors "github.com/perun-network/perun-eth-backend/channel/errors"
 	"github.com/perun-network/perun-eth-backend/wallet"
+
 	"perun.network/go-perun/channel"
+	"perun.network/go-perun/channel/multi"
+	"perun.network/go-perun/wire/perunio"
 )
 
-// Asset is an Ethereum asset.
-type Asset struct {
-	wallet.Address
+// ChainID identifies a specific Ethereum backend.
+type ChainID struct {
+	*big.Int
 }
 
-// NewAssetFromAddress creates a new asset from an Ethereum address.
-func NewAssetFromAddress(a common.Address) *Asset {
-	return &Asset{*wallet.AsWalletAddr(a)}
+func MakeChainID(id *big.Int) ChainID {
+	if id.Sign() < 0 {
+		panic("must not be smaller than zero")
+	}
+	return ChainID{id}
 }
 
-// EthAddress returns the Ethereum address representation of the asset.
+func (id *ChainID) UnmarshalBinary(data []byte) error {
+	id.Int = new(big.Int).SetBytes(data)
+	return nil
+}
+
+func (id ChainID) MarshalBinary() (data []byte, err error) {
+	return id.Bytes(), nil
+}
+
+func (id ChainID) MapKey() multi.LedgerIDMapKey {
+	return multi.LedgerIDMapKey(id.Int.String())
+}
+
+type (
+
+	// Asset is an Ethereum asset.
+	Asset struct {
+		ChainID     ChainID
+		AssetHolder wallet.Address
+	}
+
+	AssetMapKey string
+)
+
+func (a Asset) MapKey() AssetMapKey {
+	d, err := a.MarshalBinary()
+	if err != nil {
+		panic(err)
+	}
+
+	return AssetMapKey(d)
+}
+
+func (a Asset) MarshalBinary() ([]byte, error) {
+	var buf bytes.Buffer
+	err := perunio.Encode(&buf, &a.AssetHolder, a.ChainID)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func (a Asset) UnmarshalBinary(data []byte) error {
+	buf := bytes.NewBuffer(data)
+	return perunio.Decode(buf, &a.ChainID, &a.AssetHolder)
+}
+
+func (a Asset) LedgerID() multi.LedgerID {
+	return &a.ChainID
+}
+
+// NewAsset creates a new asset from an chainID and the AssetHolder address.
+func NewAsset(chainID *big.Int, assetHolder common.Address) *Asset {
+	id := MakeChainID(chainID)
+	return &Asset{id, *wallet.AsWalletAddr(assetHolder)}
+}
+
+// EthAddress returns the Ethereum address of the asset.
 func (a Asset) EthAddress() common.Address {
-	return common.Address(a.Address)
+	return common.Address(a.AssetHolder)
 }
 
 // Equal returns true iff the asset equals the given asset.

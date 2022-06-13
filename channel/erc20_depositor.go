@@ -46,10 +46,10 @@ func NewERC20Depositor(token common.Address) *ERC20Depositor {
 }
 
 // Deposit deposits ERC20 tokens into the ERC20 AssetHolder specified at the
-// requests's asset address.
+// request's asset address.
 func (d *ERC20Depositor) Deposit(ctx context.Context, req DepositReq) (types.Transactions, error) {
 	// Bind a `AssetHolderERC20` instance.
-	assetholder, err := assetholdererc20.NewAssetholdererc20(common.Address(req.Asset.Address), req.CB)
+	assetholder, err := assetholdererc20.NewAssetholdererc20(req.Asset.EthAddress(), req.CB)
 	if err != nil {
 		return nil, errors.Wrapf(err, "binding AssetHolderERC20 contract at: %x", req.Asset)
 	}
@@ -63,7 +63,7 @@ func (d *ERC20Depositor) Deposit(ctx context.Context, req DepositReq) (types.Tra
 	if err != nil {
 		return nil, errors.WithMessagef(err, "creating transactor for asset: %x", req.Asset)
 	}
-	tx1, err := token.IncreaseAllowance(opts, common.Address(req.Asset.Address), req.Balance)
+	tx1, err := token.IncreaseAllowance(opts, req.Asset.EthAddress(), req.Balance)
 	if err != nil {
 		err = cherrors.CheckIsChainNotReachableError(err)
 		return nil, errors.WithMessagef(err, "increasing allowance for asset: %x", req.Asset)

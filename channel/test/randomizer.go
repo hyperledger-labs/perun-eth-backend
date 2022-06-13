@@ -15,6 +15,7 @@
 package test
 
 import (
+	"math/big"
 	"math/rand"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -32,6 +33,13 @@ func (randomizer) NewRandomAsset(rng *rand.Rand) channel.Asset {
 
 // NewRandomAsset returns a new random ethereum Asset.
 func NewRandomAsset(rng *rand.Rand) *ethchannel.Asset {
+	chainID := NewRandomChainID(rng)
 	asset := ethwtest.NewRandomAddress(rng)
-	return ethchannel.NewAssetFromAddress(common.Address(asset))
+	return ethchannel.NewAsset(chainID.Int, common.Address(asset))
+}
+
+func NewRandomChainID(rng *rand.Rand) ethchannel.ChainID {
+	r := rng.Uint64()
+	id := new(big.Int).SetUint64(r)
+	return ethchannel.MakeChainID(id)
 }
