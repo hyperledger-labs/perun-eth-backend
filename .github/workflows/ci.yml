@@ -27,6 +27,45 @@ jobs:
         with:
           version: v1.43
 
+  bindings:
+    name: Generate bindings
+    runs-on: ubuntu-latest
+    env:
+      solc_version: v0.7.0
+      geth-tools_release: geth-alltools-linux-amd64-1.10.18-de23cf91
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+
+      - name: Install solc
+        run: |
+          mkdir -p "$HOME/bin"
+          wget -q https://github.com/ethereum/solidity/releases/download/${{ env.solc_version }}/solc-static-linux -O $HOME/bin/solc
+          chmod +x "$HOME/bin/solc"
+          export PATH=$HOME/bin:$PATH
+          solc --version
+
+      - name: Install abigen
+        run: |
+          wget -q https://gethstore.blob.core.windows.net/builds/${{ env.geth-tools_release }}.tar.gz -P $HOME
+          tar -zxf $HOME/${{ env.geth-tools_release }}.tar.gz -C $HOME
+          mv $HOME/${{ env.geth-tools_release }}/abigen $HOME/bin/
+          rm -rf  $HOME/${{ env.geth-tools_release }} $HOME/${{ env.geth-tools_release }}.tar.gz
+          export PATH=$HOME/bin:$PATH
+          abigen --version
+
+      - name: Generate bindings
+        working-directory: ${{ env.repo_dir }}
+        run: |
+          export PATH=$HOME/bin:$PATH
+          cd bindings
+          ./generate.sh
+
+      - name: Test
+        run: go test -timeout 60s ./...
+
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -54,6 +93,7 @@ jobs:
 
   race-test:
     name: Race Test
+    needs: bindings
     runs-on: ubuntu-latest
     steps:
       - name: Set up Golang
