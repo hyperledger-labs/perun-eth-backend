@@ -20,15 +20,17 @@ set -e
 ABIGEN="${ABIGEN-abigen}"
 SOLC="${SOLC-solc}"
 
+echo 'Please ensure that solc v0.7.6+ and abigen v1.10.18+ are installed.'
+
 if ! $ABIGEN --version
 then
-    echo "Please install abigen v1.10.18+ or set the environment variable ABIGEN."
+    echo "'abigen' not found. Please add to PATH or set ABIGEN='path_to_abigen'."
     exit 1
 fi
 
 if ! $SOLC --version
 then
-    echo "Please install solc v0.7.0+ or set the environment variable SOLC."
+    echo "'solc' not found. Please add to PATH or set SOLC='path_to_solc'."
     exit 1
 fi
 
