@@ -31,35 +31,33 @@ jobs:
     name: Generate bindings
     runs-on: ubuntu-latest
     env:
-      solc_version: v0.7.0
-      geth-tools_release: geth-alltools-linux-amd64-1.10.18-de23cf91
+      solc_version: 0.7.0
+      abigen_version: 1.10.18
     steps:
       - name: Checkout
         uses: actions/checkout@v2
         with:
           submodules: 'recursive'
 
+      - name: Set up Golang
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.go-version }}
+
       - name: Install solc
         run: |
-          mkdir -p "$HOME/bin"
-          wget -q https://github.com/ethereum/solidity/releases/download/${{ env.solc_version }}/solc-static-linux -O $HOME/bin/solc
-          chmod +x "$HOME/bin/solc"
-          export PATH=$HOME/bin:$PATH
+          docker pull ethereum/solc:${{ env.solc_version }}
+          alias solc='docker run ethereum/solc:${{ env.solc_version }}'
           solc --version
 
       - name: Install abigen
-        run: |
-          wget -q https://gethstore.blob.core.windows.net/builds/${{ env.geth-tools_release }}.tar.gz -P $HOME
-          tar -zxf $HOME/${{ env.geth-tools_release }}.tar.gz -C $HOME
-          mv $HOME/${{ env.geth-tools_release }}/abigen $HOME/bin/
-          rm -rf  $HOME/${{ env.geth-tools_release }} $HOME/${{ env.geth-tools_release }}.tar.gz
-          export PATH=$HOME/bin:$PATH
+        run: | 
+          go install github.com/ethereum/go-ethereum/cmd/abigen@v${{ env.abigen_version }}
           abigen --version
 
       - name: Generate bindings
         working-directory: ${{ env.repo_dir }}
         run: |
-          export PATH=$HOME/bin:$PATH
           cd bindings
           ./generate.sh
 
