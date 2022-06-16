@@ -49,6 +49,7 @@ jobs:
           export SOLC="docker run --rm -v $(pwd):$WD -w $WD ethereum/solc:0.7.6-alpine"
           export ABIGEN="docker run --rm -v $(pwd):$WD -w $WD --entrypoint abigen ethereum/client-go:alltools-v1.10.18"
           ./generate.sh
+          sudo find -type f -name "*.go" -exec chmod a+r {} \;
 
       - name: Test
         run: go test -timeout 60s ./...
