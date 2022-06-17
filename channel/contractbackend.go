@@ -29,6 +29,7 @@ import (
 	"github.com/pkg/errors"
 
 	cherrors "github.com/perun-network/perun-eth-backend/channel/errors"
+
 	"perun.network/go-perun/log"
 	pcontext "polycry.pt/poly-go/context"
 )

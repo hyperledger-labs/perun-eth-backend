@@ -20,15 +20,17 @@ set -e
 ABIGEN="${ABIGEN-abigen}"
 SOLC="${SOLC-solc}"
 
+echo 'Please ensure that solc v0.7.6+ and abigen v1.10.18+ are installed.'
+
 if ! $ABIGEN --version
 then
-    echo "Please install abigen v1.9.25+ or the environment varables AGIBEN."
+    echo "'abigen' not found. Please add to PATH or set ABIGEN='path_to_abigen'."
     exit 1
 fi
 
 if ! $SOLC --version
 then
-    echo "Please install abigen v0.7.4 or the environment varables SOLC."
+    echo "'solc' not found. Please add to PATH or set SOLC='path_to_solc'."
     exit 1
 fi
 
@@ -44,17 +46,17 @@ generate() {
     rm -r $PKG
     mkdir $PKG
 
-    # Generate bindings
-    $ABIGEN --pkg $PKG --sol ../contracts/contracts/$FILE.sol --out $PKG/$FILE.go --solc $SOLC
-
-    # Generate binary runtime
-    $SOLC --bin-runtime --optimize --allow-paths ../contracts/vendor, ../contracts/contracts/$FILE.sol -o $PKG/
-    BIN_RUNTIME=`cat ${PKG}/${CONTRACT}.bin-runtime`
+    # Compile and generate binary runtime.
+    $SOLC --abi --bin --bin-runtime --optimize --allow-paths contracts/vendor, contracts/contracts/$FILE.sol -o $PKG/
+    BIN_RUNTIME=$(cat ${PKG}/${CONTRACT}.bin-runtime)
     OUT_FILE="$PKG/${CONTRACT}BinRuntime.go"
     echo "package $PKG // import \"github.com/perun-network/perun-eth-backend/bindings/$PKG\"" > $OUT_FILE
     echo >> $OUT_FILE
     echo "// ${CONTRACT}BinRuntime is the runtime part of the compiled bytecode used for deploying new contracts." >> $OUT_FILE
     echo "var ${CONTRACT}BinRuntime = \"$BIN_RUNTIME\"" >> $OUT_FILE
+
+    # Generate bindings.
+    $ABIGEN --pkg $PKG --abi $PKG/$FILE.abi --bin $PKG/$FILE.bin --out $PKG/$FILE.go
 }
 
 # Adjudicator

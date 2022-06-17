@@ -2,7 +2,8 @@
 
 <p>
   <a href="https://www.apache.org/licenses/LICENSE-2.0.txt"><img src="https://img.shields.io/badge/license-Apache%202-blue" alt="License: Apache 2.0"></a>
-  <a href="https://github.com/perun-network/perun-eth-backend/actions/workflows/ci.yml"><img src="https://github.com/perun-network/perun-eth-backend/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
+  <a href="https://github.com/hyperledger-labs/perun-eth-backend/actions/workflows/ci.yml"><img src="https://github.com/hyperledger-labs/perun-eth-backend/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status"></a>
+  <a href="https://pkg.go.dev/github.com/perun-network/perun-eth-backend"><img src="https://pkg.go.dev/badge/github.com/perun-network/perun-eth-backend.svg" alt="Go Reference"></a>
 </p>
 
 This repository provides an [Ethereum] blockchain module for the [go-perun] state channel library.
@@ -12,7 +13,6 @@ It thereby enables Perun channels for EVM-compatible networks.
 * `bindings/`: Contract bindings.
 * `channel/`: Channel interface implementations.
 * `client/`: Client tests.
-* `contracts/`: Smart contracts, imported from [perun-eth-contracts].
 * `wallet/`: Wallet interface implementations.
 
 ## Development

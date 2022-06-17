@@ -1,0 +1,3 @@
+/bindings/*/*.abi
+/bindings/*/*.bin
+/bindings/*/*.bin-runtime

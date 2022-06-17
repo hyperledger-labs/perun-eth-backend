@@ -31,8 +31,8 @@ import (
 // ABI contains all the parsed ABI definitions of our contracts.
 // Use it together with `bind.NewBoundContract` to create a bound contract.
 var ABI = struct {
-	// ERC20Token is the parsed ABI definition of contract ERC20Token.
-	ERC20Token abi.ABI
+	// PerunToken is the parsed ABI definition of contract PerunToken.
+	PerunToken abi.ABI
 	// Adjudicator is the parsed ABI definition of contract Adjudicator.
 	Adjudicator abi.ABI
 	// AssetHolder is the parsed ABI definition of contract AssetHolder.
@@ -53,8 +53,8 @@ var Events = struct {
 	AhDeposited string
 	// AhWithdrawn is the Withdrawn event of the Assetholder contract.
 	AhWithdrawn string
-	// ERC20Approval is the Approval event of the ERC20Token contract.
-	ERC20Approval string
+	// PerunTokenApproval is the Approval event of the PerunToken contract.
+	PerunTokenApproval string
 }{}
 
 func init() {
@@ -71,12 +71,12 @@ func parseABIs() {
 		return abi
 	}
 
-	ABI.ERC20Token = parse(peruntoken.ERC20ABI)
-	ABI.Adjudicator = parse(adjudicator.AdjudicatorABI)
-	ABI.AssetHolder = parse(assetholder.AssetHolderABI)
-	ABI.ETHAssetHolder = parse(assetholdereth.AssetHolderETHABI)
-	ABI.ERC20AssetHolder = parse(assetholdererc20.AssetHolderERC20ABI)
-	ABI.TrivialApp = parse(trivialapp.TrivialAppABI)
+	ABI.PerunToken = parse(peruntoken.PeruntokenMetaData.ABI)
+	ABI.Adjudicator = parse(adjudicator.AdjudicatorMetaData.ABI)
+	ABI.AssetHolder = parse(assetholder.AssetholderMetaData.ABI)
+	ABI.ETHAssetHolder = parse(assetholdereth.AssetholderethMetaData.ABI)
+	ABI.ERC20AssetHolder = parse(assetholdererc20.Assetholdererc20MetaData.ABI)
+	ABI.TrivialApp = parse(trivialapp.TrivialappMetaData.ABI)
 }
 
 // extractEvents sets the event names and panics if any event does not exist.
@@ -92,5 +92,5 @@ func extractEvents() {
 	Events.AdjChannelUpdate = extract(ABI.Adjudicator, "ChannelUpdate")
 	Events.AhDeposited = extract(ABI.AssetHolder, "Deposited")
 	Events.AhWithdrawn = extract(ABI.AssetHolder, "Withdrawn")
-	Events.ERC20Approval = extract(ABI.ERC20Token, "Approval")
+	Events.PerunTokenApproval = extract(ABI.PerunToken, "Approval")
 }

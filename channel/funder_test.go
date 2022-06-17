@@ -34,6 +34,7 @@ import (
 	"github.com/perun-network/perun-eth-backend/channel/test"
 	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
 	"github.com/perun-network/perun-eth-backend/wallet/keystore"
+
 	"perun.network/go-perun/channel"
 	channeltest "perun.network/go-perun/channel/test"
 	"perun.network/go-perun/wallet"
@@ -449,7 +450,7 @@ func newNFunders(
 
 // fundERC20 funds `to` with ERC20 tokens from account `from`.
 func fundERC20(ctx context.Context, cb ethchannel.ContractBackend, from accounts.Account, to common.Address, token common.Address, asset ethchannel.Asset) error {
-	contract, err := peruntoken.NewERC20(token, cb)
+	contract, err := peruntoken.NewPeruntoken(token, cb)
 	if err != nil {
 		return errors.WithMessagef(err, "binding AssetHolderERC20 contract at: %v", asset)
 	}
@@ -489,7 +490,7 @@ func onChainAllocation(ctx context.Context, cb *ethchannel.ContractBackend, para
 
 	for k, asset := range _assets {
 		alloc[k] = make([]channel.Bal, len(params.Parts))
-		contract, err := assetholder.NewAssetHolder(asset.(*ethchannel.Asset).EthAddress(), cb)
+		contract, err := assetholder.NewAssetholder(asset.(*ethchannel.Asset).EthAddress(), cb)
 		if err != nil {
 			return nil, err
 		}

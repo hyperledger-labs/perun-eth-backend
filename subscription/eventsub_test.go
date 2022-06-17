@@ -32,6 +32,7 @@ import (
 	"github.com/perun-network/perun-eth-backend/channel/test"
 	"github.com/perun-network/perun-eth-backend/subscription"
 	"github.com/perun-network/perun-eth-backend/wallet/keystore"
+
 	channeltest "perun.network/go-perun/channel/test"
 	"perun.network/go-perun/log"
 	wallettest "perun.network/go-perun/wallet/test"
@@ -68,7 +69,7 @@ func TestEventSub(t *testing.T) {
 	// Setup Perun Token.
 	tokenAddr, err := ethchannel.DeployPerunToken(ctx, cb, *account, []common.Address{account.Address}, channeltest.MaxBalance)
 	require.NoError(t, err)
-	token, err := peruntoken.NewERC20(tokenAddr, cb)
+	token, err := peruntoken.NewPeruntoken(tokenAddr, cb)
 	require.NoError(t, err)
 	ct := pkgtest.NewConcurrent(t)
 
@@ -93,13 +94,13 @@ func TestEventSub(t *testing.T) {
 	sink := make(chan *subscription.Event, 10)
 	eFact := func() *subscription.Event {
 		return &subscription.Event{
-			Name: bindings.Events.ERC20Approval,
-			Data: new(peruntoken.ERC20Approval),
+			Name: bindings.Events.PerunTokenApproval,
+			Data: new(peruntoken.PeruntokenApproval),
 		}
 	}
 	// Setup the event sub after some events have been sent.
 	<-waitSent
-	contract := bind.NewBoundContract(tokenAddr, bindings.ABI.ERC20Token, cb, cb, cb)
+	contract := bind.NewBoundContract(tokenAddr, bindings.ABI.PerunToken, cb, cb, cb)
 	sub, err := subscription.NewEventSub(ctx, cb, contract, eFact, 10000)
 	require.NoError(t, err)
 	go ct.Stage("sub", func(t pkgtest.ConcT) {
@@ -120,7 +121,7 @@ func TestEventSub(t *testing.T) {
 			}
 			lastTx = e.Log.TxHash
 
-			want := &peruntoken.ERC20Approval{
+			want := &peruntoken.PeruntokenApproval{
 				Owner:   account.Address,
 				Spender: account.Address,
 				Value:   big.NewInt(int64(i + 1)),
@@ -158,7 +159,7 @@ func TestEventSub_Filter(t *testing.T) {
 	require.NoError(t, err)
 	ahAddr, err := ethchannel.DeployETHAssetholder(ctx, cb, adjAddr, *account)
 	require.NoError(t, err)
-	ah, err := assetholdereth.NewAssetHolder(ahAddr, cb)
+	ah, err := assetholdereth.NewAssetholdereth(ahAddr, cb)
 	require.NoError(t, err)
 	ct := pkgtest.NewConcurrent(t)
 
@@ -180,7 +181,7 @@ func TestEventSub_Filter(t *testing.T) {
 	eFact := func() *subscription.Event {
 		return &subscription.Event{
 			Name:   bindings.Events.AhDeposited,
-			Data:   new(assetholder.AssetHolderDeposited),
+			Data:   new(assetholder.AssetholderDeposited),
 			Filter: [][]interface{}{Filter},
 		}
 	}
@@ -195,7 +196,7 @@ func TestEventSub_Filter(t *testing.T) {
 	// Receive 1 event.
 	e := <-sink
 	require.NotNil(t, e)
-	want := &assetholder.AssetHolderDeposited{
+	want := &assetholder.AssetholderDeposited{
 		FundingID: fundingID,
 		Amount:    big.NewInt(int64(1)),
 	}
