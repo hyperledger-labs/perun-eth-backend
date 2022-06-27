@@ -27,6 +27,7 @@ import (
 	"github.com/perun-network/perun-eth-backend/channel/test"
 	ctest "github.com/perun-network/perun-eth-backend/client/test"
 	"github.com/perun-network/perun-eth-backend/wallet"
+
 	chtest "perun.network/go-perun/channel/test"
 	perunclient "perun.network/go-perun/client"
 	clienttest "perun.network/go-perun/client/test"
@@ -47,7 +48,7 @@ func TestHappyAliceBob(t *testing.T) {
 	)
 
 	s := test.NewSetup(t, rng, 2, ctest.BlockInterval, TxFinalityDepth)
-	setup = ctest.MakeRoleSetups(s, name)
+	setup = ctest.MakeRoleSetups(rng, s, name)
 
 	role[A] = clienttest.NewAlice(t, setup[A])
 	role[B] = clienttest.NewBob(t, setup[B])

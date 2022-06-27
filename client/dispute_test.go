@@ -26,6 +26,7 @@ import (
 
 	"github.com/perun-network/perun-eth-backend/channel/test"
 	ctest "github.com/perun-network/perun-eth-backend/client/test"
+
 	"perun.network/go-perun/client"
 	clienttest "perun.network/go-perun/client/test"
 	"perun.network/go-perun/log"
@@ -50,7 +51,7 @@ func TestDisputeMalloryCarol(t *testing.T) {
 	)
 
 	s := test.NewSetup(t, rng, 2, ctest.BlockInterval, TxFinalityDepth)
-	setup = ctest.MakeRoleSetups(s, name)
+	setup = ctest.MakeRoleSetups(rng, s, name)
 
 	role[A] = clienttest.NewMallory(t, setup[A])
 	role[B] = clienttest.NewCarol(t, setup[B])
@@ -68,8 +69,7 @@ func TestDisputeMalloryCarol(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), twoPartyTestTimeout)
 	defer cancel()
-	err := clienttest.ExecuteTwoPartyTest(ctx, role, execConfig)
-	require.NoError(t, err)
+	clienttest.ExecuteTwoPartyTest(ctx, t, role, execConfig)
 
 	// Assert correct final balances
 	netTransfer := big.NewInt(int64(execConfig.NumPayments[A])*execConfig.TxAmounts[A].Int64() -

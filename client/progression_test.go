@@ -23,8 +23,8 @@ import (
 	"github.com/perun-network/perun-eth-backend/channel/test"
 	ctest "github.com/perun-network/perun-eth-backend/client/test"
 	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/client"
 	clienttest "perun.network/go-perun/client/test"
@@ -38,7 +38,7 @@ func TestProgression(t *testing.T) {
 
 	names := [2]string{"Paul", "Paula"}
 	backendSetup := test.NewSetup(t, rng, 2, ctest.BlockInterval, TxFinalityDepth)
-	roleSetups := ctest.MakeRoleSetups(backendSetup, names)
+	roleSetups := ctest.MakeRoleSetups(rng, backendSetup, names)
 	clients := [2]clienttest.Executer{
 		clienttest.NewPaul(t, roleSetups[0]),
 		clienttest.NewPaula(t, roleSetups[1]),
@@ -59,8 +59,7 @@ func TestProgression(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), twoPartyTestTimeout)
 	defer cancel()
-	err := clienttest.ExecuteTwoPartyTest(ctx, clients, execConfig)
-	assert.NoError(t, err)
+	clienttest.ExecuteTwoPartyTest(ctx, t, clients, execConfig)
 }
 
 func deployMockApp(t *testing.T, s *test.Setup) wallet.Address {

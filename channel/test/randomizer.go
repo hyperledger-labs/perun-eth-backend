@@ -20,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	ethchannel "github.com/perun-network/perun-eth-backend/channel"
 	ethwtest "github.com/perun-network/perun-eth-backend/wallet/test"
+
 	"perun.network/go-perun/channel"
 )
 

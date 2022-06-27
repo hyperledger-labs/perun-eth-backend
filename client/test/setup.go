@@ -15,13 +15,16 @@
 package test
 
 import (
+	"math/rand"
 	"time"
 
 	ethctest "github.com/perun-network/perun-eth-backend/channel/test"
 	ethwtest "github.com/perun-network/perun-eth-backend/wallet/test"
+
 	clienttest "perun.network/go-perun/client/test"
 	"perun.network/go-perun/watcher/local"
 	"perun.network/go-perun/wire"
+	wiretest "perun.network/go-perun/wire/test"
 )
 
 const (
@@ -34,7 +37,7 @@ const (
 )
 
 // MakeRoleSetups creates a two party client test setup with the provided names.
-func MakeRoleSetups(s *ethctest.Setup, names [2]string) (setup [2]clienttest.RoleSetup) {
+func MakeRoleSetups(rng *rand.Rand, s *ethctest.Setup, names [2]string) (setup [2]clienttest.RoleSetup) {
 	bus := wire.NewLocalBus()
 	for i := 0; i < len(setup); i++ {
 		watcher, err := local.NewWatcher(s.Adjs[i])
@@ -43,7 +46,7 @@ func MakeRoleSetups(s *ethctest.Setup, names [2]string) (setup [2]clienttest.Rol
 		}
 		setup[i] = clienttest.RoleSetup{
 			Name:        names[i],
-			Identity:    s.Accs[i],
+			Identity:    wiretest.NewRandomAccount(rng),
 			Bus:         bus,
 			Funder:      s.Funders[i],
 			Adjudicator: s.Adjs[i],
