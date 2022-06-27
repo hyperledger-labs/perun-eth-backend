@@ -27,6 +27,7 @@ import (
 
 	"github.com/perun-network/perun-eth-backend/bindings/adjudicator"
 	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
+
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
 )
@@ -48,6 +49,9 @@ var (
 	abiState      abi.Type
 	abiProgress   abi.Method
 	abiRegister   abi.Method
+	// MaxBalance is the maximum amount of funds per asset that a user can possess.
+	// It is set to 2 ^ 256 - 1.
+	MaxBalance = abi.MaxUint256
 )
 
 func init() {
