@@ -255,6 +255,10 @@ func (c *ContractBackend) waitMined(ctx context.Context, tx *types.Transaction) 
 	return head, nil
 }
 
+func (c *ContractBackend) TxFinalityDepth() uint64 {
+	return c.txFinalityDepth
+}
+
 // Returns ((head.number - receipt.number) + 1) >= finalityDepth.
 func isFinal(receipt *types.Receipt, head *types.Header, _finalityDepth uint64) bool {
 	finalityDepth := new(big.Int)

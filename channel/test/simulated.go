@@ -29,10 +29,13 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/perun-network/perun-eth-backend/channel"
+	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
 	"github.com/pkg/errors"
 
+	perunchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/channel/test"
 	"perun.network/go-perun/log"
+	"perun.network/go-perun/wallet"
 	"polycry.pt/poly-go/sync"
 )
 
@@ -63,6 +66,13 @@ type SimulatedBackend struct {
 	mining        chan struct{} // Used for auto-mining blocks.
 	stoppedMining chan struct{} // For making sure that mining stopped.
 	commitTx      bool          // Whether each transaction is committed.
+}
+
+func (s *SimulatedBackend) Balance(p wallet.Address, _ perunchannel.Asset) perunchannel.Bal {
+	// FIXME
+	ctx := context.TODO()
+	bal, _ := s.BalanceAt(ctx, ethwallet.AsEthAddr(p), nil)
+	return bal
 }
 
 type (
