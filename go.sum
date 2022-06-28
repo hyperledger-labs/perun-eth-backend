@@ -657,6 +657,8 @@ perun.network/go-perun v0.10.1-0.20220608071013-7a3d451e5baf h1:+NvP3Cy9osCo4FBh
 perun.network/go-perun v0.10.1-0.20220608071013-7a3d451e5baf/go.mod h1:BGBZC3npkX457u87pjDd0NEIXr1a4dsH4H/YpLdGGe8=
 perun.network/go-perun v0.10.1-0.20220624064622-8d3b100ad527 h1:ZfkBsSCszWAvFnK0/FK3vuu3Nr9frGHp7TB66RCZQUQ=
 perun.network/go-perun v0.10.1-0.20220624064622-8d3b100ad527/go.mod h1:BGBZC3npkX457u87pjDd0NEIXr1a4dsH4H/YpLdGGe8=
+perun.network/go-perun v0.10.1-0.20220627124126-211eddfbfd81 h1:5pHxV7DZNXY7PyhdBal0qfqIiidaiOpdGhjzym3+q7Y=
+perun.network/go-perun v0.10.1-0.20220627124126-211eddfbfd81/go.mod h1:BGBZC3npkX457u87pjDd0NEIXr1a4dsH4H/YpLdGGe8=
 polycry.pt/poly-go v0.0.0-20211115212618-87069dfa360f/go.mod h1:XUBrNtqgEhN3EEOP/5gh7IBd3xVHKidCjXDZfl9+kMU=
 polycry.pt/poly-go v0.0.0-20220301085937-fb9d71b45a37 h1:iA5GzEa/hHfVlQpimEjPV09NATwHXxSjWNB0VVodtew=
 polycry.pt/poly-go v0.0.0-20220301085937-fb9d71b45a37/go.mod h1:XUBrNtqgEhN3EEOP/5gh7IBd3xVHKidCjXDZfl9+kMU=
