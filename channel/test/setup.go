@@ -21,6 +21,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/stretchr/testify/require"
 
 	ethchannel "github.com/perun-network/perun-eth-backend/channel"
@@ -72,9 +74,10 @@ func NewSimSetup(t *testing.T, rng *rand.Rand, txFinalityDepth uint64, blockInte
 		t.Cleanup(simBackend.StopMining)
 	}
 
+	signer := types.LatestSigner(params.AllEthashProtocolChanges)
 	contractBackend := ethchannel.NewContractBackend(
 		simBackend,
-		keystore.NewTransactor(*ksWallet, SimSigner),
+		keystore.NewTransactor(*ksWallet, signer),
 		txFinalityDepth,
 	)
 
@@ -108,21 +111,21 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 	require.NoError(t, err)
 	assetHolder, err := ethchannel.DeployETHAssetholder(ctx, *s.CB, adjudicator, s.TxSender.Account)
 	require.NoError(t, err)
-	s.Asset = ethchannel.NewAsset(s.SimBackend.Blockchain().Config().ChainID, assetHolder)
+	s.Asset = ethchannel.NewAsset(s.SimBackend.ChainID(), assetHolder)
 
 	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
-	require.NoErrorf(t, err, "initializing wallet from test keystore")
 	for i := 0; i < n; i++ {
 		s.Accs[i] = ksWallet.NewRandomAccount(rng).(*keystore.Account)
 		s.Parts[i] = s.Accs[i].Address()
 		s.SimBackend.FundAddress(ctx, s.Accs[i].Account.Address)
 		s.Recvs[i] = ksWallet.NewRandomAccount(rng).Address().(*ethwallet.Address)
+		signer := SignerForChainID(s.SimBackend.ChainID())
 		cb := ethchannel.NewContractBackend(
 			s.SimBackend,
-			keystore.NewTransactor(*ksWallet, SimSigner),
+			keystore.NewTransactor(*ksWallet, signer),
 			txFinalityDepth,
 		)
-		s.Funders[i] = ethchannel.NewFunder(cb)
+		s.Funders[i] = ethchannel.NewFunder(cb, ethchannel.MakeChainID(s.SimBackend.ChainID()))
 		require.True(t, s.Funders[i].RegisterAsset(*s.Asset, ethchannel.NewETHDepositor(), s.Accs[i].Account))
 		s.Adjs[i] = NewSimAdjudicator(cb, adjudicator, common.Address(*s.Recvs[i]), s.Accs[i].Account)
 	}

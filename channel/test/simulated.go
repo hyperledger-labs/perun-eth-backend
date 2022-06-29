@@ -51,10 +51,6 @@ const (
 	simBackendGasLimit = 8_000_000
 )
 
-// SimSigner is the latest types.Signer that can be used with the simulated
-// backend.
-var SimSigner = types.LatestSigner(params.AllEthashProtocolChanges)
-
 // SimulatedBackend provides a simulated ethereum blockchain for tests.
 type SimulatedBackend struct {
 	backends.SimulatedBackend
@@ -140,7 +136,8 @@ func (s *SimulatedBackend) FundAddress(ctx context.Context, addr common.Address)
 		To:        &addr,
 		Value:     test.MaxBalance,
 	}
-	tx, err := types.SignNewTx(s.faucetKey, SimSigner, txdata)
+	signer := SignerForChainID(s.ChainID())
+	tx, err := types.SignNewTx(s.faucetKey, signer, txdata)
 	if err != nil {
 		panic(err)
 	}
@@ -243,8 +240,17 @@ func (s *SimulatedBackend) Reorg(ctx context.Context, depth uint64, reorder Reor
 	return nil
 }
 
+func (s *SimulatedBackend) ChainID() *big.Int {
+	return s.Blockchain().Config().ChainID
+}
+
 // WithCommitTx controls whether the simulated backend should automatically
 // mine a block after a transaction was sent.
 func WithCommitTx(b bool) SimBackendOpt {
 	return func(sb *SimulatedBackend) { sb.commitTx = b }
+}
+
+// SignerForChainID returns the latest signer for the given chainID.
+func SignerForChainID(chainID *big.Int) types.Signer {
+	return types.LatestSignerForChainID(chainID)
 }

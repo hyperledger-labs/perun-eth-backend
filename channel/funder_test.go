@@ -54,7 +54,7 @@ func TestFunder_RegisterAsset_IsAssetRegistered(t *testing.T) {
 
 	for i := 0; i < n; i++ {
 		_, _, ok := funder.IsAssetRegistered(assets[i])
-		require.False(t, ok, "on a newly initialzed funder, no assets are registered")
+		require.False(t, ok, "on a newly initialized funder, no assets are registered")
 	}
 
 	for i := 0; i < n; i++ {
@@ -76,10 +76,10 @@ func newFunderSetup(rng *rand.Rand) (
 	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
 	cb := ethchannel.NewContractBackend(
 		simBackend,
-		keystore.NewTransactor(*ksWallet, test.SimSigner),
+		keystore.NewTransactor(*ksWallet, test.SignerForChainID(simBackend.ChainID())),
 		TxFinalityDepth,
 	)
-	funder := ethchannel.NewFunder(cb)
+	funder := ethchannel.NewFunder(cb, ethchannel.MakeChainID(simBackend.ChainID()))
 	assets := make([]ethchannel.Asset, n)
 	depositors := make([]ethchannel.Depositor, n)
 	accs := make([]accounts.Account, n)
@@ -385,7 +385,7 @@ func newNFunders(
 ) {
 	t.Helper()
 	simBackend := test.NewSimulatedBackend()
-	chainID := simBackend.Blockchain().Config().ChainID
+	chainID := simBackend.ChainID()
 	// Start the auto-mining of blocks.
 	simBackend.StartMining(blockInterval)
 	t.Cleanup(simBackend.StopMining)
@@ -397,7 +397,7 @@ func newNFunders(
 	simBackend.FundAddress(ctx, tokenAcc.Address)
 	cb := ethchannel.NewContractBackend(
 		simBackend,
-		keystore.NewTransactor(*ksWallet, test.SimSigner),
+		keystore.NewTransactor(*ksWallet, test.SignerForChainID(chainID)),
 		TxFinalityDepth,
 	)
 
@@ -425,7 +425,7 @@ func newNFunders(
 		err = fundERC20(ctx, cb, *tokenAcc, ethwallet.AsEthAddr(parts[i]), token, *asset2)
 		require.NoError(t, err)
 
-		funders[i] = ethchannel.NewFunder(cb)
+		funders[i] = ethchannel.NewFunder(cb, ethchannel.MakeChainID(simBackend.ChainID()))
 		require.True(t, funders[i].RegisterAsset(*asset1, ethchannel.NewETHDepositor(), acc))
 		require.True(t, funders[i].RegisterAsset(*asset2, ethchannel.NewERC20Depositor(token), acc))
 	}

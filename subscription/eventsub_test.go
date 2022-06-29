@@ -62,7 +62,7 @@ func TestEventSub(t *testing.T) {
 	sb.FundAddress(ctx, account.Address)
 	cb := ethchannel.NewContractBackend(
 		sb,
-		keystore.NewTransactor(*ksWallet, test.SimSigner),
+		keystore.NewTransactor(*ksWallet, test.SignerForChainID(sb.ChainID())),
 		txFinalityDepth,
 	)
 
@@ -150,7 +150,7 @@ func TestEventSub_Filter(t *testing.T) {
 	sb.FundAddress(ctx, account.Address)
 	cb := ethchannel.NewContractBackend(
 		sb,
-		keystore.NewTransactor(*ksWallet, test.SimSigner),
+		keystore.NewTransactor(*ksWallet, test.SignerForChainID(sb.ChainID())),
 		txFinalityDepth,
 	)
 

@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 	ethchannel "github.com/perun-network/perun-eth-backend/channel"
 	"github.com/perun-network/perun-eth-backend/wallet"
@@ -71,6 +70,12 @@ func SetupMultiLedgerTest(t *testing.T) ctest.MultiLedgerSetup {
 	c1 := setupClient(t, rng, l1, l2, bus)
 	c2 := setupClient(t, rng, l1, l2, bus)
 
+	// Fund accounts.
+	l1.simSetup.SimBackend.FundAddress(ctx, c1.accountAddress())
+	l1.simSetup.SimBackend.FundAddress(ctx, c2.accountAddress())
+	l2.simSetup.SimBackend.FundAddress(ctx, c1.accountAddress())
+	l2.simSetup.SimBackend.FundAddress(ctx, c2.accountAddress())
+
 	return ctest.MultiLedgerSetup{
 		Client1:        c1.Client,
 		Client2:        c2.Client,
@@ -88,11 +93,11 @@ type testLedger struct {
 	simSetup    *chtest.SimSetup
 	adjudicator common.Address
 	assetHolder common.Address
-	asset       ethchannel.Asset
+	asset       *ethchannel.Asset
 }
 
 func (l testLedger) ChainID() ethchannel.ChainID {
-	return ethchannel.MakeChainID(l.simSetup.SimBackend.Blockchain().Config().ChainID)
+	return ethchannel.MakeChainID(l.simSetup.SimBackend.ChainID())
 }
 
 func setupLedger(ctx context.Context, t *testing.T, rng *rand.Rand, chainID *big.Int) testLedger {
@@ -114,9 +119,8 @@ func setupLedger(ctx context.Context, t *testing.T, rng *rand.Rand, chainID *big
 		simSetup:    simSetup,
 		adjudicator: adjudicator,
 		assetHolder: assetHolder,
-		asset:       *asset,
+		asset:       asset,
 	}
-
 }
 
 // FIXME: This wrapper may should be implemented in go-perun.
@@ -126,6 +130,10 @@ type testClient struct {
 	adjL2 channel.Adjudicator
 }
 
+func (c *testClient) accountAddress() common.Address {
+	return wallet.AsEthAddr(c.WalletAddress)
+}
+
 func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) testClient {
 	require := require.New(t)
 
@@ -133,18 +141,14 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 	w := wtest.RandomWallet().(*keystore.Wallet)
 	acc := w.NewRandomAccount(rng).(*keystore.Account)
 
-	// FIXME: Necessary?
-	// Fund account.
-	//l1.simSetup.SimBackend.FundAddress(ctx, acc.Account.Address)
-
 	// Setup contract backends.
-	signer1 := types.NewEIP155Signer(l1.ChainID().Int)
+	signer1 := chtest.SignerForChainID(l1.ChainID().Int)
 	cb1 := ethchannel.NewContractBackend(
 		l1.simSetup.CB,
 		keystore.NewTransactor(*w, signer1),
 		l1.simSetup.CB.TxFinalityDepth(),
 	)
-	signer2 := types.NewEIP155Signer(l2.ChainID().Int)
+	signer2 := chtest.SignerForChainID(l2.ChainID().Int)
 	cb2 := ethchannel.NewContractBackend(
 		l2.simSetup.CB,
 		keystore.NewTransactor(*w, signer2),
@@ -153,19 +157,19 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 
 	// Setup funder.
 	multiFunder := multi.NewFunder()
-	funderL1 := ethchannel.NewFunder(cb1)
-	funderL2 := ethchannel.NewFunder(cb2)
-	registered := funderL1.RegisterAsset(l1.asset, ethchannel.NewETHDepositor(), acc.Account)
+	funderL1 := ethchannel.NewFunder(cb1, l1.ChainID())
+	funderL2 := ethchannel.NewFunder(cb2, l2.ChainID())
+	registered := funderL1.RegisterAsset(*l1.asset, ethchannel.NewETHDepositor(), acc.Account)
 	require.True(registered)
-	registered = funderL2.RegisterAsset(l2.asset, ethchannel.NewETHDepositor(), acc.Account)
+	registered = funderL2.RegisterAsset(*l2.asset, ethchannel.NewETHDepositor(), acc.Account)
 	require.True(registered)
 	multiFunder.RegisterFunder(l1.ChainID(), funderL1)
 	multiFunder.RegisterFunder(l2.ChainID(), funderL2)
 
 	// Setup adjudicator.
 	multiAdj := multi.NewAdjudicator()
-	adjL1 := chtest.NewSimAdjudicator(cb1, l1.adjudicator, acc.Account.Address, acc.Account)
-	adjL2 := chtest.NewSimAdjudicator(cb2, l2.adjudicator, acc.Account.Address, acc.Account)
+	adjL1 := chtest.NewSimAdjudicator(*l1.simSetup.CB, l1.adjudicator, acc.Account.Address, acc.Account)
+	adjL2 := chtest.NewSimAdjudicator(*l2.simSetup.CB, l2.adjudicator, acc.Account.Address, acc.Account)
 	multiAdj.RegisterAdjudicator(l1.ChainID(), adjL1)
 	multiAdj.RegisterAdjudicator(l2.ChainID(), adjL2)
 
@@ -174,10 +178,10 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 	require.NoError(err)
 
 	walletAddr := acc.Address().(*wallet.Address)
-	wireAddr := ethwire.Address{Address: walletAddr}
+	wireAddr := &ethwire.Address{Address: walletAddr}
 
 	c, err := client.New(
-		&wireAddr,
+		wireAddr,
 		bus,
 		multiFunder,
 		multiAdj,
