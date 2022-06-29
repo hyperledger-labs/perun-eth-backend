@@ -57,10 +57,12 @@ type Funder struct {
 	mtx sync.RWMutex
 
 	ContractBackend
+	// chainID specifies the chain the funder is living on.
+	chainID ChainID
 	// accounts associates an Account to every AssetIndex.
-	accounts map[Asset]accounts.Account
+	accounts map[AssetMapKey]accounts.Account
 	// depositors associates a Depositor to every AssetIndex.
-	depositors map[Asset]Depositor
+	depositors map[AssetMapKey]Depositor
 	log        log.Logger // structured logger
 }
 
@@ -70,11 +72,12 @@ const funderEventBufSize = 10
 var _ channel.Funder = (*Funder)(nil)
 
 // NewFunder creates a new ethereum funder.
-func NewFunder(backend ContractBackend) *Funder {
+func NewFunder(backend ContractBackend, chainID ChainID) *Funder {
 	return &Funder{
 		ContractBackend: backend,
-		accounts:        make(map[Asset]accounts.Account),
-		depositors:      make(map[Asset]Depositor),
+		chainID:         chainID,
+		accounts:        make(map[AssetMapKey]accounts.Account),
+		depositors:      make(map[AssetMapKey]Depositor),
 		log:             log.Default(),
 	}
 }
@@ -92,14 +95,14 @@ func (f *Funder) RegisterAsset(asset Asset, d Depositor, acc accounts.Account) b
 	f.mtx.Lock()
 	defer f.mtx.Unlock()
 
-	// Both the maps (f.accounts & f.assets) are always modified togethe such
+	// Both the maps (f.accounts & f.assets) are always modified together such
 	// that they will have the same set of keys. Hence, it is okay to check one
 	// of the two.
-	if _, ok := f.accounts[asset]; ok {
+	if _, ok := f.accounts[asset.MapKey()]; ok {
 		return false
 	}
-	f.accounts[asset] = acc
-	f.depositors[asset] = d
+	f.accounts[asset.MapKey()] = acc
+	f.depositors[asset.MapKey()] = d
 	return true
 }
 
@@ -113,8 +116,8 @@ func (f *Funder) IsAssetRegistered(asset Asset) (Depositor, accounts.Account, bo
 	// Both the maps (f.accounts & f.assets) are always modified togethe such
 	// that they will have the same set of keys. Hence, it is okay to check one
 	// of the two.
-	if acc, ok := f.accounts[asset]; ok {
-		return f.depositors[asset], acc, true
+	if acc, ok := f.accounts[asset.MapKey()]; ok {
+		return f.depositors[asset.MapKey()], acc, true
 	}
 	return nil, accounts.Account{}, false
 }
@@ -154,7 +157,7 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 	// Wait for the TXs to be mined.
 	for a, asset := range request.State.Assets {
 		for i, tx := range txs[a] {
-			acc := f.accounts[*asset.(*Asset)]
+			acc := f.accounts[(*asset.(*Asset)).MapKey()]
 			if _, err := f.ConfirmTransaction(ctx, tx, acc); err != nil {
 				if errors.Is(err, errTxTimedOut) {
 					err = client.NewTxTimedoutError(Fund.String(), tx.Hash().Hex(), err.Error())
@@ -234,11 +237,11 @@ func (f *Funder) sendFundingTx(ctx context.Context, request channel.FundingReq, 
 // deposit deposits funds for one funding-ID by calling the associated Depositor.
 // Returns an error if no matching Depositor or Account could be found.
 func (f *Funder) deposit(ctx context.Context, bal *big.Int, asset Asset, fundingID [32]byte) (types.Transactions, error) {
-	depositor, ok := f.depositors[asset]
+	depositor, ok := f.depositors[asset.MapKey()]
 	if !ok {
 		return nil, errors.Errorf("could not find Depositor for asset #%d", asset)
 	}
-	acc, ok := f.accounts[asset]
+	acc, ok := f.accounts[asset.MapKey()]
 	if !ok {
 		return nil, errors.Errorf("could not find account for asset #%d", asset)
 	}
@@ -408,7 +411,7 @@ func (f *Funder) NumTX(req channel.FundingReq) (sum uint32, err error) {
 	defer f.mtx.RUnlock()
 
 	for _, a := range req.State.Assets {
-		depositor, ok := f.depositors[*a.(*Asset)]
+		depositor, ok := f.depositors[(*a.(*Asset)).MapKey()]
 		if !ok {
 			return 0, errors.Errorf("could not find Depositor for asset #%d", a)
 		}
