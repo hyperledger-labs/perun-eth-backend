@@ -22,5 +22,5 @@ import (
 
 func TestMultiLedgerDispute(t *testing.T) {
 	mlt := SetupMultiLedgerTest(t)
-	ctest.TestMultiLedgerDispute(t, mlt, challengeDuration)
+	ctest.TestMultiLedgerDispute(t, mlt, testDuration, challengeDuration)
 }

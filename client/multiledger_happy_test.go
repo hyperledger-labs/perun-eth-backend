@@ -42,15 +42,15 @@ import (
 )
 
 const (
-	challengeDuration = 10
-	testDuration      = 10 * time.Second
+	challengeDuration = 15
+	testDuration      = 20 * time.Second
 	txFinalityDepth   = 1
 	blockInterval     = 100 * time.Millisecond
 )
 
 func TestMultiLedgerHappy(t *testing.T) {
 	mlt := SetupMultiLedgerTest(t)
-	ctest.TestMultiLedgerHappy(t, mlt, challengeDuration)
+	ctest.TestMultiLedgerHappy(t, mlt, testDuration, challengeDuration)
 }
 
 func SetupMultiLedgerTest(t *testing.T) ctest.MultiLedgerSetup {
@@ -80,7 +80,7 @@ func SetupMultiLedgerTest(t *testing.T) ctest.MultiLedgerSetup {
 		Client1:        c1.Client,
 		Client2:        c2.Client,
 		Adjudicator1:   c1.adjL1,
-		Adjudicator2:   c2.adjL2,
+		Adjudicator2:   c1.adjL2,
 		Asset1:         l1.asset,
 		Asset2:         l2.asset,
 		BalanceReader1: l1.simSetup.SimBackend,
