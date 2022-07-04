@@ -27,19 +27,22 @@ import (
 	"github.com/perun-network/perun-eth-backend/bindings"
 	"github.com/perun-network/perun-eth-backend/bindings/adjudicator"
 	cherrors "github.com/perun-network/perun-eth-backend/channel/errors"
+
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/client"
 	"perun.network/go-perun/log"
 	psync "polycry.pt/poly-go/sync"
 )
 
-// compile time check that we implement the perun adjudicator interface.
+// compile time check that we implement the Perun adjudicator interface.
 var _ channel.Adjudicator = (*Adjudicator)(nil)
 
 // The Adjudicator struct implements the channel.Adjudicator interface
 // It provides all functionality to close a channel.
 type Adjudicator struct {
 	ContractBackend
+	// chainID specifies the chain the funder is living on.
+	chainID  ChainID
 	contract *adjudicator.Adjudicator
 	bound    *bind.BoundContract
 	// The address to which we send all funds.
@@ -54,7 +57,7 @@ type Adjudicator struct {
 
 // NewAdjudicator creates a new ethereum adjudicator. The receiver is the
 // on-chain address that receives withdrawals.
-func NewAdjudicator(backend ContractBackend, contract common.Address, receiver common.Address, txSender accounts.Account) *Adjudicator {
+func NewAdjudicator(backend ContractBackend, chainID ChainID, contract common.Address, receiver common.Address, txSender accounts.Account) *Adjudicator {
 	contr, err := adjudicator.NewAdjudicator(contract, backend)
 	if err != nil {
 		panic("Could not create a new instance of adjudicator")
@@ -62,6 +65,7 @@ func NewAdjudicator(backend ContractBackend, contract common.Address, receiver c
 	bound := bind.NewBoundContract(contract, bindings.ABI.Adjudicator, backend, backend, backend)
 	return &Adjudicator{
 		ContractBackend: backend,
+		chainID:         chainID,
 		contract:        contr,
 		bound:           bound,
 		Receiver:        receiver,

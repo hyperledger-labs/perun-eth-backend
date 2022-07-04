@@ -24,6 +24,7 @@ import (
 	"github.com/pkg/errors"
 
 	ethchannel "github.com/perun-network/perun-eth-backend/channel"
+
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/log"
 )
@@ -45,7 +46,7 @@ func NewSimAdjudicator(backend ethchannel.ContractBackend, contract common.Addre
 		panic("SimAdjudicator can only be created with a SimulatedBackend.")
 	}
 	return &SimAdjudicator{
-		Adjudicator: *ethchannel.NewAdjudicator(backend, contract, receiver, acc),
+		Adjudicator: *ethchannel.NewAdjudicator(backend, ethchannel.MakeChainID(sb.ChainID()), contract, receiver, acc),
 		sb:          sb,
 	}
 }
