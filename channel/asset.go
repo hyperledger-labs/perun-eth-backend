@@ -119,6 +119,27 @@ func (a Asset) Equal(b channel.Asset) bool {
 	return a.EthAddress() == ethAsset.EthAddress()
 }
 
+// FilterAssets filters the assets for the given chainID.
+func FilterAssets(assets []channel.Asset, chainID ChainID) []channel.Asset {
+	var filtered []channel.Asset
+	for _, asset := range assets {
+		if a := asset.(*Asset); a.ChainID.MapKey() == chainID.MapKey() {
+			filtered = append(filtered, a)
+		}
+	}
+	return filtered
+}
+
+// GetAssetIdx returns the index of asset in the assets array.
+func GetAssetIdx(assets []channel.Asset, asset channel.Asset) channel.Index {
+	for i, a := range assets {
+		if a.Equal(asset) {
+			return channel.Index(i)
+		}
+	}
+	panic("asset not found")
+}
+
 var _ channel.Asset = new(Asset)
 
 // ValidateAssetHolderETH checks if the bytecode at the given asset holder ETH

@@ -152,10 +152,11 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 	}()
 
 	// Fund each asset, saving the TX in `txs` and the errors in `errg`.
-	txs, errg := f.fundAssets(ctx, channelID, request)
+	assets := FilterAssets(request.State.Assets, f.chainID)
+	txs, errg := f.fundAssets(ctx, assets, channelID, request)
 
 	// Wait for the TXs to be mined.
-	for a, asset := range request.State.Assets {
+	for a, asset := range assets {
 		for i, tx := range txs[a] {
 			acc := f.accounts[(*asset.(*Asset)).MapKey()]
 			if _, err := f.ConfirmTransaction(ctx, tx, acc); err != nil {
@@ -188,35 +189,36 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 // fundAssets funds each asset of the funding agreement in the `req`.
 // Sends the transactions and returns them. Wait on the returned gatherer
 // to ensure that all `funding` events were received.
-func (f *Funder) fundAssets(ctx context.Context, channelID channel.ID, req channel.FundingReq) ([]types.Transactions, *perror.Gatherer) {
-	txs := make([]types.Transactions, len(req.State.Assets))
+func (f *Funder) fundAssets(ctx context.Context, assets []channel.Asset, channelID channel.ID, req channel.FundingReq) ([]types.Transactions, *perror.Gatherer) {
+	txs := make([]types.Transactions, len(assets))
 	errg := perror.NewGatherer()
 	fundingIDs := FundingIDs(channelID, req.Params.Parts...)
 
-	for index, asset := range req.State.Assets {
+	for i, asset := range assets {
 		// Bind contract.
-		contract := bindAssetHolder(f.ContractBackend, asset, channel.Index(index))
+		assetIdx := GetAssetIdx(req.State.Assets, asset)
+		contract := bindAssetHolder(f.ContractBackend, asset, assetIdx)
 		// Wait for the funding event.
 		errg.Go(func() error {
-			return f.waitForFundingConfirmation(ctx, req, contract, fundingIDs)
+			ert := f.waitForFundingConfirmation(ctx, req, contract, fundingIDs)
+			return ert
 		})
 
 		// Send the funding TX.
-		tx, err := f.sendFundingTx(ctx, req, contract, fundingIDs[req.Idx])
+		tx, err := f.sendFundingTx(ctx, asset, req, contract, fundingIDs[req.Idx])
 		if err != nil {
 			f.log.WithField("asset", asset).WithError(err).Error("Could not fund asset")
 			errg.Add(errors.WithMessage(err, "funding asset"))
 			continue
 		}
-		txs[index] = tx
+		txs[i] = tx
 	}
 	return txs, errg
 }
 
 // sendFundingTx sends and returns the TXs that are needed to fulfill the
 // funding request. It is idempotent.
-func (f *Funder) sendFundingTx(ctx context.Context, request channel.FundingReq, contract assetHolder, fundingID [32]byte) (txs []*types.Transaction, fatal error) {
-	asset := request.State.Assets[contract.assetIndex].(*Asset)
+func (f *Funder) sendFundingTx(ctx context.Context, asset channel.Asset, request channel.FundingReq, contract assetHolder, fundingID [32]byte) (txs []*types.Transaction, fatal error) {
 	bal := request.Agreement[contract.assetIndex][request.Idx]
 	if bal == nil || bal.Sign() <= 0 {
 		f.log.WithFields(log.Fields{"channel": request.Params.ID(), "idx": request.Idx}).Debug("Skipped zero funding.")
@@ -231,7 +233,7 @@ func (f *Funder) sendFundingTx(ctx context.Context, request channel.FundingReq, 
 		return nil, nil
 	}
 
-	return f.deposit(ctx, bal, *asset, fundingID)
+	return f.deposit(ctx, bal, *asset.(*Asset), fundingID)
 }
 
 // deposit deposits funds for one funding-ID by calling the associated Depositor.
