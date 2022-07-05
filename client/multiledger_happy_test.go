@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package client
+package client_test
 
 import (
 	"context"
@@ -43,14 +43,17 @@ import (
 
 const (
 	challengeDuration = 15
-	testDuration      = 20 * time.Second
+	testDuration      = 30 * time.Second
 	txFinalityDepth   = 1
-	blockInterval     = 100 * time.Millisecond
+	blockInterval     = 300 * time.Millisecond
 )
 
 func TestMultiLedgerHappy(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), testDuration)
+	defer cancel()
+
 	mlt := SetupMultiLedgerTest(t)
-	ctest.TestMultiLedgerHappy(t, mlt, testDuration, challengeDuration)
+	ctest.TestMultiLedgerHappy(ctx, t, mlt, challengeDuration)
 }
 
 func SetupMultiLedgerTest(t *testing.T) ctest.MultiLedgerSetup {
@@ -71,18 +74,29 @@ func SetupMultiLedgerTest(t *testing.T) ctest.MultiLedgerSetup {
 	c2 := setupClient(t, rng, l1, l2, bus)
 
 	// Fund accounts.
-	l1.simSetup.SimBackend.FundAddress(ctx, c1.accountAddress())
-	l1.simSetup.SimBackend.FundAddress(ctx, c2.accountAddress())
-	l2.simSetup.SimBackend.FundAddress(ctx, c1.accountAddress())
-	l2.simSetup.SimBackend.FundAddress(ctx, c2.accountAddress())
+	l1.simSetup.SimBackend.FundAddress(ctx, wallet.AsEthAddr(c1.WalletAddress))
+	l1.simSetup.SimBackend.FundAddress(ctx, wallet.AsEthAddr(c2.WalletAddress))
+	l2.simSetup.SimBackend.FundAddress(ctx, wallet.AsEthAddr(c1.WalletAddress))
+	l2.simSetup.SimBackend.FundAddress(ctx, wallet.AsEthAddr(c2.WalletAddress))
 
 	return ctest.MultiLedgerSetup{
-		Client1:        c1.Client,
-		Client2:        c2.Client,
-		Adjudicator1:   c1.adjL1,
-		Adjudicator2:   c1.adjL2,
-		Asset1:         l1.asset,
-		Asset2:         l2.asset,
+		Client1: c1,
+		Client2: c2,
+		Asset1:  l1.asset,
+		Asset2:  l2.asset,
+		InitBalances: channel.Balances{
+			{etherToWei(10), etherToWei(0)}, // Asset 1.
+			{etherToWei(0), etherToWei(10)}, // Asset 2.
+		},
+		UpdateBalances1: channel.Balances{
+			{etherToWei(5), etherToWei(5)}, // Asset 1.
+			{etherToWei(3), etherToWei(7)}, // Asset 2.
+		},
+		UpdateBalances2: channel.Balances{
+			{etherToWei(1), etherToWei(9)}, // Asset 1.
+			{etherToWei(5), etherToWei(5)}, // Asset 2.
+		},
+		BalanceDelta:   etherToWei(0.00012),
 		BalanceReader1: l1.simSetup.SimBackend,
 		BalanceReader2: l2.simSetup.SimBackend,
 	}
@@ -123,18 +137,8 @@ func setupLedger(ctx context.Context, t *testing.T, rng *rand.Rand, chainID *big
 	}
 }
 
-// FIXME: This wrapper may should be implemented in go-perun.
-type testClient struct {
-	ctest.Client
-	adjL1 channel.Adjudicator
-	adjL2 channel.Adjudicator
-}
-
-func (c *testClient) accountAddress() common.Address {
-	return wallet.AsEthAddr(c.WalletAddress)
-}
-
-func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) testClient {
+func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) ctest.Client {
+	t.Helper()
 	require := require.New(t)
 
 	// Setup wallet and account.
@@ -190,14 +194,18 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 	)
 	require.NoError(err)
 
-	return testClient{
-		Client: ctest.Client{
-			Client:        c,
-			WireAddress:   wireAddr,
-			WalletAddress: walletAddr,
-			Events:        make(chan channel.AdjudicatorEvent),
-		},
-		adjL1: adjL1,
-		adjL2: adjL2,
+	return ctest.Client{
+		Client:        c,
+		Adjudicator1:  adjL1,
+		Adjudicator2:  adjL2,
+		WireAddress:   wireAddr,
+		WalletAddress: walletAddr,
+		Events:        make(chan channel.AdjudicatorEvent),
 	}
+}
+
+func etherToWei(eth float64) *big.Int {
+	weiFloat := new(big.Float).Mul(big.NewFloat(eth), new(big.Float).SetFloat64(params.Ether))
+	wei, _ := weiFloat.Int(nil)
+	return wei
 }

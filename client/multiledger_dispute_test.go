@@ -12,15 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package client
+package client_test
 
 import (
+	"context"
 	"testing"
 
 	ctest "perun.network/go-perun/client/test"
 )
 
 func TestMultiLedgerDispute(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), testDuration)
+	defer cancel()
+
 	mlt := SetupMultiLedgerTest(t)
-	ctest.TestMultiLedgerDispute(t, mlt, testDuration, challengeDuration)
+	ctest.TestMultiLedgerDispute(ctx, t, mlt, challengeDuration)
 }
