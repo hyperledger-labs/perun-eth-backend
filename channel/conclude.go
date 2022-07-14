@@ -98,6 +98,70 @@ func (a *Adjudicator) ensureConcluded(ctx context.Context, req channel.Adjudicat
 	}
 }
 
+// checkConcludedState checks whether the concluded state is equal to the
+// expected state.
+func (a *Adjudicator) checkConcludedState(
+	ctx context.Context,
+	req channel.AdjudicatorReq,
+	subStates channel.StateMap,
+) error {
+	states := channel.MakeStateMap()
+	states.Add(req.Tx.State)
+	for _, v := range subStates {
+		states.Add(v)
+	}
+
+	events := make(chan *subscription.Event, adjEventBuffSize)
+	subErr := make(chan error, 1)
+	for id := range states {
+		sub, err := subscription.Subscribe(
+			ctx,
+			a.ContractBackend,
+			a.bound,
+			updateEventType(id),
+			startBlockOffset,
+			a.txFinalityDepth,
+		)
+		if err != nil {
+			return errors.WithMessage(err, "subscribing")
+		}
+		defer sub.Close()
+		go func() {
+			subErr <- sub.Read(ctx, events)
+		}()
+	}
+
+	// Wait for concluded events and check state version.
+	validated := make(map[channel.ID]bool, len(states))
+	for {
+		select {
+		case e := <-events:
+			switch adjEvent := e.Data.(type) {
+			case *adjudicator.AdjudicatorChannelUpdate:
+				if adjEvent.Phase == phaseConcluded {
+					id := adjEvent.ChannelID
+					v := states[id].Version
+					if adjEvent.Version != v {
+						return errors.Errorf("wrong version: expected %v, got %v", v, adjEvent.Version)
+					}
+					validated[id] = true
+					log.Debugf("validated: %v/%v", len(validated), len(states))
+					if len(validated) == len(states) {
+						return nil
+					}
+				}
+			}
+		case <-ctx.Done():
+			return errors.Wrap(ctx.Err(), "context cancelled")
+		case err := <-subErr:
+			if err != nil {
+				return errors.WithMessage(err, "subscription error")
+			}
+			return errors.New("subscription closed")
+		}
+	}
+}
+
 func (a *Adjudicator) waitConcludedSecondary(ctx context.Context, req channel.AdjudicatorReq, events chan *subscription.Event) (concluded bool, err error) {
 	// In final Register calls, as the non-initiator, we optimistically wait for
 	// the other party to send the transaction first for
