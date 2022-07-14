@@ -1,0 +1,58 @@
+package client_test
+
+import (
+	"context"
+	"math/big"
+	"testing"
+
+	ethchanneltest "github.com/perun-network/perun-eth-backend/channel/test"
+	ethclienttest "github.com/perun-network/perun-eth-backend/client/test"
+	"perun.network/go-perun/apps/payment"
+	chtest "perun.network/go-perun/channel/test"
+	"perun.network/go-perun/client"
+	clienttest "perun.network/go-perun/client/test"
+	"perun.network/go-perun/wire"
+	pkgtest "polycry.pt/poly-go/test"
+)
+
+func TestSubChannelHappy(t *testing.T) {
+	rng := pkgtest.Prng(t)
+	const A, B = 0, 1 // Indices of Alice and Bob
+	s := ethchanneltest.NewSetup(t, rng, 2, ethclienttest.BlockInterval, TxFinalityDepth)
+	setups := ethclienttest.MakeRoleSetups(rng, s, [2]string{"Susie", "Tim"})
+	roles := [2]clienttest.Executer{
+		clienttest.NewSusie(t, setups[A]),
+		clienttest.NewTim(t, setups[B]),
+	}
+	// enable stages synchronization
+	stages := roles[A].EnableStages()
+	roles[B].SetStages(stages)
+
+	cfg := clienttest.NewSusieTimExecConfig(
+		clienttest.MakeBaseExecConfig(
+			[2]wire.Address{setups[A].Identity.Address(), setups[B].Identity.Address()},
+			s.Asset,
+			[2]*big.Int{big.NewInt(100), big.NewInt(100)},
+			client.WithoutApp(),
+		),
+		2,
+		3,
+		[][2]*big.Int{
+			{big.NewInt(10), big.NewInt(10)},
+			{big.NewInt(5), big.NewInt(5)},
+		},
+		[][2]*big.Int{
+			{big.NewInt(3), big.NewInt(3)},
+			{big.NewInt(2), big.NewInt(2)},
+			{big.NewInt(1), big.NewInt(1)},
+		},
+		client.WithApp(
+			chtest.NewRandomAppAndData(rng, chtest.WithAppRandomizer(new(payment.Randomizer))),
+		),
+		big.NewInt(1),
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), twoPartyTestTimeout)
+	defer cancel()
+	clienttest.ExecuteTwoPartyTest(ctx, t, roles, cfg)
+}
