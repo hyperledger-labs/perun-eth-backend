@@ -17,7 +17,7 @@ import (
 
 func TestSubChannelHappy(t *testing.T) {
 	rng := pkgtest.Prng(t)
-	const A, B = 0, 1 // Indices of Alice and Bob
+	const A, B = 0, 1 // Indices of clients.
 	s := ethchanneltest.NewSetup(t, rng, 2, ethclienttest.BlockInterval, TxFinalityDepth)
 	setups := ethclienttest.MakeRoleSetups(rng, s, [2]string{"Susie", "Tim"})
 	roles := [2]clienttest.Executer{
@@ -51,6 +51,37 @@ func TestSubChannelHappy(t *testing.T) {
 		),
 		big.NewInt(1),
 	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), twoPartyTestTimeout)
+	defer cancel()
+	clienttest.ExecuteTwoPartyTest(ctx, t, roles, cfg)
+}
+
+func TestSubChannelDispute(t *testing.T) {
+	rng := pkgtest.Prng(t)
+
+	const A, B = 0, 1 // Indices of clients.
+	s := ethchanneltest.NewSetup(t, rng, 2, ethclienttest.BlockInterval, TxFinalityDepth)
+	setups := ethclienttest.MakeRoleSetups(rng, s, [2]string{"DisputeSusie", "DisputeTim"})
+	roles := [2]clienttest.Executer{
+		clienttest.NewDisputeSusie(t, setups[A]),
+		clienttest.NewDisputeTim(t, setups[B]),
+	}
+	// enable stages synchronization
+	stages := roles[A].EnableStages()
+	roles[B].SetStages(stages)
+
+	baseCfg := clienttest.MakeBaseExecConfig(
+		[2]wire.Address{setups[A].Identity.Address(), setups[B].Identity.Address()},
+		s.Asset,
+		[2]*big.Int{big.NewInt(100), big.NewInt(100)},
+		client.WithoutApp(),
+	)
+	cfg := &clienttest.DisputeSusieTimExecConfig{
+		BaseExecConfig:  baseCfg,
+		SubChannelFunds: [2]*big.Int{big.NewInt(10), big.NewInt(10)},
+		TxAmount:        big.NewInt(1),
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), twoPartyTestTimeout)
 	defer cancel()
