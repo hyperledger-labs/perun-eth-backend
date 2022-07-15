@@ -24,32 +24,43 @@ func TestSubChannelHappy(t *testing.T) {
 		clienttest.NewSusie(t, setups[A]),
 		clienttest.NewTim(t, setups[B]),
 	}
-	// enable stages synchronization
+	// Enable stage synchronization.
 	stages := roles[A].EnableStages()
 	roles[B].SetStages(stages)
 
-	cfg := clienttest.NewSusieTimExecConfig(
-		clienttest.MakeBaseExecConfig(
-			[2]wire.Address{setups[A].Identity.Address(), setups[B].Identity.Address()},
-			s.Asset,
-			[2]*big.Int{big.NewInt(100), big.NewInt(100)},
-			client.WithoutApp(),
-		),
-		2,
-		3,
-		[][2]*big.Int{
+	// Build configuration.
+	baseCfg := clienttest.MakeBaseExecConfig(
+		[2]wire.Address{setups[A].Identity.Address(), setups[B].Identity.Address()},
+		s.Asset,
+		[2]*big.Int{big.NewInt(100), big.NewInt(100)},
+		client.WithoutApp(),
+	)
+	const (
+		numSubChannels    = 2
+		numSubSubChannels = 3
+	)
+	var (
+		subChannelFunds = [][2]*big.Int{
 			{big.NewInt(10), big.NewInt(10)},
 			{big.NewInt(5), big.NewInt(5)},
-		},
-		[][2]*big.Int{
+		}
+		subSubChannelFunds = [][2]*big.Int{
 			{big.NewInt(3), big.NewInt(3)},
 			{big.NewInt(2), big.NewInt(2)},
 			{big.NewInt(1), big.NewInt(1)},
-		},
+		}
+		txAmount = big.NewInt(1)
+	)
+	cfg := clienttest.NewSusieTimExecConfig(
+		baseCfg,
+		numSubChannels,
+		numSubSubChannels,
+		subChannelFunds,
+		subSubChannelFunds,
 		client.WithApp(
 			chtest.NewRandomAppAndData(rng, chtest.WithAppRandomizer(new(payment.Randomizer))),
 		),
-		big.NewInt(1),
+		txAmount,
 	)
 
 	ctx, cancel := context.WithTimeout(context.Background(), twoPartyTestTimeout)
@@ -67,7 +78,7 @@ func TestSubChannelDispute(t *testing.T) {
 		clienttest.NewDisputeSusie(t, setups[A]),
 		clienttest.NewDisputeTim(t, setups[B]),
 	}
-	// enable stages synchronization
+	// Enable stage synchronization.
 	stages := roles[A].EnableStages()
 	roles[B].SetStages(stages)
 

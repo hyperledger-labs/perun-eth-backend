@@ -111,6 +111,7 @@ func (a *Adjudicator) checkConcludedState(
 		states.Add(v)
 	}
 
+	// Start event subscription for each channel.
 	events := make(chan *subscription.Event, adjEventBuffSize)
 	subErr := make(chan error, 1)
 	for id := range states {
