@@ -64,10 +64,10 @@ type SimulatedBackend struct {
 	commitTx      bool          // Whether each transaction is committed.
 }
 
-func (s *SimulatedBackend) Balance(p wallet.Address, _ perunchannel.Asset) perunchannel.Bal {
-	// FIXME
-	ctx := context.TODO()
-	bal, _ := s.BalanceAt(ctx, ethwallet.AsEthAddr(p), nil)
+// Balance returns the balance of the given address on the simulated backend.
+func (s *SimulatedBackend) Balance(addr wallet.Address, _ perunchannel.Asset) perunchannel.Bal {
+	ctx := context.Background()
+	bal, _ := s.BalanceAt(ctx, ethwallet.AsEthAddr(addr), nil)
 	return bal
 }
 
@@ -240,6 +240,7 @@ func (s *SimulatedBackend) Reorg(ctx context.Context, depth uint64, reorder Reor
 	return nil
 }
 
+// ChainID returns the chainID of the underlying blockchain.
 func (s *SimulatedBackend) ChainID() *big.Int {
 	return s.Blockchain().Config().ChainID
 }

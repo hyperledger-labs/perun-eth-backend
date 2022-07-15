@@ -255,6 +255,7 @@ func (c *ContractBackend) waitMined(ctx context.Context, tx *types.Transaction) 
 	return head, nil
 }
 
+// TxFinalityDepth returns the transaction finality depth of the contract backend.
 func (c *ContractBackend) TxFinalityDepth() uint64 {
 	return c.txFinalityDepth
 }

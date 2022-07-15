@@ -158,7 +158,7 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 	// Wait for the TXs to be mined.
 	for a, asset := range assets {
 		for i, tx := range txs[a] {
-			acc := f.accounts[(*asset.(*Asset)).MapKey()]
+			acc := f.accounts[asset.(*Asset).MapKey()]
 			if _, err := f.ConfirmTransaction(ctx, tx, acc); err != nil {
 				if errors.Is(err, errTxTimedOut) {
 					err = client.NewTxTimedoutError(Fund.String(), tx.Hash().Hex(), err.Error())
@@ -196,7 +196,7 @@ func (f *Funder) fundAssets(ctx context.Context, assets []channel.Asset, channel
 
 	for i, asset := range assets {
 		// Bind contract.
-		assetIdx := GetAssetIdx(req.State.Assets, asset)
+		assetIdx := AssetIdx(req.State.Assets, asset)
 		contract := bindAssetHolder(f.ContractBackend, asset, assetIdx)
 		// Wait for the funding event.
 		errg.Go(func() error {
@@ -413,7 +413,7 @@ func (f *Funder) NumTX(req channel.FundingReq) (sum uint32, err error) {
 	defer f.mtx.RUnlock()
 
 	for _, a := range req.State.Assets {
-		depositor, ok := f.depositors[(*a.(*Asset)).MapKey()]
+		depositor, ok := f.depositors[a.(*Asset).MapKey()]
 		if !ok {
 			return 0, errors.Errorf("could not find Depositor for asset #%d", a)
 		}

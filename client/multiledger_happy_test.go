@@ -100,7 +100,6 @@ func SetupMultiLedgerTest(t *testing.T) ctest.MultiLedgerSetup {
 		BalanceReader1: l1.simSetup.SimBackend,
 		BalanceReader2: l2.simSetup.SimBackend,
 	}
-
 }
 
 type testLedger struct {

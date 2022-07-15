@@ -29,6 +29,7 @@ import (
 	ethchannel "github.com/perun-network/perun-eth-backend/channel"
 	"github.com/perun-network/perun-eth-backend/channel/test"
 	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
+
 	"perun.network/go-perun/wallet"
 	pkgtest "polycry.pt/poly-go/test"
 )
@@ -83,7 +84,7 @@ func Test_NewTransactor(t *testing.T) {
 	defer cancel()
 	tests := []struct {
 		name     string
-		ctx      context.Context
+		ctx      context.Context //nolint:containedctx // This is just done for testing. Could be revised.
 		gasLimit uint64
 	}{
 		{"Test without context", nil, uint64(0)},

@@ -41,6 +41,7 @@ type ChainID struct {
 	*big.Int
 }
 
+// MakeChainID makes a ChainID for the given id.
 func MakeChainID(id *big.Int) ChainID {
 	if id.Sign() < 0 {
 		panic("must not be smaller than zero")
@@ -48,30 +49,34 @@ func MakeChainID(id *big.Int) ChainID {
 	return ChainID{id}
 }
 
+// UnmarshalBinary unmarshals the chainID from its binary representation.
 func (id *ChainID) UnmarshalBinary(data []byte) error {
 	id.Int = new(big.Int).SetBytes(data)
 	return nil
 }
 
+// MarshalBinary marshals the chainID into its binary representation.
 func (id ChainID) MarshalBinary() (data []byte, err error) {
 	return id.Bytes(), nil
 }
 
+// MapKey returns the asset's map key representation.
 func (id ChainID) MapKey() multi.LedgerIDMapKey {
 	return multi.LedgerIDMapKey(id.Int.String())
 }
 
 type (
-
 	// Asset is an Ethereum asset.
 	Asset struct {
 		ChainID     ChainID
 		AssetHolder wallet.Address
 	}
 
+	// AssetMapKey is the map key representation of an asset.
 	AssetMapKey string
 )
 
+// MapKey returns the asset's map key representation.
 func (a Asset) MapKey() AssetMapKey {
 	d, err := a.MarshalBinary()
 	if err != nil {
@@ -81,6 +86,7 @@ func (a Asset) MapKey() AssetMapKey {
 	return AssetMapKey(d)
 }
 
+// MarshalBinary marshals the asset into its binary representation.
 func (a Asset) MarshalBinary() ([]byte, error) {
 	var buf bytes.Buffer
 	err := perunio.Encode(&buf, &a.AssetHolder, a.ChainID)
@@ -90,11 +96,13 @@ func (a Asset) MarshalBinary() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// UnmarshalBinary unmarshals the asset from its binary representation.
 func (a Asset) UnmarshalBinary(data []byte) error {
 	buf := bytes.NewBuffer(data)
 	return perunio.Decode(buf, &a.ChainID, &a.AssetHolder)
 }
 
+// LedgerID returns the ledger ID the asset lives on.
 func (a Asset) LedgerID() multi.LedgerID {
 	return &a.ChainID
 }
@@ -130,8 +138,8 @@ func FilterAssets(assets []channel.Asset, chainID ChainID) []channel.Asset {
 	return filtered
 }
 
-// GetAssetIdx returns the index of asset in the assets array.
-func GetAssetIdx(assets []channel.Asset, asset channel.Asset) channel.Index {
+// AssetIdx returns the index of asset in the assets array.
+func AssetIdx(assets []channel.Asset, asset channel.Asset) channel.Index {
 	for i, a := range assets {
 		if a.Equal(asset) {
 			return channel.Index(i)
