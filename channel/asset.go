@@ -57,6 +57,9 @@ func (id *ChainID) UnmarshalBinary(data []byte) error {
 
 // MarshalBinary marshals the chainID into its binary representation.
 func (id ChainID) MarshalBinary() (data []byte, err error) {
+	if id.Sign() == -1 {
+		return nil, errors.New("cannot marshal negative ChainID")
+	}
 	return id.Bytes(), nil
 }
 
@@ -124,11 +127,11 @@ func (a Asset) Equal(b channel.Asset) bool {
 	if !ok {
 		return false
 	}
-	return a.EthAddress() == ethAsset.EthAddress()
+	return a.ChainID == a.ChainID && a.EthAddress() == ethAsset.EthAddress()
 }
 
-// FilterAssets filters the assets for the given chainID.
-func FilterAssets(assets []channel.Asset, chainID ChainID) []channel.Asset {
+// filterAssets filters the assets for the given chainID.
+func filterAssets(assets []channel.Asset, chainID ChainID) []channel.Asset {
 	var filtered []channel.Asset
 	for _, asset := range assets {
 		if a := asset.(*Asset); a.ChainID.MapKey() == chainID.MapKey() {
@@ -138,14 +141,14 @@ func FilterAssets(assets []channel.Asset, chainID ChainID) []channel.Asset {
 	return filtered
 }
 
-// AssetIdx returns the index of asset in the assets array.
-func AssetIdx(assets []channel.Asset, asset channel.Asset) channel.Index {
+// assetIdx returns the index of asset in the assets array.
+func assetIdx(assets []channel.Asset, asset channel.Asset) (channel.Index, bool) {
 	for i, a := range assets {
 		if a.Equal(asset) {
-			return channel.Index(i)
+			return channel.Index(i), true
 		}
 	}
-	panic("asset not found")
+	return 0, false
 }
 
 var _ channel.Asset = new(Asset)

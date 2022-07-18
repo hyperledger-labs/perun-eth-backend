@@ -20,7 +20,7 @@ set -e
 ABIGEN="${ABIGEN-abigen}"
 SOLC="${SOLC-solc}"
 
-echo 'Please ensure that solc v0.7.6+ and abigen v1.10.18+ are installed.'
+echo 'Please ensure that solc v0.8.15+ and abigen v1.10.18+ are installed.'
 
 if ! $ABIGEN --version
 then

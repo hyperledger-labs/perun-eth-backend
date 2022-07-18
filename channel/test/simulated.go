@@ -56,6 +56,8 @@ type SimulatedBackend struct {
 	backends.SimulatedBackend
 	sbMtx sync.Mutex // protects SimulatedBackend
 
+	Signer types.Signer
+
 	faucetKey     *ecdsa.PrivateKey
 	faucetAddr    common.Address
 	clockMu       sync.Mutex    // Mutex for clock adjustments. Locked by SimTimeouts.
@@ -106,6 +108,8 @@ func NewSimulatedBackend(opts ...SimBackendOpt) *SimulatedBackend {
 		faucetAddr:       faucetAddr,
 		commitTx:         true,
 	}
+	sb.Signer = types.LatestSignerForChainID(sb.ChainID())
+
 	for _, opt := range opts {
 		opt(sb)
 	}
@@ -136,8 +140,7 @@ func (s *SimulatedBackend) FundAddress(ctx context.Context, addr common.Address)
 		To:        &addr,
 		Value:     test.MaxBalance,
 	}
-	signer := SignerForChainID(s.ChainID())
-	tx, err := types.SignNewTx(s.faucetKey, signer, txdata)
+	tx, err := types.SignNewTx(s.faucetKey, s.Signer, txdata)
 	if err != nil {
 		panic(err)
 	}
@@ -249,9 +252,4 @@ func (s *SimulatedBackend) ChainID() *big.Int {
 // mine a block after a transaction was sent.
 func WithCommitTx(b bool) SimBackendOpt {
 	return func(sb *SimulatedBackend) { sb.commitTx = b }
-}
-
-// SignerForChainID returns the latest signer for the given chainID.
-func SignerForChainID(chainID *big.Int) types.Signer {
-	return types.LatestSignerForChainID(chainID)
 }

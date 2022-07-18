@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package client_test
+package test
 
 import (
 	"context"
@@ -24,12 +24,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/params"
 	ethchannel "github.com/perun-network/perun-eth-backend/channel"
+	chtest "github.com/perun-network/perun-eth-backend/channel/test"
 	"github.com/perun-network/perun-eth-backend/wallet"
 	"github.com/perun-network/perun-eth-backend/wallet/keystore"
 	ethwire "github.com/perun-network/perun-eth-backend/wire"
 	"github.com/stretchr/testify/require"
-
-	chtest "github.com/perun-network/perun-eth-backend/channel/test"
 
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/channel/multi"
@@ -42,21 +41,11 @@ import (
 )
 
 const (
-	challengeDuration = 15
-	testDuration      = 30 * time.Second
-	txFinalityDepth   = 1
-	blockInterval     = 300 * time.Millisecond
+	txFinalityDepth = 1
+	blockInterval   = 300 * time.Millisecond
 )
 
-func TestMultiLedgerHappy(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), testDuration)
-	defer cancel()
-
-	mlt := SetupMultiLedgerTest(t)
-	ctest.TestMultiLedgerHappy(ctx, t, mlt, challengeDuration)
-}
-
-func SetupMultiLedgerTest(t *testing.T) ctest.MultiLedgerSetup {
+func SetupMultiLedgerTest(t *testing.T, testDuration time.Duration) ctest.MultiLedgerSetup {
 	t.Helper()
 	rng := test.Prng(t)
 
@@ -145,13 +134,13 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 	acc := w.NewRandomAccount(rng).(*keystore.Account)
 
 	// Setup contract backends.
-	signer1 := chtest.SignerForChainID(l1.ChainID().Int)
+	signer1 := l1.simSetup.SimBackend.Signer
 	cb1 := ethchannel.NewContractBackend(
 		l1.simSetup.CB,
 		keystore.NewTransactor(*w, signer1),
 		l1.simSetup.CB.TxFinalityDepth(),
 	)
-	signer2 := chtest.SignerForChainID(l2.ChainID().Int)
+	signer2 := l2.simSetup.SimBackend.Signer
 	cb2 := ethchannel.NewContractBackend(
 		l2.simSetup.CB,
 		keystore.NewTransactor(*w, signer2),

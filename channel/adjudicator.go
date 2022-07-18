@@ -34,7 +34,7 @@ import (
 	psync "polycry.pt/poly-go/sync"
 )
 
-// compile time check that we implement the Perun adjudicator interface.
+// Compile time check that we implement the Perun adjudicator interface.
 var _ channel.Adjudicator = (*Adjudicator)(nil)
 
 // The Adjudicator struct implements the channel.Adjudicator interface

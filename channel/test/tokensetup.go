@@ -71,7 +71,7 @@ func NewTokenSetup(ctx context.Context, t *testing.T, rng *rand.Rand, txFinality
 	sb.FundAddress(ctx, acc2.Address)
 	cb := ethchannel.NewContractBackend(
 		sb,
-		keystore.NewTransactor(*ksWallet, SignerForChainID(sb.ChainID())),
+		keystore.NewTransactor(*ksWallet, sb.Signer),
 		txFinalityDepth,
 	)
 

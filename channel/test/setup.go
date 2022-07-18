@@ -119,10 +119,9 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 		s.Parts[i] = s.Accs[i].Address()
 		s.SimBackend.FundAddress(ctx, s.Accs[i].Account.Address)
 		s.Recvs[i] = ksWallet.NewRandomAccount(rng).Address().(*ethwallet.Address)
-		signer := SignerForChainID(s.SimBackend.ChainID())
 		cb := ethchannel.NewContractBackend(
 			s.SimBackend,
-			keystore.NewTransactor(*ksWallet, signer),
+			keystore.NewTransactor(*ksWallet, s.SimBackend.Signer),
 			txFinalityDepth,
 		)
 		s.Funders[i] = ethchannel.NewFunder(cb, ethchannel.MakeChainID(s.SimBackend.ChainID()))

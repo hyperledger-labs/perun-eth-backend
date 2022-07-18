@@ -152,7 +152,7 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 	}()
 
 	// Fund each asset, saving the TX in `txs` and the errors in `errg`.
-	assets := FilterAssets(request.State.Assets, f.chainID)
+	assets := filterAssets(request.State.Assets, f.chainID)
 	txs, errg := f.fundAssets(ctx, assets, channelID, request)
 
 	// Wait for the TXs to be mined.
@@ -196,7 +196,11 @@ func (f *Funder) fundAssets(ctx context.Context, assets []channel.Asset, channel
 
 	for i, asset := range assets {
 		// Bind contract.
-		assetIdx := AssetIdx(req.State.Assets, asset)
+		assetIdx, ok := assetIdx(req.State.Assets, asset)
+		if !ok {
+			errg.Add(errors.New("asset not found in funding request"))
+			continue
+		}
 		contract := bindAssetHolder(f.ContractBackend, asset, assetIdx)
 		// Wait for the funding event.
 		errg.Go(func() error {

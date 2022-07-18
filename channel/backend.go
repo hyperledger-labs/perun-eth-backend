@@ -268,13 +268,13 @@ func makeIndexMap(m []uint16) []channel.Index {
 	return _m
 }
 
-// assetsToEthAssets converts an array of Assets to adjudicator.ChannelAsset.
-func assetsToEthAssets(addr []channel.Asset) []adjudicator.ChannelAsset {
-	cAddrs := make([]adjudicator.ChannelAsset, len(addr))
-	for i, part := range addr {
-		asset, ok := part.(*Asset)
+// assetsToEthAssets converts an array of Assets to adjudicator.ChannelAsset
+func assetsToEthAssets(assets []channel.Asset) []adjudicator.ChannelAsset {
+	cAddrs := make([]adjudicator.ChannelAsset, len(assets))
+	for i, a := range assets {
+		asset, ok := a.(*Asset)
 		if !ok {
-			log.Panicf("wrong address type: %T", part)
+			log.Panicf("wrong address type: %T", asset)
 		}
 		cAddrs[i] = adjudicator.ChannelAsset{
 			ChainID: asset.ChainID.Int,

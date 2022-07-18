@@ -17,14 +17,30 @@ package client_test
 import (
 	"context"
 	"testing"
+	"time"
+
+	"github.com/perun-network/perun-eth-backend/client/test"
 
 	ctest "perun.network/go-perun/client/test"
 )
+
+const (
+	challengeDuration = 15
+	testDuration      = 30 * time.Second
+)
+
+func TestMultiLedgerHappy(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), testDuration)
+	defer cancel()
+
+	mlt := test.SetupMultiLedgerTest(t, testDuration)
+	ctest.TestMultiLedgerHappy(ctx, t, mlt, challengeDuration)
+}
 
 func TestMultiLedgerDispute(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), testDuration)
 	defer cancel()
 
-	mlt := SetupMultiLedgerTest(t)
+	mlt := test.SetupMultiLedgerTest(t, testDuration)
 	ctest.TestMultiLedgerDispute(ctx, t, mlt, challengeDuration)
 }
