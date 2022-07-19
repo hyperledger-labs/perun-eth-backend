@@ -72,10 +72,10 @@ const funderEventBufSize = 10
 var _ channel.Funder = (*Funder)(nil)
 
 // NewFunder creates a new ethereum funder.
-func NewFunder(backend ContractBackend, chainID ChainID) *Funder {
+func NewFunder(backend ContractBackend) *Funder {
 	return &Funder{
 		ContractBackend: backend,
-		chainID:         chainID,
+		chainID:         backend.chainID,
 		accounts:        make(map[AssetMapKey]accounts.Account),
 		depositors:      make(map[AssetMapKey]Depositor),
 		log:             log.Default(),

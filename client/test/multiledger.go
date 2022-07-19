@@ -137,20 +137,22 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 	signer1 := l1.simSetup.SimBackend.Signer
 	cb1 := ethchannel.NewContractBackend(
 		l1.simSetup.CB,
+		l1.ChainID(),
 		keystore.NewTransactor(*w, signer1),
 		l1.simSetup.CB.TxFinalityDepth(),
 	)
 	signer2 := l2.simSetup.SimBackend.Signer
 	cb2 := ethchannel.NewContractBackend(
 		l2.simSetup.CB,
+		l2.ChainID(),
 		keystore.NewTransactor(*w, signer2),
 		l2.simSetup.CB.TxFinalityDepth(),
 	)
 
 	// Setup funder.
 	multiFunder := multi.NewFunder()
-	funderL1 := ethchannel.NewFunder(cb1, l1.ChainID())
-	funderL2 := ethchannel.NewFunder(cb2, l2.ChainID())
+	funderL1 := ethchannel.NewFunder(cb1)
+	funderL2 := ethchannel.NewFunder(cb2)
 	registered := funderL1.RegisterAsset(*l1.asset, ethchannel.NewETHDepositor(), acc.Account)
 	require.True(registered)
 	registered = funderL2.RegisterAsset(*l2.asset, ethchannel.NewETHDepositor(), acc.Account)

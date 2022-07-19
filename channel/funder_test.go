@@ -76,10 +76,11 @@ func newFunderSetup(rng *rand.Rand) (
 	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
 	cb := ethchannel.NewContractBackend(
 		simBackend,
+		ethchannel.MakeChainID(simBackend.ChainID()),
 		keystore.NewTransactor(*ksWallet, simBackend.Signer),
 		TxFinalityDepth,
 	)
-	funder := ethchannel.NewFunder(cb, ethchannel.MakeChainID(simBackend.ChainID()))
+	funder := ethchannel.NewFunder(cb)
 	assets := make([]ethchannel.Asset, n)
 	depositors := make([]ethchannel.Depositor, n)
 	accs := make([]accounts.Account, n)
@@ -397,6 +398,7 @@ func newNFunders(
 	simBackend.FundAddress(ctx, tokenAcc.Address)
 	cb := ethchannel.NewContractBackend(
 		simBackend,
+		ethchannel.MakeChainID(chainID),
 		keystore.NewTransactor(*ksWallet, simBackend.Signer),
 		TxFinalityDepth,
 	)
@@ -425,7 +427,7 @@ func newNFunders(
 		err = fundERC20(ctx, cb, *tokenAcc, ethwallet.AsEthAddr(parts[i]), token, *asset2)
 		require.NoError(t, err)
 
-		funders[i] = ethchannel.NewFunder(cb, ethchannel.MakeChainID(simBackend.ChainID()))
+		funders[i] = ethchannel.NewFunder(cb)
 		require.True(t, funders[i].RegisterAsset(*asset1, ethchannel.NewETHDepositor(), acc))
 		require.True(t, funders[i].RegisterAsset(*asset2, ethchannel.NewERC20Depositor(token), acc))
 	}

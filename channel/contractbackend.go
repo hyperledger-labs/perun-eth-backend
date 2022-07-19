@@ -16,13 +16,11 @@ package channel
 
 import (
 	"context"
-	stderrors "errors"
 	"math/big"
 	"sync"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -68,19 +66,26 @@ type ContractBackend struct {
 	nonceMtx          *sync.Mutex
 	expectedNextNonce map[common.Address]uint64
 	txFinalityDepth   uint64
+	chainID           ChainID
 }
 
 // NewContractBackend creates a new ContractBackend with the given parameters.
 // txFinalityDepth defines in how many consecutive blocks a TX has to be
 // included to be considered final. Must be at least 1.
-func NewContractBackend(cf ContractInterface, tr Transactor, txFinalityDepth uint64) ContractBackend {
+func NewContractBackend(cf ContractInterface, chainID ChainID, tr Transactor, txFinalityDepth uint64) ContractBackend {
 	return ContractBackend{
 		ContractInterface: cf,
 		tr:                tr,
 		expectedNextNonce: make(map[common.Address]uint64),
 		nonceMtx:          &sync.Mutex{},
 		txFinalityDepth:   txFinalityDepth,
+		chainID:           chainID,
 	}
+}
+
+// ChainID returns the chain identifier of the contract backend.
+func (c *ContractBackend) ChainID() ChainID {
+	return c.chainID
 }
 
 // NewWatchOpts returns bind.WatchOpts with the field Start set to the current

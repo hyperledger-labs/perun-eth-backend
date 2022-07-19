@@ -57,7 +57,7 @@ type Adjudicator struct {
 
 // NewAdjudicator creates a new ethereum adjudicator. The receiver is the
 // on-chain address that receives withdrawals.
-func NewAdjudicator(backend ContractBackend, chainID ChainID, contract common.Address, receiver common.Address, txSender accounts.Account) *Adjudicator {
+func NewAdjudicator(backend ContractBackend, contract common.Address, receiver common.Address, txSender accounts.Account) *Adjudicator {
 	contr, err := adjudicator.NewAdjudicator(contract, backend)
 	if err != nil {
 		panic("Could not create a new instance of adjudicator")
@@ -65,7 +65,7 @@ func NewAdjudicator(backend ContractBackend, chainID ChainID, contract common.Ad
 	bound := bind.NewBoundContract(contract, bindings.ABI.Adjudicator, backend, backend, backend)
 	return &Adjudicator{
 		ContractBackend: backend,
-		chainID:         chainID,
+		chainID:         backend.chainID,
 		contract:        contr,
 		bound:           bound,
 		Receiver:        receiver,

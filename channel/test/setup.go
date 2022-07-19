@@ -77,6 +77,7 @@ func NewSimSetup(t *testing.T, rng *rand.Rand, txFinalityDepth uint64, blockInte
 	signer := types.LatestSigner(params.AllEthashProtocolChanges)
 	contractBackend := ethchannel.NewContractBackend(
 		simBackend,
+		ethchannel.MakeChainID(simBackend.ChainID()),
 		keystore.NewTransactor(*ksWallet, signer),
 		txFinalityDepth,
 	)
@@ -121,10 +122,11 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 		s.Recvs[i] = ksWallet.NewRandomAccount(rng).Address().(*ethwallet.Address)
 		cb := ethchannel.NewContractBackend(
 			s.SimBackend,
+			ethchannel.MakeChainID(s.SimBackend.ChainID()),
 			keystore.NewTransactor(*ksWallet, s.SimBackend.Signer),
 			txFinalityDepth,
 		)
-		s.Funders[i] = ethchannel.NewFunder(cb, ethchannel.MakeChainID(s.SimBackend.ChainID()))
+		s.Funders[i] = ethchannel.NewFunder(cb)
 		require.True(t, s.Funders[i].RegisterAsset(*s.Asset, ethchannel.NewETHDepositor(), s.Accs[i].Account))
 		s.Adjs[i] = NewSimAdjudicator(cb, adjudicator, common.Address(*s.Recvs[i]), s.Accs[i].Account)
 	}
