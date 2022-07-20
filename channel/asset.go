@@ -127,7 +127,7 @@ func (a Asset) Equal(b channel.Asset) bool {
 	if !ok {
 		return false
 	}
-	return a.ChainID == a.ChainID && a.EthAddress() == ethAsset.EthAddress()
+	return a.ChainID.MapKey() == ethAsset.ChainID.MapKey() && a.EthAddress() == ethAsset.EthAddress()
 }
 
 // filterAssets filters the assets for the given chainID.
