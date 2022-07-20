@@ -45,6 +45,7 @@ const (
 	blockInterval   = 300 * time.Millisecond
 )
 
+// SetupMultiLedgerTest creates a multi-ledger test setup.
 func SetupMultiLedgerTest(t *testing.T, testDuration time.Duration) ctest.MultiLedgerSetup {
 	t.Helper()
 	rng := test.Prng(t)
@@ -52,8 +53,8 @@ func SetupMultiLedgerTest(t *testing.T, testDuration time.Duration) ctest.MultiL
 	ctx, cancel := context.WithTimeout(context.Background(), testDuration)
 	defer cancel()
 
-	l1 := setupLedger(ctx, t, rng, big.NewInt(1337))
-	l2 := setupLedger(ctx, t, rng, big.NewInt(1338))
+	l1 := setupLedger(ctx, t, rng, big.NewInt(1337)) //nolint:gomnd
+	l2 := setupLedger(ctx, t, rng, big.NewInt(1338)) //nolint:gomnd
 
 	// Setup message bus.
 	bus := wire.NewLocalBus()
@@ -68,6 +69,7 @@ func SetupMultiLedgerTest(t *testing.T, testDuration time.Duration) ctest.MultiL
 	l2.simSetup.SimBackend.FundAddress(ctx, wallet.AsEthAddr(c1.WalletAddress))
 	l2.simSetup.SimBackend.FundAddress(ctx, wallet.AsEthAddr(c2.WalletAddress))
 
+	//nolint:gomnd
 	return ctest.MultiLedgerSetup{
 		Client1: c1,
 		Client2: c2,

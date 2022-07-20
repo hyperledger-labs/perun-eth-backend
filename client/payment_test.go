@@ -31,7 +31,6 @@ import (
 
 	chtest "perun.network/go-perun/channel/test"
 	"perun.network/go-perun/client"
-	perunclient "perun.network/go-perun/client"
 	clienttest "perun.network/go-perun/client/test"
 	"perun.network/go-perun/log"
 	"perun.network/go-perun/wire"
@@ -68,7 +67,7 @@ func TestPaymentHappy(t *testing.T) {
 			[2]wire.Address{setup[A].Identity.Address(), setup[B].Identity.Address()},
 			s.Asset,
 			[2]*big.Int{big.NewInt(100), big.NewInt(100)},
-			perunclient.WithApp(chtest.NewRandomAppAndData(rng)),
+			client.WithApp(chtest.NewRandomAppAndData(rng)),
 		),
 		NumPayments: [2]int{2, 2},
 		TxAmounts:   [2]*big.Int{big.NewInt(5), big.NewInt(3)},

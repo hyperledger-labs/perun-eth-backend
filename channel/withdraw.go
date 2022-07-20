@@ -122,7 +122,7 @@ func withdrawnEventType(fundingID [32]byte) subscription.EventFactory {
 
 func bindAssetHolder(cb ContractBackend, asset channel.Asset, assetIndex channel.Index) assetHolder {
 	// Decode and set the asset address.
-	assetAddr := asset.(*Asset).EthAddress()
+	assetAddr := asset.(*Asset).EthAddress() //nolint:forcetypeassert
 	ctr, err := assetholder.NewAssetholder(assetAddr, cb)
 	if err != nil {
 		log.Panic("Invalid AssetHolder ABI definition.")

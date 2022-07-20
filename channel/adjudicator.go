@@ -179,8 +179,7 @@ func (a *Adjudicator) call(ctx context.Context, req channel.AdjudicatorReq, fn a
 // ValidateAdjudicator checks if the bytecode at given address is correct.
 // Returns a ContractBytecodeError if the bytecode at given address is invalid.
 // This error can be checked with function IsErrInvalidContractCode.
-func ValidateAdjudicator(ctx context.Context,
-	backend bind.ContractCaller, adjudicatorAddr common.Address) error {
+func ValidateAdjudicator(ctx context.Context, backend bind.ContractCaller, adjudicatorAddr common.Address) error {
 	return validateContract(ctx, backend, adjudicatorAddr, adjudicator.AdjudicatorBinRuntime)
 }
 

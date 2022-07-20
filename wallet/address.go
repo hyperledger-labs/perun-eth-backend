@@ -62,7 +62,11 @@ func (a *Address) String() string {
 // Equal checks the equality of two addresses. The implementation must be
 // equivalent to checking `Address.Cmp(Address) == 0`.
 func (a *Address) Equal(addr wallet.Address) bool {
-	return bytes.Equal(a.bytes(), addr.(*Address).bytes())
+	addrTyped, ok := addr.(*Address)
+	if !ok {
+		return false
+	}
+	return bytes.Equal(a.bytes(), addrTyped.bytes())
 }
 
 // Cmp checks ordering of two addresses.
@@ -70,14 +74,24 @@ func (a *Address) Equal(addr wallet.Address) bool {
 // -1 if a < b,
 // +1 if a > b.
 // https://godoc.org/bytes#Compare
+//
+// Panics if the input is not of the same type as the receiver.
 func (a *Address) Cmp(addr wallet.Address) int {
-	return bytes.Compare(a.bytes(), addr.(*Address).bytes())
+	addrTyped, ok := addr.(*Address)
+	if !ok {
+		panic(fmt.Sprintf("wrong type: expected %T, got %T", a, addr))
+	}
+	return bytes.Compare(a.bytes(), addrTyped.bytes())
 }
 
 // AsEthAddr is a helper function to convert an address interface back into an
 // ethereum address.
 func AsEthAddr(a wallet.Address) common.Address {
-	return common.Address(*a.(*Address))
+	addrTyped, ok := a.(*Address)
+	if !ok {
+		panic(fmt.Sprintf("wrong type: expected %T, got %T", &Address{}, a))
+	}
+	return common.Address(*addrTyped)
 }
 
 // AsWalletAddr is a helper function to convert an ethereum address to an

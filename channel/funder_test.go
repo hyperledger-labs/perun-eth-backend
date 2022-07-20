@@ -70,7 +70,11 @@ func TestFunder_RegisterAsset_IsAssetRegistered(t *testing.T) {
 }
 
 func newFunderSetup(rng *rand.Rand) (
-	*ethchannel.Funder, []ethchannel.Asset, []ethchannel.Depositor, []accounts.Account) {
+	*ethchannel.Funder,
+	[]ethchannel.Asset,
+	[]ethchannel.Depositor,
+	[]accounts.Account,
+) {
 	n := 2
 	simBackend := test.NewSimulatedBackend()
 	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)

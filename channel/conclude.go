@@ -137,19 +137,16 @@ func (a *Adjudicator) checkConcludedState(
 	for {
 		select {
 		case e := <-events:
-			switch adjEvent := e.Data.(type) {
-			case *adjudicator.AdjudicatorChannelUpdate:
-				if adjEvent.Phase == phaseConcluded {
-					id := adjEvent.ChannelID
-					v := states[id].Version
-					if adjEvent.Version != v {
-						return errors.Errorf("wrong version: expected %v, got %v", v, adjEvent.Version)
-					}
-					validated[id] = true
-					log.Debugf("validated: %v/%v", len(validated), len(states))
-					if len(validated) == len(states) {
-						return nil
-					}
+			if adjEvent, ok := e.Data.(*adjudicator.AdjudicatorChannelUpdate); ok && adjEvent.Phase == phaseConcluded {
+				id := adjEvent.ChannelID
+				v := states[id].Version
+				if adjEvent.Version != v {
+					return errors.Errorf("wrong version: expected %v, got %v", v, adjEvent.Version)
+				}
+				validated[id] = true
+				log.Debugf("validated: %v/%v", len(validated), len(states))
+				if len(validated) == len(states) {
+					return nil
 				}
 			}
 		case <-ctx.Done():

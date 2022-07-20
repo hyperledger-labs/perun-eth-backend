@@ -16,6 +16,7 @@ package channel
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"sync"
 
@@ -138,18 +139,11 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 
 	// We wait for the funding timeout in a go routine and cancel the funding
 	// context if the timeout elapses.
-	timeout, err := NewBlockTimeoutDuration(ctx, f.ContractInterface, request.Params.ChallengeDuration)
+	ctx, cancel, err := f.fundingTimeoutContext(ctx, request)
 	if err != nil {
-		return errors.WithMessage(err, "creating block timeout")
+		return err
 	}
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel() // in case we return before block timeout
-	go func() {
-		if err := timeout.Wait(ctx); err != nil && !pcontext.IsContextError(err) {
-			f.log.Warn("Fund: BlockTimeout.Wait runtime error: ", err)
-		}
-		cancel() // cancel funding context on funding timeout
-	}()
+	defer cancel() // Cancel the context if we return before the block timeout.
 
 	// Fund each asset, saving the TX in `txs` and the errors in `errg`.
 	assets := filterAssets(request.State.Assets, f.chainID)
@@ -158,7 +152,11 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 	// Wait for the TXs to be mined.
 	for a, asset := range assets {
 		for i, tx := range txs[a] {
-			acc := f.accounts[asset.(*Asset).MapKey()]
+			assetTyped, ok := asset.(*Asset)
+			if !ok {
+				return fmt.Errorf("wrong type: expected %T, got %T", &Asset{}, asset)
+			}
+			acc := f.accounts[assetTyped.MapKey()]
 			if _, err := f.ConfirmTransaction(ctx, tx, acc); err != nil {
 				if errors.Is(err, errTxTimedOut) {
 					err = client.NewTxTimedoutError(Fund.String(), tx.Hash().Hex(), err.Error())
@@ -174,7 +172,11 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 	nonFundingErrg := perror.NewGatherer()
 	for _, err := range perror.Causes(errg.Wait()) {
 		if channel.IsAssetFundingError(err) && err != nil {
-			fundingErrs = append(fundingErrs, err.(*channel.AssetFundingError))
+			fudingErr, ok := err.(*channel.AssetFundingError)
+			if !ok {
+				return fmt.Errorf("wrong type: expected %T, got %T", &channel.AssetFundingError{}, err)
+			}
+			fundingErrs = append(fundingErrs, fudingErr)
 		} else if err != nil {
 			nonFundingErrg.Add(err)
 		}
@@ -184,6 +186,21 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 		return channel.NewFundingTimeoutError(fundingErrs)
 	}
 	return nonFundingErrg.Err()
+}
+
+func (f *Funder) fundingTimeoutContext(ctx context.Context, req channel.FundingReq) (context.Context, context.CancelFunc, error) {
+	timeout, err := NewBlockTimeoutDuration(ctx, f.ContractInterface, req.Params.ChallengeDuration)
+	if err != nil {
+		return nil, nil, errors.WithMessage(err, "creating block timeout")
+	}
+	ctx, cancel := context.WithCancel(ctx)
+	go func() {
+		if err := timeout.Wait(ctx); err != nil && !pcontext.IsContextError(err) {
+			f.log.Warn("Fund: BlockTimeout.Wait runtime error: ", err)
+		}
+		cancel() // cancel funding context on funding timeout
+	}()
+	return ctx, cancel, nil
 }
 
 // fundAssets funds each asset of the funding agreement in the `req`.
@@ -222,7 +239,13 @@ func (f *Funder) fundAssets(ctx context.Context, assets []channel.Asset, channel
 
 // sendFundingTx sends and returns the TXs that are needed to fulfill the
 // funding request. It is idempotent.
-func (f *Funder) sendFundingTx(ctx context.Context, asset channel.Asset, request channel.FundingReq, contract assetHolder, fundingID [32]byte) (txs []*types.Transaction, fatal error) {
+func (f *Funder) sendFundingTx(
+	ctx context.Context,
+	asset channel.Asset,
+	request channel.FundingReq,
+	contract assetHolder,
+	fundingID [32]byte,
+) (txs []*types.Transaction, fatal error) {
 	bal := request.Agreement[contract.assetIndex][request.Idx]
 	if bal == nil || bal.Sign() <= 0 {
 		f.log.WithFields(log.Fields{"channel": request.Params.ID(), "idx": request.Idx}).Debug("Skipped zero funding.")
@@ -237,7 +260,11 @@ func (f *Funder) sendFundingTx(ctx context.Context, asset channel.Asset, request
 		return nil, nil
 	}
 
-	return f.deposit(ctx, bal, *asset.(*Asset), fundingID)
+	assetTyped, ok := asset.(*Asset)
+	if !ok {
+		return nil, fmt.Errorf("wrong type: expected %T, got %T", &Asset{}, asset)
+	}
+	return f.deposit(ctx, bal, *assetTyped, fundingID)
 }
 
 // deposit deposits funds for one funding-ID by calling the associated Depositor.
