@@ -104,7 +104,7 @@ func (*Backend) Verify(addr wallet.Address, s *channel.State, sig wallet.Sig) (b
 // NewAsset returns a variable of type Asset, which can be used
 // for unmarshalling an asset from its binary representation.
 func (b *Backend) NewAsset() channel.Asset {
-	return NewAsset()
+	return &Asset{}
 }
 
 // CalcID calculates the channelID as needed by the ethereum smart contracts.
@@ -148,13 +148,6 @@ func Verify(addr wallet.Address, s *channel.State, sig wallet.Sig) (bool, error)
 	return ethwallet.VerifySignature(enc, sig, addr)
 }
 
-// NewAsset returns a variable of type Asset, which can be used
-// for unmarshalling an asset from its binary representation.
-func NewAsset() channel.Asset {
-	addr := Asset{}
-	return &addr
-}
-
 // ToEthParams converts a channel.Params to a ChannelParams struct.
 func ToEthParams(p *channel.Params) adjudicator.ChannelParams {
 	var app common.Address
@@ -191,7 +184,7 @@ func ToEthState(s *channel.State) adjudicator.ChannelState {
 		locked[i] = adjudicator.ChannelSubAlloc{ID: sub.ID, Balances: sub.Bals, IndexMap: indexMap}
 	}
 	outcome := adjudicator.ChannelAllocation{
-		Assets:   assetsToCommonAddresses(s.Allocation.Assets),
+		Assets:   assetsToEthAssets(s.Allocation.Assets),
 		Balances: s.Balances,
 		Locked:   locked,
 	}
@@ -224,19 +217,6 @@ func EncodeState(state *adjudicator.ChannelState) ([]byte, error) {
 	args := abi.Arguments{{Type: abiState}}
 	enc, err := args.Pack(*state)
 	return enc, errors.WithStack(err)
-}
-
-// assetsToCommonAddresses converts an array of Assets to common.Addresses.
-func assetsToCommonAddresses(addr []channel.Asset) []common.Address {
-	cAddrs := make([]common.Address, len(addr))
-	for i, part := range addr {
-		asset, ok := part.(*Asset)
-		if !ok {
-			log.Panicf("wrong address type: %T", part)
-		}
-		cAddrs[i] = common.Address(asset.Address)
-	}
-	return cAddrs
 }
 
 // pwToCommonAddresses converts an array of perun/ethwallet.Addresses to common.Addresses.
@@ -288,10 +268,26 @@ func makeIndexMap(m []uint16) []channel.Index {
 	return _m
 }
 
-func fromEthAssets(assets []common.Address) []channel.Asset {
+// assetsToEthAssets converts an array of Assets to adjudicator.ChannelAsset
+func assetsToEthAssets(assets []channel.Asset) []adjudicator.ChannelAsset {
+	cAddrs := make([]adjudicator.ChannelAsset, len(assets))
+	for i, a := range assets {
+		asset, ok := a.(*Asset)
+		if !ok {
+			log.Panicf("wrong address type: %T", asset)
+		}
+		cAddrs[i] = adjudicator.ChannelAsset{
+			ChainID: asset.ChainID.Int,
+			Holder:  asset.EthAddress(),
+		}
+	}
+	return cAddrs
+}
+
+func fromEthAssets(assets []adjudicator.ChannelAsset) []channel.Asset {
 	_assets := make([]channel.Asset, len(assets))
 	for i, a := range assets {
-		_assets[i] = NewAssetFromAddress(a)
+		_assets[i] = NewAsset(a.ChainID, a.Holder)
 	}
 	return _assets
 }

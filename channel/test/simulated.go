@@ -29,10 +29,13 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/perun-network/perun-eth-backend/channel"
+	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
 	"github.com/pkg/errors"
 
+	perunchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/channel/test"
 	"perun.network/go-perun/log"
+	"perun.network/go-perun/wallet"
 	"polycry.pt/poly-go/sync"
 )
 
@@ -48,14 +51,12 @@ const (
 	simBackendGasLimit = 8_000_000
 )
 
-// SimSigner is the latest types.Signer that can be used with the simulated
-// backend.
-var SimSigner = types.LatestSigner(params.AllEthashProtocolChanges)
-
 // SimulatedBackend provides a simulated ethereum blockchain for tests.
 type SimulatedBackend struct {
 	backends.SimulatedBackend
 	sbMtx sync.Mutex // protects SimulatedBackend
+
+	Signer types.Signer
 
 	faucetKey     *ecdsa.PrivateKey
 	faucetAddr    common.Address
@@ -63,6 +64,13 @@ type SimulatedBackend struct {
 	mining        chan struct{} // Used for auto-mining blocks.
 	stoppedMining chan struct{} // For making sure that mining stopped.
 	commitTx      bool          // Whether each transaction is committed.
+}
+
+// Balance returns the balance of the given address on the simulated backend.
+func (s *SimulatedBackend) Balance(addr wallet.Address, _ perunchannel.Asset) perunchannel.Bal {
+	ctx := context.Background()
+	bal, _ := s.BalanceAt(ctx, ethwallet.AsEthAddr(addr), nil)
+	return bal
 }
 
 type (
@@ -100,6 +108,8 @@ func NewSimulatedBackend(opts ...SimBackendOpt) *SimulatedBackend {
 		faucetAddr:       faucetAddr,
 		commitTx:         true,
 	}
+	sb.Signer = types.LatestSignerForChainID(sb.ChainID())
+
 	for _, opt := range opts {
 		opt(sb)
 	}
@@ -130,7 +140,7 @@ func (s *SimulatedBackend) FundAddress(ctx context.Context, addr common.Address)
 		To:        &addr,
 		Value:     test.MaxBalance,
 	}
-	tx, err := types.SignNewTx(s.faucetKey, SimSigner, txdata)
+	tx, err := types.SignNewTx(s.faucetKey, s.Signer, txdata)
 	if err != nil {
 		panic(err)
 	}
@@ -231,6 +241,11 @@ func (s *SimulatedBackend) Reorg(ctx context.Context, depth uint64, reorder Reor
 		s.Commit()
 	}
 	return nil
+}
+
+// ChainID returns the chainID of the underlying blockchain.
+func (s *SimulatedBackend) ChainID() *big.Int {
+	return s.Blockchain().Config().ChainID
 }
 
 // WithCommitTx controls whether the simulated backend should automatically

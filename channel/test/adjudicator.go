@@ -24,6 +24,7 @@ import (
 	"github.com/pkg/errors"
 
 	ethchannel "github.com/perun-network/perun-eth-backend/channel"
+
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/log"
 )

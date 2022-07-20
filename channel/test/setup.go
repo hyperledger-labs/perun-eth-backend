@@ -21,11 +21,14 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/stretchr/testify/require"
 
 	ethchannel "github.com/perun-network/perun-eth-backend/channel"
 	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
 	"github.com/perun-network/perun-eth-backend/wallet/keystore"
+
 	"perun.network/go-perun/wallet"
 	wallettest "perun.network/go-perun/wallet/test"
 )
@@ -71,9 +74,11 @@ func NewSimSetup(t *testing.T, rng *rand.Rand, txFinalityDepth uint64, blockInte
 		t.Cleanup(simBackend.StopMining)
 	}
 
+	signer := types.LatestSigner(params.AllEthashProtocolChanges)
 	contractBackend := ethchannel.NewContractBackend(
 		simBackend,
-		keystore.NewTransactor(*ksWallet, SimSigner),
+		ethchannel.MakeChainID(simBackend.ChainID()),
+		keystore.NewTransactor(*ksWallet, signer),
 		txFinalityDepth,
 	)
 
@@ -105,12 +110,11 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 	defer cancel()
 	adjudicator, err := ethchannel.DeployAdjudicator(ctx, *s.CB, s.TxSender.Account)
 	require.NoError(t, err)
-	ethAsset, err := ethchannel.DeployETHAssetholder(ctx, *s.CB, adjudicator, s.TxSender.Account)
+	assetHolder, err := ethchannel.DeployETHAssetholder(ctx, *s.CB, adjudicator, s.TxSender.Account)
 	require.NoError(t, err)
-	s.Asset = ethchannel.NewAssetFromAddress(ethAsset)
+	s.Asset = ethchannel.NewAsset(s.SimBackend.ChainID(), assetHolder)
 
 	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
-	require.NoErrorf(t, err, "initializing wallet from test keystore")
 	for i := 0; i < n; i++ {
 		s.Accs[i] = ksWallet.NewRandomAccount(rng).(*keystore.Account)
 		s.Parts[i] = s.Accs[i].Address()
@@ -118,7 +122,8 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 		s.Recvs[i] = ksWallet.NewRandomAccount(rng).Address().(*ethwallet.Address)
 		cb := ethchannel.NewContractBackend(
 			s.SimBackend,
-			keystore.NewTransactor(*ksWallet, SimSigner),
+			ethchannel.MakeChainID(s.SimBackend.ChainID()),
+			keystore.NewTransactor(*ksWallet, s.SimBackend.Signer),
 			txFinalityDepth,
 		)
 		s.Funders[i] = ethchannel.NewFunder(cb)

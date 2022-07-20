@@ -47,16 +47,20 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 func (a *Adjudicator) ensureWithdrawn(ctx context.Context, req channel.AdjudicatorReq) error {
 	g, ctx := errgroup.WithContext(ctx)
 
-	for index, asset := range req.Tx.Allocation.Assets {
+	for _, asset := range filterAssets(req.Tx.Allocation.Assets, a.chainID) {
+		index, ok := assetIdx(req.Tx.Allocation.Assets, asset)
+		if !ok {
+			return errors.New("asset not found in adjudicator request")
+		}
 		// Skip zero balance withdrawals
 		if req.Tx.Allocation.Balances[index][req.Idx].Sign() == 0 {
 			a.log.WithFields(log.Fields{"channel": req.Params.ID, "idx": req.Idx}).Debug("Skipped zero withdrawing.")
 			continue
 		}
-		index, asset := index, asset // Capture variables locally for usage in closure
+		asset := asset // Capture asset locally for usage in closure.
 		g.Go(func() error {
 			// Create subscription
-			contract := bindAssetHolder(a.ContractBackend, asset, channel.Index(index))
+			contract := bindAssetHolder(a.ContractBackend, asset, index)
 			fundingID := FundingIDs(req.Params.ID(), req.Params.Parts[req.Idx])[0]
 			events := make(chan *subscription.Event, adjEventBuffSize)
 			subErr := make(chan error, 1)

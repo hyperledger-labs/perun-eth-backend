@@ -16,13 +16,11 @@ package channel
 
 import (
 	"context"
-	stderrors "errors"
 	"math/big"
 	"sync"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -68,19 +66,26 @@ type ContractBackend struct {
 	nonceMtx          *sync.Mutex
 	expectedNextNonce map[common.Address]uint64
 	txFinalityDepth   uint64
+	chainID           ChainID
 }
 
 // NewContractBackend creates a new ContractBackend with the given parameters.
 // txFinalityDepth defines in how many consecutive blocks a TX has to be
 // included to be considered final. Must be at least 1.
-func NewContractBackend(cf ContractInterface, tr Transactor, txFinalityDepth uint64) ContractBackend {
+func NewContractBackend(cf ContractInterface, chainID ChainID, tr Transactor, txFinalityDepth uint64) ContractBackend {
 	return ContractBackend{
 		ContractInterface: cf,
 		tr:                tr,
 		expectedNextNonce: make(map[common.Address]uint64),
 		nonceMtx:          &sync.Mutex{},
 		txFinalityDepth:   txFinalityDepth,
+		chainID:           chainID,
 	}
+}
+
+// ChainID returns the chain identifier of the contract backend.
+func (c *ContractBackend) ChainID() ChainID {
+	return c.chainID
 }
 
 // NewWatchOpts returns bind.WatchOpts with the field Start set to the current
@@ -255,6 +260,11 @@ func (c *ContractBackend) waitMined(ctx context.Context, tx *types.Transaction) 
 	return head, nil
 }
 
+// TxFinalityDepth returns the transaction finality depth of the contract backend.
+func (c *ContractBackend) TxFinalityDepth() uint64 {
+	return c.txFinalityDepth
+}
+
 // Returns ((head.number - receipt.number) + 1) >= finalityDepth.
 func isFinal(receipt *types.Receipt, head *types.Header, _finalityDepth uint64) bool {
 	finalityDepth := new(big.Int)
@@ -263,38 +273,4 @@ func isFinal(receipt *types.Receipt, head *types.Header, _finalityDepth uint64) 
 	diff := new(big.Int).Sub(head.Number, receipt.BlockNumber)
 	included := new(big.Int).Add(diff, big.NewInt(1))
 	return included.Cmp(finalityDepth) >= 0
-}
-
-// ErrTxFailed signals a failed, i.e., reverted, transaction.
-var ErrTxFailed = stderrors.New("transaction failed")
-
-// IsErrTxFailed returns whether the cause of the error was a failed transaction.
-func IsErrTxFailed(err error) bool {
-	return errors.Is(err, ErrTxFailed)
-}
-
-func errorReason(ctx context.Context, b *ContractBackend, tx *types.Transaction, blockNum *big.Int, acc accounts.Account) (string, error) {
-	msg := ethereum.CallMsg{
-		From:     acc.Address,
-		To:       tx.To(),
-		Gas:      tx.Gas(),
-		GasPrice: tx.GasPrice(),
-		Value:    tx.Value(),
-		Data:     tx.Data(),
-	}
-	res, err := b.CallContract(ctx, msg, blockNum)
-	if err != nil {
-		err = cherrors.CheckIsChainNotReachableError(err)
-		return "", errors.WithMessage(err, "CallContract")
-	}
-	reason, err := abi.UnpackRevert(res)
-	return reason, errors.Wrap(err, "unpacking revert reason")
-}
-
-// ErrInvalidContractCode signals invalid bytecode at given address, such as incorrect or no code.
-var ErrInvalidContractCode = stderrors.New("invalid bytecode at address")
-
-// IsErrInvalidContractCode returns whether the cause of the error was a invalid bytecode.
-func IsErrInvalidContractCode(err error) bool {
-	return errors.Is(err, ErrInvalidContractCode)
 }

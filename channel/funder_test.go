@@ -54,7 +54,7 @@ func TestFunder_RegisterAsset_IsAssetRegistered(t *testing.T) {
 
 	for i := 0; i < n; i++ {
 		_, _, ok := funder.IsAssetRegistered(assets[i])
-		require.False(t, ok, "on a newly initialzed funder, no assets are registered")
+		require.False(t, ok, "on a newly initialized funder, no assets are registered")
 	}
 
 	for i := 0; i < n; i++ {
@@ -76,7 +76,8 @@ func newFunderSetup(rng *rand.Rand) (
 	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
 	cb := ethchannel.NewContractBackend(
 		simBackend,
-		keystore.NewTransactor(*ksWallet, test.SimSigner),
+		ethchannel.MakeChainID(simBackend.ChainID()),
+		keystore.NewTransactor(*ksWallet, simBackend.Signer),
 		TxFinalityDepth,
 	)
 	funder := ethchannel.NewFunder(cb)
@@ -385,6 +386,7 @@ func newNFunders(
 ) {
 	t.Helper()
 	simBackend := test.NewSimulatedBackend()
+	chainID := simBackend.ChainID()
 	// Start the auto-mining of blocks.
 	simBackend.StartMining(blockInterval)
 	t.Cleanup(simBackend.StopMining)
@@ -396,7 +398,8 @@ func newNFunders(
 	simBackend.FundAddress(ctx, tokenAcc.Address)
 	cb := ethchannel.NewContractBackend(
 		simBackend,
-		keystore.NewTransactor(*ksWallet, test.SimSigner),
+		ethchannel.MakeChainID(chainID),
+		keystore.NewTransactor(*ksWallet, simBackend.Signer),
 		TxFinalityDepth,
 	)
 
@@ -404,7 +407,7 @@ func newNFunders(
 	assetAddr1, err := ethchannel.DeployETHAssetholder(ctx, cb, deployAccount.Address, *deployAccount)
 	require.NoError(t, err, "Deployment should succeed")
 	t.Logf("asset holder #1 address is %s", assetAddr1.Hex())
-	asset1 := ethchannel.NewAssetFromAddress(assetAddr1)
+	asset1 := ethchannel.NewAsset(chainID, assetAddr1)
 	// Deploy PerunToken + ETHAssetholder.
 
 	token, err := ethchannel.DeployPerunToken(ctx, cb, *deployAccount, []common.Address{tokenAcc.Address}, channeltest.MaxBalance)
@@ -412,7 +415,7 @@ func newNFunders(
 	assetAddr2, err := ethchannel.DeployERC20Assetholder(ctx, cb, common.Address{}, token, *deployAccount)
 	require.NoError(t, err, "Deployment should succeed")
 	t.Logf("asset holder #2 address is %s", assetAddr2.Hex())
-	asset2 := ethchannel.NewAssetFromAddress(assetAddr2)
+	asset2 := ethchannel.NewAsset(chainID, assetAddr2)
 
 	parts = make([]wallet.Address, n)
 	funders = make([]*ethchannel.Funder, n)
@@ -441,8 +444,8 @@ func newNFunders(
 		rng,
 		channeltest.WithNumParts(n),
 		channeltest.WithAssets(
-			ethchannel.NewAssetFromAddress(assetAddr1),
-			ethchannel.NewAssetFromAddress(assetAddr2),
+			ethchannel.NewAsset(chainID, assetAddr1),
+			ethchannel.NewAsset(chainID, assetAddr2),
 		),
 	)
 	return parts, funders, params, allocation
