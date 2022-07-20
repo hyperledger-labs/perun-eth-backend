@@ -3,7 +3,7 @@ run:
 
   # Skip the eth bindings.
   skip-dirs:
-    - backend/ethereum/bindings/
+    - bindings/
 
   # Do not change go.{mod,sum}.
   modules-download-mode: readonly
