@@ -16,6 +16,7 @@ package keystore
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"math/rand"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -104,7 +105,11 @@ func (w *Wallet) NewRandomAccount(rnd *rand.Rand) wallet.Account {
 func (w *Wallet) Unlock(addr wallet.Address) (wallet.Account, error) {
 	log.Debugf("Unlocking account %v", addr)
 	// Hack: create ethereum account from ethereum address.
-	acc := accounts.Account{Address: common.Address(*addr.(*ethwallet.Address))}
+	ethAddr, ok := addr.(*ethwallet.Address)
+	if !ok {
+		return nil, fmt.Errorf("wrong type: expected %T, got %T", &ethwallet.Address{}, addr)
+	}
+	acc := accounts.Account{Address: common.Address(*ethAddr)}
 
 	if err := w.Ks.Unlock(acc, w.pw); err != nil {
 		return nil, errors.Wrapf(err, "unlocking %v", addr)

@@ -127,14 +127,14 @@ func (a Asset) Equal(b channel.Asset) bool {
 	if !ok {
 		return false
 	}
-	return a.ChainID == a.ChainID && a.EthAddress() == ethAsset.EthAddress()
+	return a.ChainID.MapKey() == ethAsset.ChainID.MapKey() && a.EthAddress() == ethAsset.EthAddress()
 }
 
 // filterAssets filters the assets for the given chainID.
 func filterAssets(assets []channel.Asset, chainID ChainID) []channel.Asset {
 	var filtered []channel.Asset
 	for _, asset := range assets {
-		if a := asset.(*Asset); a.ChainID.MapKey() == chainID.MapKey() {
+		if a := asset.(*Asset); a.ChainID.MapKey() == chainID.MapKey() { //nolint:forcetypeassert // We would have to panic anyways.
 			filtered = append(filtered, a)
 		}
 	}
@@ -161,8 +161,7 @@ var _ channel.Asset = new(Asset)
 //
 // Returns a ContractBytecodeError if the bytecode is invalid. This error can
 // be checked with function IsErrInvalidContractCode.
-func ValidateAssetHolderETH(ctx context.Context,
-	backend bind.ContractBackend, assetHolderETH, adjudicator common.Address) error {
+func ValidateAssetHolderETH(ctx context.Context, backend bind.ContractBackend, assetHolderETH, adjudicator common.Address) error {
 	return validateAssetHolder(ctx, backend, assetHolderETH, adjudicator,
 		assetholdereth.AssetHolderETHBinRuntime)
 }
@@ -175,14 +174,12 @@ func ValidateAssetHolderETH(ctx context.Context,
 //
 // Returns a ContractBytecodeError if the bytecode is invalid. This error can
 // be checked with function IsErrInvalidContractCode.
-func ValidateAssetHolderERC20(ctx context.Context,
-	backend bind.ContractBackend, assetHolderERC20, adjudicator, token common.Address) error {
+func ValidateAssetHolderERC20(ctx context.Context, backend bind.ContractBackend, assetHolderERC20, adjudicator, token common.Address) error {
 	return validateAssetHolder(ctx, backend, assetHolderERC20, adjudicator,
 		assetHolderERC20BinRuntimeFor(token))
 }
 
-func validateAssetHolder(ctx context.Context,
-	backend bind.ContractBackend, assetHolderAddr, adjudicatorAddr common.Address, bytecode string) error {
+func validateAssetHolder(ctx context.Context, backend bind.ContractBackend, assetHolderAddr, adjudicatorAddr common.Address, bytecode string) error {
 	if err := validateContract(ctx, backend, assetHolderAddr, bytecode); err != nil {
 		return errors.WithMessage(err, "validating asset holder")
 	}
@@ -205,8 +202,7 @@ func validateAssetHolder(ctx context.Context,
 	return nil
 }
 
-func validateContract(ctx context.Context,
-	backend bind.ContractCaller, contract common.Address, bytecode string) error {
+func validateContract(ctx context.Context, backend bind.ContractCaller, contract common.Address, bytecode string) error {
 	code, err := backend.CodeAt(ctx, contract, nil)
 	if err != nil {
 		err = cherrors.CheckIsChainNotReachableError(err)

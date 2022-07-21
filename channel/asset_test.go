@@ -38,14 +38,20 @@ func TestValidateAssetHolderERC20(t *testing.T) {
 	var (
 		rng      = pkgtest.Prng(t)
 		token    = common.Address(ethwallettest.NewRandomAddress(rng))
-		deployer = func(ctx context.Context,
+		deployer = func(
+			ctx context.Context,
 			backend ethchannel.ContractBackend,
 			adjudicatorAddr common.Address,
-			deployer accounts.Account) (common.Address, error) {
+			deployer accounts.Account,
+		) (common.Address, error) {
 			return ethchannel.DeployERC20Assetholder(ctx, backend, adjudicatorAddr, token, deployer)
 		}
-		verifier = func(ctx context.Context,
-			backend bind.ContractBackend, assetHolderETH, adjudicator common.Address) error {
+		verifier = func(
+			ctx context.Context,
+			backend bind.ContractBackend,
+			assetHolderETH,
+			adjudicator common.Address,
+		) error {
 			return ethchannel.ValidateAssetHolderERC20(ctx, backend, assetHolderETH, adjudicator, token)
 		}
 	)
@@ -54,12 +60,19 @@ func TestValidateAssetHolderERC20(t *testing.T) {
 }
 
 func testValidateAssetHolder(t *testing.T,
-	deployer func(ctx context.Context,
+	deployer func(
+		ctx context.Context,
 		backend ethchannel.ContractBackend,
 		adjudicatorAddr common.Address,
-		deployer accounts.Account) (common.Address, error),
-	validator func(ctx context.Context,
-		backend bind.ContractBackend, assetHolderETH, adjudicator common.Address) error) {
+		deployer accounts.Account,
+	) (common.Address, error),
+	validator func(
+		ctx context.Context,
+		backend bind.ContractBackend,
+		assetHolderETH,
+		adjudicator common.Address,
+	) error,
+) {
 	t.Helper()
 	// Test setup
 	rng := pkgtest.Prng(t, "validate")

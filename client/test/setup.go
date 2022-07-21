@@ -55,6 +55,7 @@ func MakeRoleSetups(rng *rand.Rand, s *ethctest.Setup, names [2]string) (setup [
 			Timeout:     DefaultTimeout,
 			// Scaled due to simbackend automining progressing faster than real time.
 			ChallengeDuration: challengeDurationBlocks * uint64(time.Second/BlockInterval),
+			Errors:            make(chan error),
 		}
 	}
 	return

@@ -41,6 +41,10 @@ func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, 
 		return errors.WithMessage(err, "ensure Concluded")
 	}
 
+	if err := a.checkConcludedState(ctx, req, subStates); err != nil {
+		return errors.WithMessage(err, "check concluded state")
+	}
+
 	return errors.WithMessage(a.ensureWithdrawn(ctx, req), "ensure Withdrawn")
 }
 
@@ -118,7 +122,7 @@ func withdrawnEventType(fundingID [32]byte) subscription.EventFactory {
 
 func bindAssetHolder(cb ContractBackend, asset channel.Asset, assetIndex channel.Index) assetHolder {
 	// Decode and set the asset address.
-	assetAddr := asset.(*Asset).EthAddress()
+	assetAddr := asset.(*Asset).EthAddress() //nolint:forcetypeassert
 	ctr, err := assetholder.NewAssetholder(assetAddr, cb)
 	if err != nil {
 		log.Panic("Invalid AssetHolder ABI definition.")

@@ -137,8 +137,7 @@ func (c *ContractBackend) pastOffsetBlockNum(ctx context.Context) (uint64, error
 // The gas price and nonce are not set and will be set by go-ethereum
 // automatically when not manually specified by the caller. The caller must also
 // set the value manually afterwards if it should be different from 0.
-func (c *ContractBackend) NewTransactor(ctx context.Context, gasLimit uint64,
-	acc accounts.Account) (*bind.TransactOpts, error) {
+func (c *ContractBackend) NewTransactor(ctx context.Context, gasLimit uint64, acc accounts.Account) (*bind.TransactOpts, error) {
 	c.nonceMtx.Lock()
 	defer c.nonceMtx.Unlock()
 	expectedNextNonce, found := c.expectedNextNonce[acc.Address]

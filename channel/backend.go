@@ -268,7 +268,7 @@ func makeIndexMap(m []uint16) []channel.Index {
 	return _m
 }
 
-// assetsToEthAssets converts an array of Assets to adjudicator.ChannelAsset
+// assetsToEthAssets converts an array of Assets to adjudicator.ChannelAsset.
 func assetsToEthAssets(assets []channel.Asset) []adjudicator.ChannelAsset {
 	cAddrs := make([]adjudicator.ChannelAsset, len(assets))
 	for i, a := range assets {
