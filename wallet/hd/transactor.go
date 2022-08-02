@@ -15,6 +15,8 @@
 package hd
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -53,7 +55,15 @@ func (t *Transactor) NewTransactor(account accounts.Account) (*bind.TransactOpts
 				// properly sign a transaction with a Wallet that doesn't have the
 				// SignHash method, if the tx needs to be signed according to EIP155
 				// rules. So in this case, use the Wallet's SignTx method.
-				return t.Wallet.SignTx(account, tx, tx.ChainId())
+				//
+				// Wallets that internally use `types.LatestSignerForChainID(chainID)`
+				// expect the chainID to be nil for Legacy (pre EIP-155) transactions.
+				// `tx.ChainId` returns 0 for those transactions.
+				chainID := tx.ChainId()
+				if chainID.Cmp(big.NewInt(0)) == 0 {
+					chainID = nil
+				}
+				return t.Wallet.SignTx(account, tx, chainID)
 			}
 
 			signature, err := hs.SignHash(account, t.Signer.Hash(tx).Bytes())
