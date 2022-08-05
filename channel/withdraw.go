@@ -16,6 +16,7 @@ package channel
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -165,11 +166,17 @@ func (a *Adjudicator) callAssetWithdraw(ctx context.Context, request channel.Adj
 }
 
 func (a *Adjudicator) newWithdrawalAuth(request channel.AdjudicatorReq, asset assetHolder) (assetholder.AssetHolderWithdrawalAuth, []byte, error) {
+	fid := FundingID(request.Tx.ID, request.Params.Parts[request.Idx])
+	bal, err := asset.Assetholder.Holdings(nil, fid)
+	if err != nil {
+		return assetholder.AssetHolderWithdrawalAuth{}, nil, fmt.Errorf("getting balance: %w", err)
+	}
+
 	auth := assetholder.AssetHolderWithdrawalAuth{
 		ChannelID:   request.Params.ID(),
 		Participant: wallet.AsEthAddr(request.Acc.Address()),
 		Receiver:    a.Receiver,
-		Amount:      request.Tx.Allocation.Balances[asset.assetIndex][request.Idx],
+		Amount:      bal,
 	}
 	enc, err := encodeAssetHolderWithdrawalAuth(auth)
 	if err != nil {
