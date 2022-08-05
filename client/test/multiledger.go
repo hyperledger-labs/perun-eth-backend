@@ -127,7 +127,7 @@ func setupLedger(ctx context.Context, t *testing.T, rng *rand.Rand, chainID *big
 	}
 }
 
-func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) ctest.Client {
+func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) ctest.MultiLedgerClient {
 	t.Helper()
 	require := require.New(t)
 
@@ -186,7 +186,7 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 	)
 	require.NoError(err)
 
-	return ctest.Client{
+	return ctest.MultiLedgerClient{
 		Client:        c,
 		Adjudicator1:  adjL1,
 		Adjudicator2:  adjL2,
