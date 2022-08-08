@@ -423,19 +423,29 @@ func countZeroBalances(bals []channel.Bal) (n int) {
 // where each entry contains the hash Keccak256(channel id || participant address).
 func FundingIDs(channelID channel.ID, participants ...perunwallet.Address) [][32]byte {
 	ids := make([][32]byte, len(participants))
-	args := abi.Arguments{{Type: abiBytes32}, {Type: abiAddress}}
 	for idx, pID := range participants {
 		address, ok := pID.(*wallet.Address)
 		if !ok {
 			log.Panic("wrong address type")
 		}
-		bytes, err := args.Pack(channelID, common.Address(*address))
-		if err != nil {
-			log.Panicf("error packing values: %v", err)
-		}
-		ids[idx] = crypto.Keccak256Hash(bytes)
+		ids[idx] = FundingID(channelID, address)
 	}
 	return ids
+}
+
+// FundingID returns the funding identifier for a participnant, i.e.,
+// Keccak256(channel id || participant address).
+func FundingID(channelID channel.ID, participant perunwallet.Address) [32]byte {
+	args := abi.Arguments{{Type: abiBytes32}, {Type: abiAddress}}
+	address, ok := participant.(*wallet.Address)
+	if !ok {
+		log.Panic("wrong address type")
+	}
+	bytes, err := args.Pack(channelID, common.Address(*address))
+	if err != nil {
+		log.Panicf("error packing values: %v", err)
+	}
+	return crypto.Keccak256Hash(bytes)
 }
 
 // NumTX returns how many Transactions are needed for the funding request.
