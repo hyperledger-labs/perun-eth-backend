@@ -66,6 +66,23 @@ type SimulatedBackend struct {
 	commitTx      bool          // Whether each transaction is committed.
 }
 
+type BalanceReader struct {
+	b   *SimulatedBackend
+	acc wallet.Address
+}
+
+func (br *BalanceReader) Balance(asset perunchannel.Asset) perunchannel.Bal {
+	return br.b.Balance(br.acc, asset)
+}
+
+// NewBalanceReader creates balance for the given account.
+func (b *SimulatedBackend) NewBalanceReader(acc wallet.Address) *BalanceReader {
+	return &BalanceReader{
+		b:   b,
+		acc: acc,
+	}
+}
+
 // Balance returns the balance of the given address on the simulated backend.
 func (s *SimulatedBackend) Balance(addr wallet.Address, _ perunchannel.Asset) perunchannel.Bal {
 	ctx := context.Background()

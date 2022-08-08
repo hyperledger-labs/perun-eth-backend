@@ -56,6 +56,7 @@ func MakeRoleSetups(rng *rand.Rand, s *ethctest.Setup, names [2]string) (setup [
 			// Scaled due to simbackend automining progressing faster than real time.
 			ChallengeDuration: challengeDurationBlocks * uint64(time.Second/BlockInterval),
 			Errors:            make(chan error),
+			BalanceReader:     s.SimBackend.NewBalanceReader(s.Accs[i].Address()),
 		}
 	}
 	return

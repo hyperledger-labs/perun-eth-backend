@@ -87,9 +87,7 @@ func SetupMultiLedgerTest(t *testing.T, testDuration time.Duration) ctest.MultiL
 			{etherToWei(1), etherToWei(9)}, // Asset 1.
 			{etherToWei(5), etherToWei(5)}, // Asset 2.
 		},
-		BalanceDelta:   etherToWei(0.00012),
-		BalanceReader1: l1.simSetup.SimBackend,
-		BalanceReader2: l2.simSetup.SimBackend,
+		BalanceDelta: etherToWei(0.00012),
 	}
 }
 
@@ -187,12 +185,14 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 	require.NoError(err)
 
 	return ctest.MultiLedgerClient{
-		Client:        c,
-		Adjudicator1:  adjL1,
-		Adjudicator2:  adjL2,
-		WireAddress:   wireAddr,
-		WalletAddress: walletAddr,
-		Events:        make(chan channel.AdjudicatorEvent),
+		Client:         c,
+		Adjudicator1:   adjL1,
+		Adjudicator2:   adjL2,
+		WireAddress:    wireAddr,
+		WalletAddress:  walletAddr,
+		Events:         make(chan channel.AdjudicatorEvent),
+		BalanceReader1: l1.simSetup.SimBackend.NewBalanceReader(acc.Address()),
+		BalanceReader2: l2.simSetup.SimBackend.NewBalanceReader(acc.Address()),
 	}
 }
 
