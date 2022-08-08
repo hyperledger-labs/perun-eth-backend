@@ -58,8 +58,6 @@ type Funder struct {
 	mtx sync.RWMutex
 
 	ContractBackend
-	// chainID specifies the chain the funder is living on.
-	chainID ChainID
 	// accounts associates an Account to every AssetIndex.
 	accounts map[AssetMapKey]accounts.Account
 	// depositors associates a Depositor to every AssetIndex.
@@ -76,7 +74,6 @@ var _ channel.Funder = (*Funder)(nil)
 func NewFunder(backend ContractBackend) *Funder {
 	return &Funder{
 		ContractBackend: backend,
-		chainID:         backend.chainID,
 		accounts:        make(map[AssetMapKey]accounts.Account),
 		depositors:      make(map[AssetMapKey]Depositor),
 		log:             log.Default(),
@@ -146,7 +143,7 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 	defer cancel() // Cancel the context if we return before the block timeout.
 
 	// Fund each asset, saving the TX in `txs` and the errors in `errg`.
-	assets := filterAssets(request.State.Assets, f.chainID)
+	assets := request.State.Assets
 	txs, errg := f.fundAssets(ctx, assets, channelID, request)
 
 	// Wait for the TXs to be mined.
@@ -345,7 +342,7 @@ func (f *Funder) waitForFundingConfirmation(ctx context.Context, request channel
 	// The allocation that all participants agreed on.
 	agreement := request.Agreement.Clone()[asset.assetIndex]
 	// Count how many zero balance funding requests are there
-	N := len(request.Params.Parts) - countZeroBalances(agreement)
+	N := len(request.Params.Parts) - countZeroBalances(agreement) - f.countDifferentLedger(request.State.Assets)
 
 	// Wait for all non-zero funding requests
 	for N > 0 {
@@ -417,6 +414,16 @@ func countZeroBalances(bals []channel.Bal) (n int) {
 		}
 	}
 	return
+}
+
+func (f *Funder) countDifferentLedger(assets []channel.Asset) int {
+	c := 0
+	for _, a := range assets {
+		if a.(*Asset).ChainID.MapKey() != f.chainID.MapKey() {
+			c++
+		}
+	}
+	return c
 }
 
 // FundingIDs returns a slice the same size as the number of passed participants
