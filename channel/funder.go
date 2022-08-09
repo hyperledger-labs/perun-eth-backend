@@ -458,7 +458,7 @@ func FundingIDs(channelID channel.ID, participants ...perunwallet.Address) [][32
 	return ids
 }
 
-// FundingID returns the funding identifier for a participnant, i.e.,
+// FundingID returns the funding identifier for a participant, i.e.,
 // Keccak256(channel id || participant address).
 func FundingID(channelID channel.ID, participant perunwallet.Address) [32]byte {
 	args := abi.Arguments{{Type: abiBytes32}, {Type: abiAddress}}

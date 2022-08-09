@@ -16,7 +16,6 @@ package client_test
 
 import (
 	"context"
-	"math/big"
 	"math/rand"
 	"testing"
 	"time"
@@ -31,7 +30,7 @@ import (
 func TestFundRecovery(t *testing.T) {
 	rng := test.Prng(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1000*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	ctest.TestFundRecovery(
@@ -39,9 +38,9 @@ func TestFundRecovery(t *testing.T) {
 		t,
 		ctest.FundSetup{
 			ChallengeDuration: 1,
-			FridaInitBal:      ethToWei(big.NewFloat(100)),
-			FredInitBal:       ethToWei(big.NewFloat(50)),
-			BalanceDelta:      ethToWei(big.NewFloat(0.001)),
+			FridaInitBal:      ethclienttest.EtherToWei(100),
+			FredInitBal:       ethclienttest.EtherToWei(50),
+			BalanceDelta:      ethclienttest.EtherToWei(0.001),
 		},
 		func(r *rand.Rand) ([2]ctest.RoleSetup, channel.Asset) {
 			setup := channeltest.NewSetup(t, rng, 2, ethclienttest.BlockInterval, 1)
@@ -52,9 +51,4 @@ func TestFundRecovery(t *testing.T) {
 			return roles, setup.Asset
 		},
 	)
-}
-
-func ethToWei(eth *big.Float) *big.Int {
-	wei, _ := new(big.Float).Mul(eth, big.NewFloat(1e18)).Int(nil)
-	return wei
 }

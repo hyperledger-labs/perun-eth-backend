@@ -78,7 +78,7 @@ func (br *BalanceReader) Balance(asset perunchannel.Asset) perunchannel.Bal {
 	return br.b.Balance(br.acc, asset)
 }
 
-// NewBalanceReader creates balance for the given account.
+// NewBalanceReader creates a new balance reader for the given account.
 func (s *SimulatedBackend) NewBalanceReader(acc wallet.Address) *BalanceReader {
 	return &BalanceReader{
 		b:   s,
