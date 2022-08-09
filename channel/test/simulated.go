@@ -66,19 +66,22 @@ type SimulatedBackend struct {
 	commitTx      bool          // Whether each transaction is committed.
 }
 
+// BalanceReader is a balance reader used for testing. It is associated with a
+// given account.
 type BalanceReader struct {
 	b   *SimulatedBackend
 	acc wallet.Address
 }
 
+// Balance returns the asset balance of the associated account.
 func (br *BalanceReader) Balance(asset perunchannel.Asset) perunchannel.Bal {
 	return br.b.Balance(br.acc, asset)
 }
 
 // NewBalanceReader creates balance for the given account.
-func (b *SimulatedBackend) NewBalanceReader(acc wallet.Address) *BalanceReader {
+func (s *SimulatedBackend) NewBalanceReader(acc wallet.Address) *BalanceReader {
 	return &BalanceReader{
-		b:   b,
+		b:   s,
 		acc: acc,
 	}
 }

@@ -322,27 +322,41 @@ func (f *Funder) depositedSub(ctx context.Context, contract *bind.BoundContract,
 	return sub, errors.WithMessage(err, "subscribing to deposited event")
 }
 
-// waitForFundingConfirmation waits for the confirmation events on the blockchain that
-// both we and all peers successfully funded the channel for the specified asset
-// according to the funding agreement.
-func (f *Funder) waitForFundingConfirmation(ctx context.Context, request channel.FundingReq, asset assetHolder, fundingIDs [][32]byte) error {
+func (f *Funder) subscribeDeposited(ctx context.Context, contract *bind.BoundContract, fundingIDs ...[32]byte) (chan *subscription.Event, *subscription.ResistantEventSub, chan error, error) {
 	deposited := make(chan *subscription.Event)
 	subErr := make(chan error, 1)
 	// Subscribe to events.
-	sub, err := f.depositedSub(ctx, asset.contract, fundingIDs...)
+	sub, err := f.depositedSub(ctx, contract, fundingIDs...)
 	if err != nil {
-		return errors.WithMessage(err, "subscribing to deposited event")
+		return nil, nil, nil, errors.WithMessage(err, "subscribing to deposited event")
 	}
-	defer sub.Close()
 	// Read from the sub.
 	go func() {
 		subErr <- sub.Read(ctx, deposited)
 	}()
+	return deposited, sub, subErr, nil
+}
+
+// waitForFundingConfirmation waits for the confirmation events on the blockchain that
+// both we and all peers successfully funded the channel for the specified asset
+// according to the funding agreement.
+func (f *Funder) waitForFundingConfirmation(ctx context.Context, request channel.FundingReq, asset assetHolder, fundingIDs [][32]byte) error {
+	// Subscribe to events.
+	deposited, sub, subErr, err := f.subscribeDeposited(ctx, asset.contract, fundingIDs...)
+	if err != nil {
+		return errors.WithMessage(err, "subscribing to deposited event")
+	}
+	defer sub.Close()
 
 	// The allocation that all participants agreed on.
 	agreement := request.Agreement.Clone()[asset.assetIndex]
-	// Count how many zero balance funding requests are there
-	N := len(request.Params.Parts) - countZeroBalances(agreement) - f.countDifferentLedger(request.State.Assets)
+	// Count how often we don't expect an event because we have a zero balance or
+	// the asset is on a different ledger.
+	differentLedger, err := f.countDifferentLedger(request.State.Assets)
+	if err != nil {
+		return err
+	}
+	N := len(request.Params.Parts) - countZeroBalances(agreement) - differentLedger
 
 	// Wait for all non-zero funding requests
 	for N > 0 {
@@ -416,14 +430,18 @@ func countZeroBalances(bals []channel.Bal) (n int) {
 	return
 }
 
-func (f *Funder) countDifferentLedger(assets []channel.Asset) int {
+func (f *Funder) countDifferentLedger(assets []channel.Asset) (int, error) {
 	c := 0
 	for _, a := range assets {
-		if a.(*Asset).ChainID.MapKey() != f.chainID.MapKey() {
+		ethAsset, ok := a.(*Asset)
+		if !ok {
+			return 0, fmt.Errorf("wrong type: expected *Asset, got %T", a)
+		}
+		if ethAsset.ChainID.MapKey() != f.chainID.MapKey() {
 			c++
 		}
 	}
-	return c
+	return c, nil
 }
 
 // FundingIDs returns a slice the same size as the number of passed participants
