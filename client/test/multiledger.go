@@ -76,20 +76,18 @@ func SetupMultiLedgerTest(t *testing.T, testDuration time.Duration) ctest.MultiL
 		Asset1:  l1.asset,
 		Asset2:  l2.asset,
 		InitBalances: channel.Balances{
-			{etherToWei(10), etherToWei(0)}, // Asset 1.
-			{etherToWei(0), etherToWei(10)}, // Asset 2.
+			{EtherToWei(10), EtherToWei(0)}, // Asset 1.
+			{EtherToWei(0), EtherToWei(10)}, // Asset 2.
 		},
 		UpdateBalances1: channel.Balances{
-			{etherToWei(5), etherToWei(5)}, // Asset 1.
-			{etherToWei(3), etherToWei(7)}, // Asset 2.
+			{EtherToWei(5), EtherToWei(5)}, // Asset 1.
+			{EtherToWei(3), EtherToWei(7)}, // Asset 2.
 		},
 		UpdateBalances2: channel.Balances{
-			{etherToWei(1), etherToWei(9)}, // Asset 1.
-			{etherToWei(5), etherToWei(5)}, // Asset 2.
+			{EtherToWei(1), EtherToWei(9)}, // Asset 1.
+			{EtherToWei(5), EtherToWei(5)}, // Asset 2.
 		},
-		BalanceDelta:   etherToWei(0.00012),
-		BalanceReader1: l1.simSetup.SimBackend,
-		BalanceReader2: l2.simSetup.SimBackend,
+		BalanceDelta: EtherToWei(0.00012),
 	}
 }
 
@@ -127,7 +125,7 @@ func setupLedger(ctx context.Context, t *testing.T, rng *rand.Rand, chainID *big
 	}
 }
 
-func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) ctest.Client {
+func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) ctest.MultiLedgerClient {
 	t.Helper()
 	require := require.New(t)
 
@@ -156,6 +154,10 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 	funderL1 := ethchannel.NewFunder(cb1)
 	funderL2 := ethchannel.NewFunder(cb2)
 	registered := funderL1.RegisterAsset(*l1.asset, ethchannel.NewETHDepositor(), acc.Account)
+	require.True(registered)
+	registered = funderL1.RegisterAsset(*l2.asset, ethchannel.NewNoOpDepositor(), acc.Account)
+	require.True(registered)
+	registered = funderL2.RegisterAsset(*l1.asset, ethchannel.NewNoOpDepositor(), acc.Account)
 	require.True(registered)
 	registered = funderL2.RegisterAsset(*l2.asset, ethchannel.NewETHDepositor(), acc.Account)
 	require.True(registered)
@@ -186,17 +188,20 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 	)
 	require.NoError(err)
 
-	return ctest.Client{
-		Client:        c,
-		Adjudicator1:  adjL1,
-		Adjudicator2:  adjL2,
-		WireAddress:   wireAddr,
-		WalletAddress: walletAddr,
-		Events:        make(chan channel.AdjudicatorEvent),
+	return ctest.MultiLedgerClient{
+		Client:         c,
+		Adjudicator1:   adjL1,
+		Adjudicator2:   adjL2,
+		WireAddress:    wireAddr,
+		WalletAddress:  walletAddr,
+		Events:         make(chan channel.AdjudicatorEvent),
+		BalanceReader1: l1.simSetup.SimBackend.NewBalanceReader(acc.Address()),
+		BalanceReader2: l2.simSetup.SimBackend.NewBalanceReader(acc.Address()),
 	}
 }
 
-func etherToWei(eth float64) *big.Int {
+// EtherToWei converts eth to wei.
+func EtherToWei(eth float64) *big.Int {
 	weiFloat := new(big.Float).Mul(big.NewFloat(eth), new(big.Float).SetFloat64(params.Ether))
 	wei, _ := weiFloat.Int(nil)
 	return wei

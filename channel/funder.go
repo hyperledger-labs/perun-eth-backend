@@ -58,8 +58,6 @@ type Funder struct {
 	mtx sync.RWMutex
 
 	ContractBackend
-	// chainID specifies the chain the funder is living on.
-	chainID ChainID
 	// accounts associates an Account to every AssetIndex.
 	accounts map[AssetMapKey]accounts.Account
 	// depositors associates a Depositor to every AssetIndex.
@@ -76,7 +74,6 @@ var _ channel.Funder = (*Funder)(nil)
 func NewFunder(backend ContractBackend) *Funder {
 	return &Funder{
 		ContractBackend: backend,
-		chainID:         backend.chainID,
 		accounts:        make(map[AssetMapKey]accounts.Account),
 		depositors:      make(map[AssetMapKey]Depositor),
 		log:             log.Default(),
@@ -146,7 +143,7 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 	defer cancel() // Cancel the context if we return before the block timeout.
 
 	// Fund each asset, saving the TX in `txs` and the errors in `errg`.
-	assets := filterAssets(request.State.Assets, f.chainID)
+	assets := request.State.Assets
 	txs, errg := f.fundAssets(ctx, assets, channelID, request)
 
 	// Wait for the TXs to be mined.
@@ -325,27 +322,41 @@ func (f *Funder) depositedSub(ctx context.Context, contract *bind.BoundContract,
 	return sub, errors.WithMessage(err, "subscribing to deposited event")
 }
 
-// waitForFundingConfirmation waits for the confirmation events on the blockchain that
-// both we and all peers successfully funded the channel for the specified asset
-// according to the funding agreement.
-func (f *Funder) waitForFundingConfirmation(ctx context.Context, request channel.FundingReq, asset assetHolder, fundingIDs [][32]byte) error {
+func (f *Funder) subscribeDeposited(ctx context.Context, contract *bind.BoundContract, fundingIDs ...[32]byte) (chan *subscription.Event, *subscription.ResistantEventSub, chan error, error) {
 	deposited := make(chan *subscription.Event)
 	subErr := make(chan error, 1)
 	// Subscribe to events.
-	sub, err := f.depositedSub(ctx, asset.contract, fundingIDs...)
+	sub, err := f.depositedSub(ctx, contract, fundingIDs...)
 	if err != nil {
-		return errors.WithMessage(err, "subscribing to deposited event")
+		return nil, nil, nil, errors.WithMessage(err, "subscribing to deposited event")
 	}
-	defer sub.Close()
 	// Read from the sub.
 	go func() {
 		subErr <- sub.Read(ctx, deposited)
 	}()
+	return deposited, sub, subErr, nil
+}
+
+// waitForFundingConfirmation waits for the confirmation events on the blockchain that
+// both we and all peers successfully funded the channel for the specified asset
+// according to the funding agreement.
+func (f *Funder) waitForFundingConfirmation(ctx context.Context, request channel.FundingReq, asset assetHolder, fundingIDs [][32]byte) error {
+	// Subscribe to events.
+	deposited, sub, subErr, err := f.subscribeDeposited(ctx, asset.contract, fundingIDs...)
+	if err != nil {
+		return errors.WithMessage(err, "subscribing to deposited event")
+	}
+	defer sub.Close()
 
 	// The allocation that all participants agreed on.
 	agreement := request.Agreement.Clone()[asset.assetIndex]
-	// Count how many zero balance funding requests are there
-	N := len(request.Params.Parts) - countZeroBalances(agreement)
+	// Count how often we don't expect an event because we have a zero balance or
+	// the asset is on a different ledger.
+	differentLedger, err := f.countDifferentLedger(request.State.Assets)
+	if err != nil {
+		return err
+	}
+	N := len(request.Params.Parts) - countZeroBalances(agreement) - differentLedger
 
 	// Wait for all non-zero funding requests
 	for N > 0 {
@@ -419,23 +430,47 @@ func countZeroBalances(bals []channel.Bal) (n int) {
 	return
 }
 
+func (f *Funder) countDifferentLedger(assets []channel.Asset) (int, error) {
+	c := 0
+	for _, a := range assets {
+		ethAsset, ok := a.(*Asset)
+		if !ok {
+			return 0, fmt.Errorf("wrong type: expected *Asset, got %T", a)
+		}
+		if ethAsset.ChainID.MapKey() != f.chainID.MapKey() {
+			c++
+		}
+	}
+	return c, nil
+}
+
 // FundingIDs returns a slice the same size as the number of passed participants
 // where each entry contains the hash Keccak256(channel id || participant address).
 func FundingIDs(channelID channel.ID, participants ...perunwallet.Address) [][32]byte {
 	ids := make([][32]byte, len(participants))
-	args := abi.Arguments{{Type: abiBytes32}, {Type: abiAddress}}
 	for idx, pID := range participants {
 		address, ok := pID.(*wallet.Address)
 		if !ok {
 			log.Panic("wrong address type")
 		}
-		bytes, err := args.Pack(channelID, common.Address(*address))
-		if err != nil {
-			log.Panicf("error packing values: %v", err)
-		}
-		ids[idx] = crypto.Keccak256Hash(bytes)
+		ids[idx] = FundingID(channelID, address)
 	}
 	return ids
+}
+
+// FundingID returns the funding identifier for a participant, i.e.,
+// Keccak256(channel id || participant address).
+func FundingID(channelID channel.ID, participant perunwallet.Address) [32]byte {
+	args := abi.Arguments{{Type: abiBytes32}, {Type: abiAddress}}
+	address, ok := participant.(*wallet.Address)
+	if !ok {
+		log.Panic("wrong address type")
+	}
+	bytes, err := args.Pack(channelID, common.Address(*address))
+	if err != nil {
+		log.Panicf("error packing values: %v", err)
+	}
+	return crypto.Keccak256Hash(bytes)
 }
 
 // NumTX returns how many Transactions are needed for the funding request.
