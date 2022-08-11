@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	challengeDuration = 15
+	challengeDuration = 15 * uint64(time.Second/test.BlockInterval)
 	testDuration      = 30 * time.Second
 )
 
