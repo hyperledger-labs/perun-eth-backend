@@ -166,24 +166,26 @@ func (a *Adjudicator) checkConcludedState(
 }
 
 func (a *Adjudicator) waitConcludedSecondary(ctx context.Context, req channel.AdjudicatorReq) (concluded bool, err error) {
-	sub, err := subscription.Subscribe(ctx, a.ContractBackend, a.bound, updateEventType(req.Params.ID()), startBlockOffset, a.txFinalityDepth)
-	if err != nil {
-		return false, errors.WithMessage(err, "subscribing")
-	}
-	defer sub.Close()
-	events := make(chan *subscription.Event, adjEventBuffSize)
-	go func() {
-		err := sub.Read(ctx, events)
-		if err != nil {
-			a.log.Warnf("waitConcludedSecondary: reading events: %v", err)
-			return
-		}
-	}()
-
 	// In final Register calls, as the non-initiator, we optimistically wait for
 	// the other party to send the transaction first for
 	// `secondaryWaitBlocks + TxFinalityDepth` many blocks.
 	if req.Tx.IsFinal && req.Secondary {
+		// Create subscription.
+		sub, err := subscription.Subscribe(ctx, a.ContractBackend, a.bound, updateEventType(req.Params.ID()), startBlockOffset, a.txFinalityDepth)
+		if err != nil {
+			return false, errors.WithMessage(err, "subscribing")
+		}
+		defer sub.Close()
+		events := make(chan *subscription.Event, adjEventBuffSize)
+		go func() {
+			err := sub.Read(ctx, events)
+			if err != nil {
+				a.log.Warnf("waitConcludedSecondary: reading events: %v", err)
+				return
+			}
+		}()
+
+		// Wait for concluded event.
 		waitBlocks := secondaryWaitBlocks + int(a.txFinalityDepth)
 		return waitConcludedForNBlocks(ctx, a, events, waitBlocks)
 	}
