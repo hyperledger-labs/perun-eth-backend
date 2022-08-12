@@ -140,7 +140,9 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 	if err != nil {
 		return err
 	}
-	defer cancel() // Cancel the context if we return before the block timeout.
+	defer func() {
+		cancel() // Cancel the context if we return before the block timeout.
+	}()
 
 	// Fund each asset, saving the TX in `txs` and the errors in `errg`.
 	assets := request.State.Assets
@@ -218,8 +220,7 @@ func (f *Funder) fundAssets(ctx context.Context, assets []channel.Asset, channel
 		contract := bindAssetHolder(f.ContractBackend, asset, assetIdx)
 		// Wait for the funding event.
 		errg.Go(func() error {
-			ert := f.waitForFundingConfirmation(ctx, req, contract, fundingIDs)
-			return ert
+			return f.waitForFundingConfirmation(ctx, req, contract, fundingIDs)
 		})
 
 		// Send the funding TX.
@@ -341,6 +342,16 @@ func (f *Funder) subscribeDeposited(ctx context.Context, contract *bind.BoundCon
 // both we and all peers successfully funded the channel for the specified asset
 // according to the funding agreement.
 func (f *Funder) waitForFundingConfirmation(ctx context.Context, request channel.FundingReq, asset assetHolder, fundingIDs [][32]byte) error {
+	// If asset on different ledger, return.
+	a := request.State.Assets[asset.assetIndex]
+	ethAsset, ok := a.(*Asset)
+	if !ok {
+		return fmt.Errorf("wrong type: expected *Asset, got %T", a)
+	}
+	if ethAsset.ChainID.MapKey() != f.chainID.MapKey() {
+		return nil
+	}
+
 	// Subscribe to events.
 	deposited, sub, subErr, err := f.subscribeDeposited(ctx, asset.contract, fundingIDs...)
 	if err != nil {
@@ -348,18 +359,14 @@ func (f *Funder) waitForFundingConfirmation(ctx context.Context, request channel
 	}
 	defer sub.Close()
 
-	// The allocation that all participants agreed on.
-	agreement := request.Agreement.Clone()[asset.assetIndex]
-	// Count how often we don't expect an event because we have a zero balance or
-	// the asset is on a different ledger.
-	differentLedger, err := f.countDifferentLedger(request.State.Assets)
-	if err != nil {
-		return err
+	// Wait until funding complete.
+	remaining := request.Agreement.Clone()[asset.assetIndex]
+	remainingTotal := channel.Balances([][]*big.Int{remaining}).Sum()[0]
+	if remainingTotal.Cmp(big.NewInt(0)) <= 0 {
+		return nil
 	}
-	N := len(request.Params.Parts) - countZeroBalances(agreement) - differentLedger
-
-	// Wait for all non-zero funding requests
-	for N > 0 {
+loop:
+	for {
 		select {
 		case rawEvent := <-deposited:
 			event, ok := rawEvent.Data.(*assetholder.AssetholderDeposited)
@@ -368,29 +375,24 @@ func (f *Funder) waitForFundingConfirmation(ctx context.Context, request channel
 			}
 			log := f.log.WithField("fundingID", event.FundingID)
 
-			// Calculate the position in the participant array.
+			// Subtract amount.
 			idx := partIdx(event.FundingID, fundingIDs)
+			remainingForPart := remaining[idx]
+			remainingForPart.Sub(remainingForPart, event.Amount)
+			log.Debugf("peer[%d]: got: %v, remaining for [%d, %d] = %v", request.Idx, event.Amount, asset.assetIndex, idx, remainingForPart)
 
-			amount := agreement[idx]
-			if amount.Sign() == 0 {
-				continue // ignore double events
+			// Exit loop if fully funded.
+			remainingTotal := channel.Balances([][]*big.Int{remaining}).Sum()[0]
+			if remainingTotal.Cmp(big.NewInt(0)) <= 0 {
+				break loop
 			}
-
-			amount.Sub(amount, event.Amount)
-			if amount.Sign() != 1 {
-				// participant funded successfully
-				N--
-				agreement[idx].SetUint64(0)
-			}
-			log.Debugf("peer[%d]: got: %v, remaining for [%d,%d] = %v. N: %d", request.Idx, event.Amount, asset.assetIndex, idx, amount, N)
-
 		case <-ctx.Done():
-			return fundingTimeoutError(agreement, asset)
+			return fundingTimeoutError(remaining, asset)
 		case err := <-subErr:
 			// Resolve race between ctx and subErr, as ctx fires both events.
 			select {
 			case <-ctx.Done():
-				return fundingTimeoutError(agreement, asset)
+				return fundingTimeoutError(remaining, asset)
 			default:
 			}
 			return err
@@ -399,9 +401,9 @@ func (f *Funder) waitForFundingConfirmation(ctx context.Context, request channel
 	return nil
 }
 
-func fundingTimeoutError(agreement []channel.Bal, asset assetHolder) error {
+func fundingTimeoutError(remaining []channel.Bal, asset assetHolder) error {
 	var indices []channel.Index
-	for k, bals := range agreement {
+	for k, bals := range remaining {
 		if bals.Sign() == 1 {
 			indices = append(indices, channel.Index(k))
 		}
@@ -419,29 +421,6 @@ func partIdx(partID [32]byte, fundingIDs [][32]byte) int {
 		}
 	}
 	return -1
-}
-
-func countZeroBalances(bals []channel.Bal) (n int) {
-	for _, part := range bals {
-		if part.Sign() == 0 {
-			n++
-		}
-	}
-	return
-}
-
-func (f *Funder) countDifferentLedger(assets []channel.Asset) (int, error) {
-	c := 0
-	for _, a := range assets {
-		ethAsset, ok := a.(*Asset)
-		if !ok {
-			return 0, fmt.Errorf("wrong type: expected *Asset, got %T", a)
-		}
-		if ethAsset.ChainID.MapKey() != f.chainID.MapKey() {
-			c++
-		}
-	}
-	return c, nil
 }
 
 // FundingIDs returns a slice the same size as the number of passed participants

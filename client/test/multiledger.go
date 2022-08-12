@@ -76,8 +76,8 @@ func SetupMultiLedgerTest(t *testing.T, testDuration time.Duration) ctest.MultiL
 		Asset1:  l1.asset,
 		Asset2:  l2.asset,
 		InitBalances: channel.Balances{
-			{EtherToWei(10), EtherToWei(0)}, // Asset 1.
-			{EtherToWei(0), EtherToWei(10)}, // Asset 2.
+			{EtherToWei(8), EtherToWei(2)}, // Asset 1.
+			{EtherToWei(2), EtherToWei(8)}, // Asset 2.
 		},
 		UpdateBalances1: channel.Balances{
 			{EtherToWei(5), EtherToWei(5)}, // Asset 1.

@@ -125,8 +125,8 @@ func TestWithdrawZeroBalance(t *testing.T) {
 }
 
 // shouldFunders decides who should fund. 1 indicates funding, 0 indicates skipping.
+//nolint:thelper // Not a helper.
 func testWithdrawZeroBalance(t *testing.T, n int) {
-	t.Helper()
 	rng := pkgtest.Prng(t)
 	s := test.NewSetup(t, rng, n, blockInterval, TxFinalityDepth)
 	// create valid state and params

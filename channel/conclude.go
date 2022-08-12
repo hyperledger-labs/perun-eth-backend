@@ -16,6 +16,7 @@ package channel
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -43,31 +44,25 @@ const (
 //   - if none found, conclude/concludeFinal is called on the adjudicator
 // - it waits for a Concluded event from the blockchain.
 func (a *Adjudicator) ensureConcluded(ctx context.Context, req channel.AdjudicatorReq, subStates channel.StateMap) error {
-	sub, err := subscription.Subscribe(ctx, a.ContractBackend, a.bound, updateEventType(req.Params.ID()), startBlockOffset, a.txFinalityDepth)
-	if err != nil {
-		return errors.WithMessage(err, "subscribing")
-	}
-	defer sub.Close()
 	// Check whether it is already concluded.
-	if concluded, err := a.isConcluded(ctx, sub); err != nil {
+	if concluded, err := a.isConcluded(ctx, req.Tx.ID); err != nil {
 		return errors.WithMessage(err, "isConcluded")
 	} else if concluded {
 		return nil
 	}
 
-	events := make(chan *subscription.Event, adjEventBuffSize)
-	subErr := make(chan error, 1)
-	waitCtx, cancel := context.WithCancel(ctx)
-	go func() {
-		defer cancel()
-		subErr <- sub.Read(ctx, events)
-	}()
-
-	concluded, err := a.waitConcludedSecondary(waitCtx, req, events)
+	// If the secondary flag is set, we wait for someone else to conclude.
+	concluded, err := a.waitConcludedSecondary(ctx, req)
 	if err != nil {
 		return errors.WithMessage(err, "waiting for secondary conclude")
 	} else if concluded {
 		return nil
+	}
+
+	// Wait until we can conclude.
+	err = a.waitConcludable(ctx, req)
+	if err != nil {
+		return fmt.Errorf("waiting for concludability: %w", err)
 	}
 
 	// No conclude event found in the past, send transaction.
@@ -77,6 +72,11 @@ func (a *Adjudicator) ensureConcluded(ctx context.Context, req channel.Adjudicat
 	}
 
 	// Wait for concluded event.
+	sub, events, subErr, err := a.createEventSub(ctx, req.Tx.ID, false)
+	if err != nil {
+		return errors.WithMessage(err, "subscribing")
+	}
+	defer sub.Close()
 	for {
 		select {
 		case _e := <-events:
@@ -160,13 +160,21 @@ func (a *Adjudicator) checkConcludedState(
 	}
 }
 
-func (a *Adjudicator) waitConcludedSecondary(ctx context.Context, req channel.AdjudicatorReq, events chan *subscription.Event) (concluded bool, err error) {
+func (a *Adjudicator) waitConcludedSecondary(ctx context.Context, req channel.AdjudicatorReq) (concluded bool, err error) {
 	// In final Register calls, as the non-initiator, we optimistically wait for
 	// the other party to send the transaction first for
 	// `secondaryWaitBlocks + TxFinalityDepth` many blocks.
 	if req.Tx.IsFinal && req.Secondary {
+		// Create subscription.
+		sub, events, subErr, err := a.createEventSub(ctx, req.Tx.ID, false)
+		if err != nil {
+			return false, errors.WithMessage(err, "subscribing")
+		}
+		defer sub.Close()
+
+		// Wait for concluded event.
 		waitBlocks := secondaryWaitBlocks + int(a.txFinalityDepth)
-		return waitConcludedForNBlocks(ctx, a, events, waitBlocks)
+		return waitConcludedForNBlocks(ctx, a, events, subErr, waitBlocks)
 	}
 	return false, nil
 }
@@ -191,14 +199,13 @@ func (a *Adjudicator) conclude(ctx context.Context, req channel.AdjudicatorReq, 
 }
 
 // isConcluded returns whether a channel is already concluded.
-func (a *Adjudicator) isConcluded(ctx context.Context, sub *subscription.ResistantEventSub) (bool, error) {
-	events := make(chan *subscription.Event, adjEventBuffSize)
-	subErr := make(chan error, 1)
-	// Write the events into events.
-	go func() {
-		defer close(events)
-		subErr <- sub.ReadPast(ctx, events)
-	}()
+func (a *Adjudicator) isConcluded(ctx context.Context, ch channel.ID) (bool, error) {
+	sub, events, subErr, err := a.createEventSub(ctx, ch, true)
+	if err != nil {
+		return false, errors.WithMessage(err, "subscribing")
+	}
+	defer sub.Close()
+
 	// Read all events and check for concluded.
 	for _e := range events {
 		e, ok := _e.Data.(*adjudicator.AdjudicatorChannelUpdate)
@@ -210,6 +217,79 @@ func (a *Adjudicator) isConcluded(ctx context.Context, sub *subscription.Resista
 		}
 	}
 	return false, errors.WithMessage(<-subErr, "reading past events")
+}
+
+func (a *Adjudicator) createEventSub(
+	ctx context.Context,
+	ch channel.ID,
+	past bool,
+) (
+	*subscription.ResistantEventSub,
+	<-chan *subscription.Event,
+	<-chan error,
+	error,
+) {
+	sub, err := subscription.Subscribe(
+		ctx,
+		a.ContractBackend,
+		a.bound,
+		updateEventType(ch),
+		startBlockOffset,
+		a.txFinalityDepth,
+	)
+	if err != nil {
+		return nil, nil, nil, errors.WithMessage(err, "subscribing")
+	}
+
+	events := make(chan *subscription.Event, adjEventBuffSize)
+	subErr := make(chan error, 1)
+	go func() {
+		defer close(events)
+		if past {
+			subErr <- sub.ReadPast(ctx, events)
+		} else {
+			subErr <- sub.Read(ctx, events)
+		}
+	}()
+	return sub, events, subErr, nil
+}
+
+// waitConcludable waits until the specified channel is concludable.
+func (a *Adjudicator) waitConcludable(ctx context.Context, req channel.AdjudicatorReq) error {
+	// If final, we can conclude immediately.
+	if req.Tx.IsFinal {
+		return nil
+	}
+
+	sub, events, subErr, err := a.createEventSub(ctx, req.Tx.ID, true)
+	if err != nil {
+		return errors.WithMessage(err, "subscribing")
+	}
+	defer sub.Close()
+
+	// Process events.
+	var up *adjudicator.AdjudicatorChannelUpdate
+	for e := range events {
+		var ok bool
+		up, ok = e.Data.(*adjudicator.AdjudicatorChannelUpdate)
+		if !ok {
+			log.Panic("wrong event type")
+		}
+		if up.Phase == phaseDispute {
+			// Wait until channel is concludable. If we have an app channel, we need
+			// to wait two phases.
+			t := up.Timeout
+			if !channel.IsNoApp(req.Params.App) {
+				t += req.Params.ChallengeDuration
+			}
+			timeout := NewBlockTimeout(a.ContractInterface, t)
+			err := timeout.Wait(ctx)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return errors.WithMessage(<-subErr, "reading past events")
 }
 
 // isForceExecuted returns whether a channel is in the forced execution phase.
@@ -264,7 +344,8 @@ func updateEventType(channelID [32]byte) subscription.EventFactory {
 // the Concluded event subscription instance.
 func waitConcludedForNBlocks(ctx context.Context,
 	cr ethereum.ChainReader,
-	concluded chan *subscription.Event,
+	concluded <-chan *subscription.Event,
+	subErr <-chan error,
 	numBlocks int,
 ) (bool, error) {
 	h := make(chan *types.Header, adjHeaderBuffSize)
@@ -290,6 +371,8 @@ func waitConcludedForNBlocks(ctx context.Context,
 		case err = <-hsub.Err():
 			err = cherrors.CheckIsChainNotReachableError(err)
 			return false, errors.WithMessage(err, "header subscription error")
+		case err = <-subErr:
+			return false, errors.WithMessage(err, "event subscription error")
 		}
 	}
 	return false, nil
