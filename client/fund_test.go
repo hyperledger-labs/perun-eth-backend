@@ -47,8 +47,10 @@ func TestFundRecovery(t *testing.T) {
 			for i, adj := range setup.Adjs {
 				adj.Receiver = setup.Accs[i].Account.Address
 			}
-			roles := ethclienttest.MakeRoleSetups(rng, setup, [2]string{"Frida", "Fred"})
-			return roles, setup.Asset
+			roles := ethclienttest.MakeRoleSetups(rng, setup, []string{"Frida", "Fred"})
+			var rolesArray [2]ctest.RoleSetup
+			copy(rolesArray[:], roles)
+			return rolesArray, setup.Asset
 		},
 	)
 }

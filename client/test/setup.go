@@ -37,14 +37,15 @@ const (
 )
 
 // MakeRoleSetups creates a two party client test setup with the provided names.
-func MakeRoleSetups(rng *rand.Rand, s *ethctest.Setup, names [2]string) (setup [2]clienttest.RoleSetup) {
+func MakeRoleSetups(rng *rand.Rand, s *ethctest.Setup, names []string) []clienttest.RoleSetup {
+	setups := make([]clienttest.RoleSetup, len(names))
 	bus := wire.NewLocalBus()
-	for i := 0; i < len(setup); i++ {
+	for i := 0; i < len(setups); i++ {
 		watcher, err := local.NewWatcher(s.Adjs[i])
 		if err != nil {
 			panic("Error initializing watcher: " + err.Error())
 		}
-		setup[i] = clienttest.RoleSetup{
+		setups[i] = clienttest.RoleSetup{
 			Name:        names[i],
 			Identity:    wiretest.NewRandomAccount(rng),
 			Bus:         bus,
@@ -59,5 +60,5 @@ func MakeRoleSetups(rng *rand.Rand, s *ethctest.Setup, names [2]string) (setup [
 			BalanceReader:     s.SimBackend.NewBalanceReader(s.Accs[i].Address()),
 		}
 	}
-	return
+	return setups
 }

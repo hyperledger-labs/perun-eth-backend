@@ -36,7 +36,7 @@ import (
 func TestProgression(t *testing.T) {
 	rng := pkgtest.Prng(t)
 
-	names := [2]string{"Paul", "Paula"}
+	names := []string{"Paul", "Paula"}
 	backendSetup := test.NewSetup(t, rng, 2, ctest.BlockInterval, TxFinalityDepth)
 	roleSetups := ctest.MakeRoleSetups(rng, backendSetup, names)
 	clients := [2]clienttest.Executer{
@@ -71,7 +71,7 @@ func deployMockApp(t *testing.T, s *test.Setup) wallet.Address {
 	return ethwallet.AsWalletAddr(addr)
 }
 
-func clientAddresses(roleSetups [2]clienttest.RoleSetup) (addresses [2]wire.Address) {
+func clientAddresses(roleSetups []clienttest.RoleSetup) (addresses [2]wire.Address) {
 	for i := 0; i < len(roleSetups); i++ {
 		addresses[i] = roleSetups[i].Identity.Address()
 	}

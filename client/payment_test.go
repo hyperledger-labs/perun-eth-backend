@@ -48,13 +48,12 @@ func TestPaymentHappy(t *testing.T) {
 
 	const A, B = 0, 1 // Indices of Alice and Bob
 	var (
-		name  = [2]string{"Alice", "Bob"}
-		setup [2]clienttest.RoleSetup
-		role  [2]clienttest.Executer
+		name = [2]string{"Alice", "Bob"}
+		role [2]clienttest.Executer
 	)
 
 	s := test.NewSetup(t, rng, 2, ctest.BlockInterval, TxFinalityDepth)
-	setup = ctest.MakeRoleSetups(rng, s, name)
+	setup := ctest.MakeRoleSetups(rng, s, name[:])
 
 	role[A] = clienttest.NewAlice(t, setup[A])
 	role[B] = clienttest.NewBob(t, setup[B])
@@ -111,13 +110,12 @@ func TestPaymentDispute(t *testing.T) {
 
 	const A, B = 0, 1 // Indices of Mallory and Carol
 	var (
-		name  = [2]string{"Mallory", "Carol"}
-		setup [2]clienttest.RoleSetup
-		role  [2]clienttest.Executer
+		name = [2]string{"Mallory", "Carol"}
+		role [2]clienttest.Executer
 	)
 
 	s := test.NewSetup(t, rng, 2, ctest.BlockInterval, TxFinalityDepth)
-	setup = ctest.MakeRoleSetups(rng, s, name)
+	setup := ctest.MakeRoleSetups(rng, s, name[:])
 
 	role[A] = clienttest.NewMallory(t, setup[A])
 	role[B] = clienttest.NewCarol(t, setup[B])
