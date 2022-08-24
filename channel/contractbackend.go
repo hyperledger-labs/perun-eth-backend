@@ -138,34 +138,50 @@ func (c *ContractBackend) pastOffsetBlockNum(ctx context.Context) (uint64, error
 // automatically when not manually specified by the caller. The caller must also
 // set the value manually afterwards if it should be different from 0.
 func (c *ContractBackend) NewTransactor(ctx context.Context, gasLimit uint64, acc accounts.Account) (*bind.TransactOpts, error) {
-	c.nonceMtx.Lock()
-	defer c.nonceMtx.Unlock()
-	expectedNextNonce, found := c.expectedNextNonce[acc.Address]
-	if !found {
-		c.expectedNextNonce[acc.Address] = 0
-	}
-
 	auth, err := c.tr.NewTransactor(acc)
 	if err != nil {
 		return nil, errors.WithMessage(err, "creating transactor")
 	}
 
+	// Set context and gas limit.
 	auth.GasLimit = gasLimit
 	auth.Context = ctx
 
-	nonce, err := c.PendingNonceAt(ctx, acc.Address)
+	// Set and store nonce.
+	nonce, err := c.nonce(ctx, auth.From)
+	if err != nil {
+		return nil, err
+	}
+	auth.Nonce = big.NewInt(int64(nonce))
+	return auth, nil
+}
+
+// nonce tries to determine the correct nonce by comparing local and chain nonce
+// expectations.
+func (c *ContractBackend) nonce(ctx context.Context, sender common.Address) (uint64, error) {
+	// Look up pending nonce from backend.
+	nonce, err := c.PendingNonceAt(ctx, sender)
 	if err != nil {
 		err = cherrors.CheckIsChainNotReachableError(err)
-		return nil, errors.WithMessage(err, "fetching nonce")
+		return 0, errors.WithMessage(err, "fetching nonce")
 	}
+
+	// Look up expected next nonce locally.
+	c.nonceMtx.Lock()
+	defer c.nonceMtx.Unlock()
+	expectedNextNonce, found := c.expectedNextNonce[sender]
+	if !found {
+		c.expectedNextNonce[sender] = 0
+	}
+
+	// Compare nonces and use larger.
 	if nonce < expectedNextNonce {
 		nonce = expectedNextNonce
 	}
 
-	auth.Nonce = big.NewInt(int64(nonce))
-	c.expectedNextNonce[acc.Address] = nonce + 1
-
-	return auth, nil
+	// Update local expectation.
+	c.expectedNextNonce[sender] = nonce + 1
+	return nonce, nil
 }
 
 // ConfirmTransaction returns the receipt of the transaction if it was
