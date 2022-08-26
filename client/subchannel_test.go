@@ -33,7 +33,7 @@ func TestSubChannelHappy(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	const A, B = 0, 1 // Indices of clients.
 	s := ethchanneltest.NewSetup(t, rng, 2, ethclienttest.BlockInterval, TxFinalityDepth)
-	setups := ethclienttest.MakeRoleSetups(rng, s, [2]string{"Susie", "Tim"})
+	setups := ethclienttest.MakeRoleSetups(rng, s, []string{"Susie", "Tim"})
 	roles := [2]clienttest.Executer{
 		clienttest.NewSusie(t, setups[A]),
 		clienttest.NewTim(t, setups[B]),
@@ -87,7 +87,7 @@ func TestSubChannelDispute(t *testing.T) {
 
 	const A, B = 0, 1 // Indices of clients.
 	s := ethchanneltest.NewSetup(t, rng, 2, ethclienttest.BlockInterval, TxFinalityDepth)
-	setups := ethclienttest.MakeRoleSetups(rng, s, [2]string{"DisputeSusie", "DisputeTim"})
+	setups := ethclienttest.MakeRoleSetups(rng, s, []string{"DisputeSusie", "DisputeTim"})
 	roles := [2]clienttest.Executer{
 		clienttest.NewDisputeSusie(t, setups[A]),
 		clienttest.NewDisputeTim(t, setups[B]),
