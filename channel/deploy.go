@@ -23,12 +23,12 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/perun-network/perun-eth-backend/bindings/erc20token"
 	"github.com/pkg/errors"
 
 	"github.com/perun-network/perun-eth-backend/bindings/adjudicator"
 	"github.com/perun-network/perun-eth-backend/bindings/assetholdererc20"
 	"github.com/perun-network/perun-eth-backend/bindings/assetholdereth"
-	"github.com/perun-network/perun-eth-backend/bindings/peruntoken"
 	"github.com/perun-network/perun-eth-backend/bindings/trivialapp"
 	cherrors "github.com/perun-network/perun-eth-backend/channel/errors"
 
@@ -39,13 +39,13 @@ import (
 
 const deployGasLimit = 6600000
 
-// DeployPerunToken deploys a new PerunToken contract.
+// DeployPerunToken deploys a new ERC20Token contract named PerunToken.
 // Returns txTimedOutError if the context is cancelled or if the context
 // deadline is exceeded when waiting for the transaction to be mined.
 func DeployPerunToken(ctx context.Context, backend ContractBackend, deployer accounts.Account, initAccs []common.Address, initBals *big.Int) (common.Address, error) {
 	return deployContract(ctx, backend, deployer, "PerunToken",
 		func(auth *bind.TransactOpts, cb ContractBackend) (common.Address, *types.Transaction, error) {
-			addr, tx, _, err := peruntoken.DeployPeruntoken(auth, backend, initAccs, initBals)
+			addr, tx, _, err := erc20token.DeployErc20token(auth, backend, "PerunToken", "PRN", initAccs, initBals)
 			return addr, tx, err
 		})
 }

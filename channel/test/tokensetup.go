@@ -26,10 +26,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/perun-network/perun-eth-backend/bindings/erc20token"
 	"github.com/stretchr/testify/require"
 
 	"github.com/perun-network/perun-eth-backend/bindings"
-	"github.com/perun-network/perun-eth-backend/bindings/peruntoken"
 	ethchannel "github.com/perun-network/perun-eth-backend/channel"
 	"github.com/perun-network/perun-eth-backend/wallet/keystore"
 
@@ -41,15 +41,15 @@ import (
 type TokenSetup struct {
 	SB         *SimulatedBackend
 	CB         ethchannel.ContractBackend
-	Token      *peruntoken.Peruntoken
+	Token      *erc20token.Erc20token
 	Contract   *bind.BoundContract
 	R          *require.Assertions
 	T          *testing.T
 	Acc1, Acc2 *accounts.Account
 
 	subApproval, subTransfer event.Subscription
-	SinkApproval             chan *peruntoken.PeruntokenApproval
-	SinkTransfer             chan *peruntoken.PeruntokenTransfer
+	SinkApproval             chan *erc20token.Erc20tokenApproval
+	SinkTransfer             chan *erc20token.Erc20tokenTransfer
 }
 
 const (
@@ -81,9 +81,9 @@ func NewTokenSetup(ctx context.Context, t *testing.T, rng *rand.Rand, txFinality
 	defer sb.StopMining()
 	tokenAddr, err := ethchannel.DeployPerunToken(ctx, cb, *acc1, []common.Address{acc1.Address}, channeltest.MaxBalance)
 	require.NoError(t, err)
-	token, err := peruntoken.NewPeruntoken(tokenAddr, cb)
+	token, err := erc20token.NewErc20token(tokenAddr, cb)
 	require.NoError(t, err)
-	contract := bind.NewBoundContract(tokenAddr, bindings.ABI.PerunToken, cb, cb, cb)
+	contract := bind.NewBoundContract(tokenAddr, bindings.ABI.ERC20Token, cb, cb, cb)
 
 	return &TokenSetup{
 		SB:       sb,
@@ -100,11 +100,11 @@ func NewTokenSetup(ctx context.Context, t *testing.T, rng *rand.Rand, txFinality
 // StartSubs starts the Approval and Transfer subscriptions.
 func (s *TokenSetup) StartSubs() {
 	// Approval sub.
-	sinkApproval := make(chan *peruntoken.PeruntokenApproval, eventBuffSize)
+	sinkApproval := make(chan *erc20token.Erc20tokenApproval, eventBuffSize)
 	subApproval, err := s.Token.WatchApproval(&bind.WatchOpts{}, sinkApproval, nil, nil)
 	require.NoError(s.T, err)
 	// Transfer sub.
-	sinkTransfer := make(chan *peruntoken.PeruntokenTransfer, eventBuffSize)
+	sinkTransfer := make(chan *erc20token.Erc20tokenTransfer, eventBuffSize)
 	subTransfer, err := s.Token.WatchTransfer(&bind.WatchOpts{}, sinkTransfer, nil, nil)
 	require.NoError(s.T, err)
 
@@ -148,7 +148,7 @@ func (s *TokenSetup) ConfirmTx(tx *types.Transaction, confirm bool) {
 // AllowanceEvent waits for an allowance event with value `v`.
 // `included` decided whether or not its `Removed` values should not be set.
 func (s *TokenSetup) AllowanceEvent(v uint64, included bool) {
-	var e *peruntoken.PeruntokenApproval
+	var e *erc20token.Erc20tokenApproval
 
 	select {
 	case e = <-s.SinkApproval:
@@ -166,7 +166,7 @@ func (s *TokenSetup) AllowanceEvent(v uint64, included bool) {
 // TransferEvent waits for a transfer event.
 // `included` decided whether or not its `Removed` values should not be set.
 func (s *TokenSetup) TransferEvent(included bool) {
-	var e *peruntoken.PeruntokenTransfer
+	var e *erc20token.Erc20tokenTransfer
 
 	select {
 	case e = <-s.SinkTransfer:

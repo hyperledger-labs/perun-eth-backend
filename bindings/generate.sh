@@ -68,7 +68,7 @@ generate "AssetHolderETH" "assetholdereth"
 generate "AssetHolderERC20" "assetholdererc20"
 
 # Tokens
-generate "PerunToken" "peruntoken"
+generate "ERC20Token" "erc20token"
 
 # Applications
 generate "TrivialApp" "trivialapp"

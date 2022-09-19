@@ -24,12 +24,12 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/perun-network/perun-eth-backend/bindings/erc20token"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/perun-network/perun-eth-backend/bindings/assetholder"
-	"github.com/perun-network/perun-eth-backend/bindings/peruntoken"
 	ethchannel "github.com/perun-network/perun-eth-backend/channel"
 	"github.com/perun-network/perun-eth-backend/channel/test"
 	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
@@ -457,7 +457,7 @@ func newNFunders(
 
 // fundERC20 funds `to` with ERC20 tokens from account `from`.
 func fundERC20(ctx context.Context, cb ethchannel.ContractBackend, from accounts.Account, to common.Address, token common.Address, asset ethchannel.Asset) error {
-	contract, err := peruntoken.NewPeruntoken(token, cb)
+	contract, err := erc20token.NewErc20token(token, cb)
 	if err != nil {
 		return errors.WithMessagef(err, "binding AssetHolderERC20 contract at: %v", asset)
 	}

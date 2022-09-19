@@ -22,12 +22,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/perun-network/perun-eth-backend/bindings/erc20token"
 	"github.com/stretchr/testify/require"
 
 	"github.com/perun-network/perun-eth-backend/bindings"
 	"github.com/perun-network/perun-eth-backend/bindings/assetholder"
 	"github.com/perun-network/perun-eth-backend/bindings/assetholdereth"
-	"github.com/perun-network/perun-eth-backend/bindings/peruntoken"
 	ethchannel "github.com/perun-network/perun-eth-backend/channel"
 	"github.com/perun-network/perun-eth-backend/channel/test"
 	"github.com/perun-network/perun-eth-backend/subscription"
@@ -70,7 +70,7 @@ func TestEventSub(t *testing.T) {
 	// Setup Perun Token.
 	tokenAddr, err := ethchannel.DeployPerunToken(ctx, cb, *account, []common.Address{account.Address}, channeltest.MaxBalance)
 	require.NoError(t, err)
-	token, err := peruntoken.NewPeruntoken(tokenAddr, cb)
+	token, err := erc20token.NewErc20token(tokenAddr, cb)
 	require.NoError(t, err)
 	ct := pkgtest.NewConcurrent(t)
 
@@ -95,13 +95,13 @@ func TestEventSub(t *testing.T) {
 	sink := make(chan *subscription.Event, 10)
 	eFact := func() *subscription.Event {
 		return &subscription.Event{
-			Name: bindings.Events.PerunTokenApproval,
-			Data: new(peruntoken.PeruntokenApproval),
+			Name: bindings.Events.ERC20TokenApproval,
+			Data: new(erc20token.Erc20tokenApproval),
 		}
 	}
 	// Setup the event sub after some events have been sent.
 	<-waitSent
-	contract := bind.NewBoundContract(tokenAddr, bindings.ABI.PerunToken, cb, cb, cb)
+	contract := bind.NewBoundContract(tokenAddr, bindings.ABI.ERC20Token, cb, cb, cb)
 	sub, err := subscription.NewEventSub(ctx, cb, contract, eFact, 10000)
 	require.NoError(t, err)
 	go ct.Stage("sub", func(t pkgtest.ConcT) {
@@ -122,7 +122,7 @@ func TestEventSub(t *testing.T) {
 			}
 			lastTx = e.Log.TxHash
 
-			want := &peruntoken.PeruntokenApproval{
+			want := &erc20token.Erc20tokenApproval{
 				Owner:   account.Address,
 				Spender: account.Address,
 				Value:   big.NewInt(int64(i + 1)),

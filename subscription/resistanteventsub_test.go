@@ -20,9 +20,9 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/perun-network/perun-eth-backend/bindings/erc20token"
 	"github.com/stretchr/testify/require"
 
-	"github.com/perun-network/perun-eth-backend/bindings/peruntoken"
 	"github.com/perun-network/perun-eth-backend/channel/test"
 	"github.com/perun-network/perun-eth-backend/subscription"
 
@@ -34,7 +34,7 @@ import (
 var event = func() *subscription.Event {
 	return &subscription.Event{
 		Name: "Approval",
-		Data: new(peruntoken.PeruntokenApproval),
+		Data: new(erc20token.Erc20tokenApproval),
 	}
 }
 

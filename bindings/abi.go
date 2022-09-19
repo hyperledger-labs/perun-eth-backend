@@ -24,15 +24,15 @@ import (
 	"github.com/perun-network/perun-eth-backend/bindings/assetholder"
 	"github.com/perun-network/perun-eth-backend/bindings/assetholdererc20"
 	"github.com/perun-network/perun-eth-backend/bindings/assetholdereth"
-	"github.com/perun-network/perun-eth-backend/bindings/peruntoken"
+	"github.com/perun-network/perun-eth-backend/bindings/erc20token"
 	"github.com/perun-network/perun-eth-backend/bindings/trivialapp"
 )
 
 // ABI contains all the parsed ABI definitions of our contracts.
 // Use it together with `bind.NewBoundContract` to create a bound contract.
 var ABI = struct {
-	// PerunToken is the parsed ABI definition of contract PerunToken.
-	PerunToken abi.ABI
+	// ERC20Token is the parsed ABI definition of contract ERC20Token.
+	ERC20Token abi.ABI
 	// Adjudicator is the parsed ABI definition of contract Adjudicator.
 	Adjudicator abi.ABI
 	// AssetHolder is the parsed ABI definition of contract AssetHolder.
@@ -53,8 +53,8 @@ var Events = struct {
 	AhDeposited string
 	// AhWithdrawn is the Withdrawn event of the Assetholder contract.
 	AhWithdrawn string
-	// PerunTokenApproval is the Approval event of the PerunToken contract.
-	PerunTokenApproval string
+	// ERC20TokenApproval is the Approval event of the ERC20Token contract.
+	ERC20TokenApproval string
 }{}
 
 func init() {
@@ -71,7 +71,7 @@ func parseABIs() {
 		return abi
 	}
 
-	ABI.PerunToken = parse(peruntoken.PeruntokenMetaData.ABI)
+	ABI.ERC20Token = parse(erc20token.Erc20tokenMetaData.ABI)
 	ABI.Adjudicator = parse(adjudicator.AdjudicatorMetaData.ABI)
 	ABI.AssetHolder = parse(assetholder.AssetholderMetaData.ABI)
 	ABI.ETHAssetHolder = parse(assetholdereth.AssetholderethMetaData.ABI)
@@ -92,5 +92,5 @@ func extractEvents() {
 	Events.AdjChannelUpdate = extract(ABI.Adjudicator, "ChannelUpdate")
 	Events.AhDeposited = extract(ABI.AssetHolder, "Deposited")
 	Events.AhWithdrawn = extract(ABI.AssetHolder, "Withdrawn")
-	Events.PerunTokenApproval = extract(ABI.PerunToken, "Approval")
+	Events.ERC20TokenApproval = extract(ABI.ERC20Token, "Approval")
 }

@@ -19,10 +19,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/perun-network/perun-eth-backend/bindings/erc20token"
 	"github.com/pkg/errors"
 
 	"github.com/perun-network/perun-eth-backend/bindings/assetholdererc20"
-	"github.com/perun-network/perun-eth-backend/bindings/peruntoken"
 	cherrors "github.com/perun-network/perun-eth-backend/channel/errors"
 )
 
@@ -54,7 +54,7 @@ func (d *ERC20Depositor) Deposit(ctx context.Context, req DepositReq) (types.Tra
 		return nil, errors.Wrapf(err, "binding AssetHolderERC20 contract at: %x", req.Asset)
 	}
 	// Bind an `ERC20` instance.
-	token, err := peruntoken.NewPeruntoken(d.Token, req.CB)
+	token, err := erc20token.NewErc20token(d.Token, req.CB)
 	if err != nil {
 		return nil, errors.Wrapf(err, "binding ERC20 contract at: %x", d.Token)
 	}
