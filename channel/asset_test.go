@@ -16,6 +16,7 @@ package channel_test
 
 import (
 	"context"
+	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -123,4 +124,21 @@ func Test_Asset_GenericMarshaler(t *testing.T) {
 		asset := ethwallettest.NewRandomAddress(rng)
 		wiretest.GenericMarshalerTest(t, &asset)
 	}
+}
+
+func TestMarshalling(t *testing.T) {
+	rng := pkgtest.Prng(t)
+	assetIn := ethchannel.Asset{
+		ChainID: ethchannel.ChainID{
+			big.NewInt(rng.Int63()),
+		},
+		AssetHolder: ethwallettest.NewRandomAddress(rng),
+	}
+	bytes, err := assetIn.MarshalBinary()
+	require.NoError(t, err)
+	var assetOut ethchannel.Asset
+	err = assetOut.UnmarshalBinary(bytes)
+	require.NoError(t, err)
+
+	require.Equal(t, assetIn, assetOut)
 }
