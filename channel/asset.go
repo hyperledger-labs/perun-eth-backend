@@ -92,7 +92,7 @@ func (a Asset) MapKey() AssetMapKey {
 // MarshalBinary marshals the asset into its binary representation.
 func (a Asset) MarshalBinary() ([]byte, error) {
 	var buf bytes.Buffer
-	err := perunio.Encode(&buf, &a.AssetHolder, a.ChainID)
+	err := perunio.Encode(&buf, a.ChainID, &a.AssetHolder)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (a Asset) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary unmarshals the asset from its binary representation.
-func (a Asset) UnmarshalBinary(data []byte) error {
+func (a *Asset) UnmarshalBinary(data []byte) error {
 	buf := bytes.NewBuffer(data)
 	return perunio.Decode(buf, &a.ChainID, &a.AssetHolder)
 }
