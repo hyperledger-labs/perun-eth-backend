@@ -164,7 +164,7 @@ func (a *Adjudicator) waitConcludedSecondary(ctx context.Context, req channel.Ad
 	// In final Register calls, as the non-initiator, we optimistically wait for
 	// the other party to send the transaction first for
 	// `secondaryWaitBlocks + TxFinalityDepth` many blocks.
-	if req.Tx.IsFinal && req.Secondary {
+	if req.Tx.IsFinal {
 		// Create subscription.
 		sub, events, subErr, err := a.createEventSub(ctx, req.Tx.ID, false)
 		if err != nil {

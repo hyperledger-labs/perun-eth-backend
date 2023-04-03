@@ -183,7 +183,14 @@ func (a *Adjudicator) convertEvent(ctx context.Context, e *adjudicator.Adjudicat
 		if ch.Params.App == zeroAddress {
 			app = channel.NoApp()
 		} else {
-			app, err = channel.Resolve(wallet.AsWalletAddr(ch.Params.App))
+
+			appAddr := wallet.AsWalletAddr(ch.Params.App)
+			appID := &AppID{
+				Address: appAddr,
+			}
+			
+			app, err = channel.Resolve(appID)
+
 			if err != nil {
 				return nil, err
 			}
@@ -201,7 +208,12 @@ func (a *Adjudicator) convertEvent(ctx context.Context, e *adjudicator.Adjudicat
 		if err != nil {
 			return nil, errors.WithMessage(err, "fetching call data")
 		}
-		app, err := channel.Resolve(wallet.AsWalletAddr(args.Params.App))
+		appAddr:= wallet.AsWalletAddr(args.Params.App)
+		appID := &AppID{
+			Address: appAddr,
+		}
+		app, err := channel.Resolve(appID)
+
 		if err != nil {
 			return nil, errors.WithMessage(err, "resolving app")
 		}
