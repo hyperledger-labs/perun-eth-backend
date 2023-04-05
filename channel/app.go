@@ -1,10 +1,8 @@
 package channel
 
 import (
-	"bytes"
 	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
 	"perun.network/go-perun/channel"
-	"perun.network/go-perun/wire/perunio"
 )
 
 var _ channel.AppID = new(AppID)
@@ -14,13 +12,12 @@ type AppID struct {
 }
 type AppIDKey string
 
-func (id AppID) Equal(b channel.AppID) bool {
+func (a *AppID) Equal(b channel.AppID) bool {
 	bTyped, ok := b.(*AppID)
 	if !ok {
 		return false
 	}
-
-	return id.Address.Equal(bTyped.Address)
+	return a.Address.Equal(bTyped.Address)
 }
 
 // Key returns the key representation of this app identifier.
@@ -30,19 +27,25 @@ func (id AppID) Key() channel.AppIDKey {
 		panic(err)
 	}
 	return channel.AppIDKey(b)
+
 }
 
-func (a AppID) MarshalBinary() ([]byte, error) {
-	var buf bytes.Buffer
-	err := perunio.Encode(&buf, &a)
+func (a *AppID) MarshalBinary() ([]byte, error) {
+	data, err := a.Address.MarshalBinary() // Access the embedded Address field
+
 	if err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil
+	return data, nil
 }
 
-// UnmarshalBinary unmarshals the asset from its binary representation.
 func (a *AppID) UnmarshalBinary(data []byte) error {
-	buf := bytes.NewBuffer(data)
-	return perunio.Decode(buf, &a)
+	addr := &ethwallet.Address{}
+	err := addr.UnmarshalBinary(data)
+	if err != nil {
+		return err
+	}
+	appaddr := &AppID{addr}
+	*a = *appaddr // Dereference the addr pointer before assigning it to *a
+	return nil
 }
