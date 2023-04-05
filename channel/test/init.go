@@ -15,9 +15,15 @@
 package test
 
 import (
+	"github.com/perun-network/perun-eth-backend/channel"
+	"math/rand"
+	pchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/channel/test"
 )
 
 func init() {
 	test.SetRandomizer(new(randomizer))
+	test.SetNewRandomAppID(func(r *rand.Rand) pchannel.AppID {
+		return channel.NewRandomAppID(r)
+	})
 }

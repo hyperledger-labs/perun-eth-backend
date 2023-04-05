@@ -2,6 +2,10 @@ package channel
 
 import (
 	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
+	ethtestwallet "github.com/perun-network/perun-eth-backend/wallet/test"
+
+	"math/rand"
+
 	"perun.network/go-perun/channel"
 )
 
@@ -12,7 +16,7 @@ type AppID struct {
 }
 type AppIDKey string
 
-func (a *AppID) Equal(b channel.AppID) bool {
+func (a AppID) Equal(b channel.AppID) bool {
 	bTyped, ok := b.(*AppID)
 	if !ok {
 		return false
@@ -30,8 +34,8 @@ func (id AppID) Key() channel.AppIDKey {
 
 }
 
-func (a *AppID) MarshalBinary() ([]byte, error) {
-	data, err := a.Address.MarshalBinary() // Access the embedded Address field
+func (a AppID) MarshalBinary() ([]byte, error) {
+	data, err := a.Address.MarshalBinary()
 
 	if err != nil {
 		return nil, err
@@ -46,6 +50,11 @@ func (a *AppID) UnmarshalBinary(data []byte) error {
 		return err
 	}
 	appaddr := &AppID{addr}
-	*a = *appaddr // Dereference the addr pointer before assigning it to *a
+	*a = *appaddr
 	return nil
+}
+
+func NewRandomAppID(rng *rand.Rand) *AppID {
+	addr := ethtestwallet.NewRandomAddress(rng)
+	return &AppID{&addr}
 }
