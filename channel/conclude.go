@@ -42,6 +42,7 @@ const (
 // - it searches for a past concluded event by calling `isConcluded`
 //   - if found, channel is already concluded and success is returned
 //   - if none found, conclude/concludeFinal is called on the adjudicator
+//
 // - it waits for a Concluded event from the blockchain.
 func (a *Adjudicator) ensureConcluded(ctx context.Context, req channel.AdjudicatorReq, subStates channel.StateMap) error {
 	// Check whether it is already concluded.

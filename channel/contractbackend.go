@@ -18,6 +18,7 @@ import (
 	"context"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -45,6 +46,11 @@ const (
 // create a TxTimedoutError with additional context.
 var errTxTimedOut = errors.New("")
 
+var (
+	GlobalExpectedNonces map[ChainID]map[common.Address]uint64
+	GlobalNonceMtx       map[ChainID]map[common.Address]*sync.Mutex
+)
+
 // ContractInterface provides all functions needed by an ethereum backend.
 // Both test.SimulatedBackend and ethclient.Client implement this interface.
 type ContractInterface interface {
@@ -63,7 +69,7 @@ type Transactor interface {
 type ContractBackend struct {
 	ContractInterface
 	tr                Transactor
-	nonceMtx          *sync.Mutex
+	nonceMtx          map[common.Address]*sync.Mutex
 	expectedNextNonce map[common.Address]uint64
 	txFinalityDepth   uint64
 	chainID           ChainID
@@ -73,11 +79,24 @@ type ContractBackend struct {
 // txFinalityDepth defines in how many consecutive blocks a TX has to be
 // included to be considered final. Must be at least 1.
 func NewContractBackend(cf ContractInterface, chainID ChainID, tr Transactor, txFinalityDepth uint64) ContractBackend {
+	// Check if the global maps are initialized, if not, initialize them.
+	if GlobalExpectedNonces == nil {
+		GlobalExpectedNonces = make(map[ChainID]map[common.Address]uint64)
+	}
+	if GlobalNonceMtx == nil {
+		GlobalNonceMtx = make(map[ChainID]map[common.Address]*sync.Mutex)
+	}
+
+	// Check if the specific chainID entry exists in the global maps, if not, create it.
+	if _, exists := GlobalExpectedNonces[chainID]; !exists {
+		GlobalExpectedNonces[chainID] = make(map[common.Address]uint64)
+		GlobalNonceMtx[chainID] = make(map[common.Address]*sync.Mutex)
+	}
 	return ContractBackend{
 		ContractInterface: cf,
 		tr:                tr,
-		expectedNextNonce: make(map[common.Address]uint64),
-		nonceMtx:          &sync.Mutex{},
+		expectedNextNonce: GlobalExpectedNonces[chainID],
+		nonceMtx:          GlobalNonceMtx[chainID],
 		txFinalityDepth:   txFinalityDepth,
 		chainID:           chainID,
 	}
@@ -165,10 +184,12 @@ func (c *ContractBackend) nonce(ctx context.Context, sender common.Address) (uin
 		err = cherrors.CheckIsChainNotReachableError(err)
 		return 0, errors.WithMessage(err, "fetching nonce")
 	}
-
 	// Look up expected next nonce locally.
-	c.nonceMtx.Lock()
-	defer c.nonceMtx.Unlock()
+	if c.nonceMtx[sender] == nil {
+		c.nonceMtx[sender] = &sync.Mutex{}
+	}
+	c.nonceMtx[sender].Lock()
+	defer c.nonceMtx[sender].Unlock()
 	expectedNextNonce, found := c.expectedNextNonce[sender]
 	if !found {
 		c.expectedNextNonce[sender] = 0
@@ -220,11 +241,13 @@ func (c *ContractBackend) confirmNTimes(ctx context.Context, tx *types.Transacti
 	if finalityDepth < 1 {
 		return nil, errors.New("finalityDepth was less than 1")
 	}
+	startWaitMined := time.Now()
 	// Wait to be included at least once.
 	head, err := c.waitMined(ctx, tx)
 	if err != nil {
 		return nil, errors.WithMessage(err, "waiting for TX to be mined")
 	}
+	log.Printf("WaitMined of tx %s in %s; Start: %s ; End: %s", tx.Hash().Hex(), time.Since(startWaitMined), startWaitMined, time.Now())
 
 	// Set up header sub for future blocks.
 	heads := make(chan *types.Header, contractBackendHeadBuffSize)
@@ -236,6 +259,7 @@ func (c *ContractBackend) confirmNTimes(ctx context.Context, tx *types.Transacti
 	}
 	defer hsub.Unsubscribe()
 
+	startPollReceipt := time.Now()
 	for {
 		select {
 		case head := <-heads:
@@ -247,17 +271,21 @@ func (c *ContractBackend) confirmNTimes(ctx context.Context, tx *types.Transacti
 				break
 			}
 			if receipt != nil && isFinal(receipt, head, finalityDepth) {
+				log.Printf("PollReceipt for Tx %s in %s", tx.Hash().Hex(), time.Since(startPollReceipt))
 				return receipt, nil
 			}
 			// TX is either not included in the canonical chain anymore
 			// or not yet final; wait for next head.
 		case err := <-hsub.Err():
 			err = cherrors.CheckIsChainNotReachableError(err)
+			log.Printf("PollReceipt for Tx %s in %s", tx.Hash().Hex(), time.Since(startPollReceipt))
 			return nil, errors.WithMessage(err, "header subscription")
 		case <-ctx.Done():
+			log.Printf("PollReceipt for Tx %s in %s", tx.Hash().Hex(), time.Since(startPollReceipt))
 			return nil, ctx.Err()
 		}
 	}
+
 }
 
 // waitMined waits for a TX to be mined and returns the latest head.

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -151,6 +152,7 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 	// Wait for the TXs to be mined.
 	for a, asset := range assets {
 		for i, tx := range txs[a] {
+			startFund := time.Now()
 			assetTyped, ok := asset.(*Asset)
 			if !ok {
 				return fmt.Errorf("wrong type: expected %T, got %T", &Asset{}, asset)
@@ -163,6 +165,8 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 				return errors.WithMessagef(err, "sending %dth funding TX for asset %d", i, a)
 			}
 			f.log.Debugf("Mined TX: %v", tx.Hash().Hex())
+			elapsedFund := time.Since(startFund)
+			log.Printf("Waiting for asset %s to be funded tx %s in %s", asset, tx.Hash().Hex(), elapsedFund)
 		}
 	}
 
