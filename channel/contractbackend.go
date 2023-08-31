@@ -75,14 +75,14 @@ type ContractBackend struct {
 }
 
 type noncer interface {
-	nonce(chainID ChainID, addr common.Address) uint64
-	setNonce(chainID ChainID, addr common.Address, nonce uint64) error
+	// nonce(chainID ChainID, addr common.Address) uint64
+	setNonce(chainID ChainID, addr common.Address, nonce uint64) (uint64, error)
 }
 
 // LocalNoncer implements noncer interface.
 type LocalNoncer struct {
 	expectedNextNonce map[common.Address]uint64
-	nonceMtx          map[common.Address]*sync.Mutex
+	nonceMtx          *sync.Mutex
 }
 
 // GlobalNoncer implements a global nonce counter that is shared across different contract backends.
@@ -91,13 +91,13 @@ type GlobalNoncer struct {
 	nonceMtx          map[ChainID]map[common.Address]*sync.Mutex
 }
 
-func (d LocalNoncer) nonce(chainID ChainID, addr common.Address) uint64 {
-	return d.expectedNextNonce[addr]
-}
+// func (d LocalNoncer) nonce(chainID ChainID, addr common.Address) uint64 {
+// 	return d.expectedNextNonce[addr]
+// }
 
-func (d LocalNoncer) setNonce(chainID ChainID, sender common.Address, nonce uint64) error {
-	d.nonceMtx[sender].Lock()
-	defer d.nonceMtx[sender].Unlock()
+func (d LocalNoncer) setNonce(chainID ChainID, sender common.Address, nonce uint64) (uint64, error) {
+	d.nonceMtx.Lock()
+	defer d.nonceMtx.Unlock()
 
 	expectedNextNonce, found := d.expectedNextNonce[sender]
 
@@ -113,14 +113,14 @@ func (d LocalNoncer) setNonce(chainID ChainID, sender common.Address, nonce uint
 	// Update local expectation.
 	d.expectedNextNonce[sender] = nonce + 1
 
-	return nil
+	return nonce, nil
 }
 
 // NewLocalNoncer creates a new local noncer.
 func NewLocalNoncer() *LocalNoncer {
 	return &LocalNoncer{
 		expectedNextNonce: make(map[common.Address]uint64),
-		nonceMtx:          make(map[common.Address]*sync.Mutex),
+		nonceMtx:          &sync.Mutex{},
 	}
 }
 
@@ -238,14 +238,12 @@ func (c *ContractBackend) nonce(ctx context.Context, sender common.Address) (uin
 		return 0, errors.WithMessage(err, "fetching nonce")
 	}
 
-	err = c.noncer.setNonce(c.chainID, sender, nonce)
+	nonce, err = c.noncer.setNonce(c.chainID, sender, nonce)
 	if err != nil {
 		return 0, errors.WithMessage(err, "setting nonce")
 	}
 
-	nonceUpdated := c.noncer.nonce(c.chainID, sender)
-
-	return nonceUpdated, nil
+	return nonce, nil
 }
 
 // ConfirmTransaction returns the receipt of the transaction if it was
