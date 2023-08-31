@@ -146,12 +146,18 @@ func NewGlobalNoncer() *GlobalNoncer {
 	}
 }
 
-type contractBackendOpts func(*ContractBackend)
+// ContractBackendOpts are options for the contract backend.
+type ContractBackendOpts func(*ContractBackend)
+
+// SetNoncer sets the noncer for the contract backend.
+func (c *ContractBackend) SetNoncer(nc noncer) {
+	c.noncer = nc
+}
 
 // NewContractBackend creates a new ContractBackend with the given parameters.
 // txFinalityDepth defines in how many consecutive blocks a TX has to be
 // included to be considered final. Must be at least 1.
-func NewContractBackend(cf ContractInterface, chainID ChainID, tr Transactor, txFinalityDepth uint64, opts ...contractBackendOpts) ContractBackend {
+func NewContractBackend(cf ContractInterface, chainID ChainID, tr Transactor, txFinalityDepth uint64, opts ...ContractBackendOpts) ContractBackend {
 	cb := ContractBackend{
 		ContractInterface: cf,
 		tr:                tr,
