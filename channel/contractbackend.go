@@ -18,7 +18,6 @@ import (
 	"context"
 	"math/big"
 	"sync"
-	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -282,13 +281,11 @@ func (c *ContractBackend) confirmNTimes(ctx context.Context, tx *types.Transacti
 	if finalityDepth < 1 {
 		return nil, errors.New("finalityDepth was less than 1")
 	}
-	startWaitMined := time.Now()
 	// Wait to be included at least once.
 	head, err := c.waitMined(ctx, tx)
 	if err != nil {
 		return nil, errors.WithMessage(err, "waiting for TX to be mined")
 	}
-	log.Printf("WaitMined of tx %s in %s; Start: %s ; End: %s", tx.Hash().Hex(), time.Since(startWaitMined), startWaitMined, time.Now())
 
 	// Set up header sub for future blocks.
 	heads := make(chan *types.Header, contractBackendHeadBuffSize)
@@ -300,7 +297,6 @@ func (c *ContractBackend) confirmNTimes(ctx context.Context, tx *types.Transacti
 	}
 	defer hsub.Unsubscribe()
 
-	startPollReceipt := time.Now()
 	for {
 		select {
 		case head := <-heads:
@@ -312,17 +308,14 @@ func (c *ContractBackend) confirmNTimes(ctx context.Context, tx *types.Transacti
 				break
 			}
 			if receipt != nil && isFinal(receipt, head, finalityDepth) {
-				log.Printf("PollReceipt for Tx %s in %s", tx.Hash().Hex(), time.Since(startPollReceipt))
 				return receipt, nil
 			}
 			// TX is either not included in the canonical chain anymore
 			// or not yet final; wait for next head.
 		case err := <-hsub.Err():
 			err = cherrors.CheckIsChainNotReachableError(err)
-			log.Printf("PollReceipt for Tx %s in %s", tx.Hash().Hex(), time.Since(startPollReceipt))
 			return nil, errors.WithMessage(err, "header subscription")
 		case <-ctx.Done():
-			log.Printf("PollReceipt for Tx %s in %s", tx.Hash().Hex(), time.Since(startPollReceipt))
 			return nil, ctx.Err()
 		}
 	}
