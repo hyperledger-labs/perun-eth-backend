@@ -45,11 +45,6 @@ const (
 // create a TxTimedoutError with additional context.
 var errTxTimedOut = errors.New("")
 
-var (
-	GlobalExpectedNonces map[ChainID]map[common.Address]uint64
-	GlobalNonceMtx       map[ChainID]map[common.Address]*sync.Mutex
-)
-
 // ContractInterface provides all functions needed by an ethereum backend.
 // Both test.SimulatedBackend and ethclient.Client implement this interface.
 type ContractInterface interface {
@@ -74,7 +69,6 @@ type ContractBackend struct {
 }
 
 type noncer interface {
-	// nonce(chainID ChainID, addr common.Address) uint64
 	setNonce(chainID ChainID, addr common.Address, nonce uint64) (uint64, error)
 }
 
@@ -86,13 +80,33 @@ type LocalNoncer struct {
 
 // GlobalNoncer implements a global nonce counter that is shared across different contract backends.
 type GlobalNoncer struct {
-	expectedNextNonce map[ChainID]map[common.Address]uint64
-	nonceMtx          map[ChainID]map[common.Address]*sync.Mutex
+	expectedNextNonce map[common.Address]uint64
+	nonceMtx          map[common.Address]*sync.Mutex
 }
 
-// func (d LocalNoncer) nonce(chainID ChainID, addr common.Address) uint64 {
-// 	return d.expectedNextNonce[addr]
-// }
+func (d GlobalNoncer) setNonce(chainID ChainID, sender common.Address, nonce uint64) (uint64, error) {
+	if d.nonceMtx[sender] == nil {
+		d.nonceMtx[sender] = &sync.Mutex{}
+	}
+	d.nonceMtx[sender].Lock()
+	defer d.nonceMtx[sender].Unlock()
+
+	expectedNextNonce, found := d.expectedNextNonce[sender]
+
+	if !found {
+		d.expectedNextNonce[sender] = 0
+	}
+
+	// Compare nonces and use larger.
+	if nonce < expectedNextNonce {
+		nonce = expectedNextNonce
+	}
+
+	// Update local expectation.
+	d.expectedNextNonce[sender] = nonce + 1
+
+	return nonce, nil
+}
 
 func (d LocalNoncer) setNonce(chainID ChainID, sender common.Address, nonce uint64) (uint64, error) {
 	d.nonceMtx.Lock()
@@ -127,8 +141,8 @@ func NewLocalNoncer() *LocalNoncer {
 // is shared across different contract backends.
 func NewGlobalNoncer() *GlobalNoncer {
 	return &GlobalNoncer{
-		expectedNextNonce: make(map[ChainID]map[common.Address]uint64),
-		nonceMtx:          make(map[ChainID]map[common.Address]*sync.Mutex),
+		expectedNextNonce: make(map[common.Address]uint64),
+		nonceMtx:          make(map[common.Address]*sync.Mutex),
 	}
 }
 
@@ -141,7 +155,7 @@ func NewContractBackend(cf ContractInterface, chainID ChainID, tr Transactor, tx
 	cb := ContractBackend{
 		ContractInterface: cf,
 		tr:                tr,
-		noncer:            NewLocalNoncer(),
+		noncer:            NewGlobalNoncer(),
 		txFinalityDepth:   txFinalityDepth,
 		chainID:           chainID,
 	}
@@ -319,7 +333,6 @@ func (c *ContractBackend) confirmNTimes(ctx context.Context, tx *types.Transacti
 			return nil, ctx.Err()
 		}
 	}
-
 }
 
 // waitMined waits for a TX to be mined and returns the latest head.
