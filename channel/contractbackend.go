@@ -46,6 +46,11 @@ const (
 // create a TxTimedoutError with additional context.
 var errTxTimedOut = errors.New("")
 
+var (
+	GlobalExpectedNonces map[ChainID]map[common.Address]uint64
+	GlobalNonceMtx       map[ChainID]map[common.Address]*sync.Mutex
+)
+
 // ContractInterface provides all functions needed by an ethereum backend.
 // Both test.SimulatedBackend and ethclient.Client implement this interface.
 type ContractInterface interface {
@@ -323,6 +328,7 @@ func (c *ContractBackend) confirmNTimes(ctx context.Context, tx *types.Transacti
 			return nil, ctx.Err()
 		}
 	}
+
 }
 
 // waitMined waits for a TX to be mined and returns the latest head.
