@@ -46,11 +46,6 @@ const (
 // create a TxTimedoutError with additional context.
 var errTxTimedOut = errors.New("")
 
-var (
-	GlobalExpectedNonces map[ChainID]map[common.Address]uint64
-	GlobalNonceMtx       map[ChainID]map[common.Address]*sync.Mutex
-)
-
 // ContractInterface provides all functions needed by an ethereum backend.
 // Both test.SimulatedBackend and ethclient.Client implement this interface.
 type ContractInterface interface {
@@ -68,38 +63,91 @@ type Transactor interface {
 // This is needed to send on-chain transaction to interact with the smart contracts.
 type ContractBackend struct {
 	ContractInterface
-	tr                Transactor
-	nonceMtx          map[common.Address]*sync.Mutex
-	expectedNextNonce map[common.Address]uint64
-	txFinalityDepth   uint64
-	chainID           ChainID
+	tr              Transactor
+	noncer          noncer
+	txFinalityDepth uint64
+	chainID         ChainID
 }
+
+type noncer interface {
+	nonce(chainID ChainID, addr common.Address) uint64
+	setNonce(chainID ChainID, addr common.Address, nonce uint64) error
+}
+
+// LocalNoncer implements noncer interface.
+type LocalNoncer struct {
+	expectedNextNonce map[common.Address]uint64
+	nonceMtx          map[common.Address]*sync.Mutex
+}
+
+// GlobalNoncer implements a global nonce counter that is shared across different contract backends.
+type GlobalNoncer struct {
+	expectedNextNonce map[ChainID]map[common.Address]uint64
+	nonceMtx          map[ChainID]map[common.Address]*sync.Mutex
+}
+
+func (d LocalNoncer) nonce(chainID ChainID, addr common.Address) uint64 {
+	return d.expectedNextNonce[addr]
+}
+
+func (d LocalNoncer) setNonce(chainID ChainID, sender common.Address, nonce uint64) error {
+	d.nonceMtx[sender].Lock()
+	defer d.nonceMtx[sender].Unlock()
+
+	expectedNextNonce, found := d.expectedNextNonce[sender]
+
+	if !found {
+		d.expectedNextNonce[sender] = 0
+	}
+
+	// Compare nonces and use larger.
+	if nonce < expectedNextNonce {
+		nonce = expectedNextNonce
+	}
+
+	// Update local expectation.
+	d.expectedNextNonce[sender] = nonce + 1
+
+	return nil
+}
+
+// NewLocalNoncer creates a new local noncer.
+func NewLocalNoncer() *LocalNoncer {
+	return &LocalNoncer{
+		expectedNextNonce: make(map[common.Address]uint64),
+		nonceMtx:          make(map[common.Address]*sync.Mutex),
+	}
+}
+
+// NewGlobalNoncer initializes a global noncer that handles the nonce across different chains and contract backends. It is set outside of the contract backend because
+// is shared across different contract backends.
+func NewGlobalNoncer() *GlobalNoncer {
+	return &GlobalNoncer{
+		expectedNextNonce: make(map[ChainID]map[common.Address]uint64),
+		nonceMtx:          make(map[ChainID]map[common.Address]*sync.Mutex),
+	}
+}
+
+type contractBackendOpts func(*ContractBackend)
 
 // NewContractBackend creates a new ContractBackend with the given parameters.
 // txFinalityDepth defines in how many consecutive blocks a TX has to be
 // included to be considered final. Must be at least 1.
-func NewContractBackend(cf ContractInterface, chainID ChainID, tr Transactor, txFinalityDepth uint64) ContractBackend {
-	// Check if the global maps are initialized, if not, initialize them.
-	if GlobalExpectedNonces == nil {
-		GlobalExpectedNonces = make(map[ChainID]map[common.Address]uint64)
-	}
-	if GlobalNonceMtx == nil {
-		GlobalNonceMtx = make(map[ChainID]map[common.Address]*sync.Mutex)
-	}
-
-	// Check if the specific chainID entry exists in the global maps, if not, create it.
-	if _, exists := GlobalExpectedNonces[chainID]; !exists {
-		GlobalExpectedNonces[chainID] = make(map[common.Address]uint64)
-		GlobalNonceMtx[chainID] = make(map[common.Address]*sync.Mutex)
-	}
-	return ContractBackend{
+func NewContractBackend(cf ContractInterface, chainID ChainID, tr Transactor, txFinalityDepth uint64, opts ...contractBackendOpts) ContractBackend {
+	cb := ContractBackend{
 		ContractInterface: cf,
 		tr:                tr,
-		expectedNextNonce: GlobalExpectedNonces[chainID],
-		nonceMtx:          GlobalNonceMtx[chainID],
+		noncer:            NewLocalNoncer(),
 		txFinalityDepth:   txFinalityDepth,
 		chainID:           chainID,
 	}
+
+	// overwrite settings with options: in particular, the way the nonce is being handled.
+	for _, opt := range opts {
+		opt(&cb)
+	}
+
+	return cb
 }
 
 // ChainID returns the chain identifier of the contract backend.
@@ -184,25 +232,15 @@ func (c *ContractBackend) nonce(ctx context.Context, sender common.Address) (uin
 		err = cherrors.CheckIsChainNotReachableError(err)
 		return 0, errors.WithMessage(err, "fetching nonce")
 	}
-	// Look up expected next nonce locally.
-	if c.nonceMtx[sender] == nil {
-		c.nonceMtx[sender] = &sync.Mutex{}
-	}
-	c.nonceMtx[sender].Lock()
-	defer c.nonceMtx[sender].Unlock()
-	expectedNextNonce, found := c.expectedNextNonce[sender]
-	if !found {
-		c.expectedNextNonce[sender] = 0
+
+	err = c.noncer.setNonce(c.chainID, sender, nonce)
+	if err != nil {
+		return 0, errors.WithMessage(err, "setting nonce")
 	}
 
-	// Compare nonces and use larger.
-	if nonce < expectedNextNonce {
-		nonce = expectedNextNonce
-	}
+	nonceUpdated := c.noncer.nonce(c.chainID, sender)
 
-	// Update local expectation.
-	c.expectedNextNonce[sender] = nonce + 1
-	return nonce, nil
+	return nonceUpdated, nil
 }
 
 // ConfirmTransaction returns the receipt of the transaction if it was
@@ -285,7 +323,6 @@ func (c *ContractBackend) confirmNTimes(ctx context.Context, tx *types.Transacti
 			return nil, ctx.Err()
 		}
 	}
-
 }
 
 // waitMined waits for a TX to be mined and returns the latest head.
@@ -309,9 +346,9 @@ func (c *ContractBackend) TxFinalityDepth() uint64 {
 }
 
 // Returns ((head.number - receipt.number) + 1) >= finalityDepth.
-func isFinal(receipt *types.Receipt, head *types.Header, _finalityDepth uint64) bool {
+func isFinal(receipt *types.Receipt, head *types.Header, finalityDepthArg uint64) bool {
 	finalityDepth := new(big.Int)
-	finalityDepth.SetUint64(_finalityDepth)
+	finalityDepth.SetUint64(finalityDepthArg)
 
 	diff := new(big.Int).Sub(head.Number, receipt.BlockNumber)
 	included := new(big.Int).Add(diff, big.NewInt(1))
