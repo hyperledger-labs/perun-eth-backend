@@ -72,29 +72,26 @@ type noncer interface {
 	setNonce(chainID ChainID, addr common.Address, nonce uint64) (uint64, error)
 }
 
-// LocalNoncer implements noncer interface.
-type LocalNoncer struct {
+// SharedNoncer implements noncer interface.
+type SharedNoncer struct {
 	expectedNextNonce map[common.Address]uint64
 	nonceMtx          *sync.Mutex
 }
 
 // GlobalNoncer implements a global nonce counter that is shared across different contract backends.
-type GlobalNoncer struct {
-	expectedNextNonce map[common.Address]uint64
-	nonceMtx          map[common.Address]*sync.Mutex
-}
+// type GlobalNoncer struct {
+// 	expectedNextNonce map[common.Address]uint64
+// 	nonceMtx          map[common.Address]*sync.Mutex
+// }
 
-func (d GlobalNoncer) setNonce(chainID ChainID, sender common.Address, nonce uint64) (uint64, error) {
-	if d.nonceMtx[sender] == nil {
-		d.nonceMtx[sender] = &sync.Mutex{}
-	}
-	d.nonceMtx[sender].Lock()
-	defer d.nonceMtx[sender].Unlock()
+func (n SharedNoncer) setNonce(chainID ChainID, sender common.Address, nonce uint64) (uint64, error) {
+	n.nonceMtx.Lock()
+	defer n.nonceMtx.Unlock()
 
-	expectedNextNonce, found := d.expectedNextNonce[sender]
+	expectedNextNonce, found := n.expectedNextNonce[sender]
 
 	if !found {
-		d.expectedNextNonce[sender] = 0
+		n.expectedNextNonce[sender] = 0
 	}
 
 	// Compare nonces and use larger.
@@ -103,46 +100,16 @@ func (d GlobalNoncer) setNonce(chainID ChainID, sender common.Address, nonce uin
 	}
 
 	// Update local expectation.
-	d.expectedNextNonce[sender] = nonce + 1
+	n.expectedNextNonce[sender] = nonce + 1
 
 	return nonce, nil
 }
 
-func (d LocalNoncer) setNonce(chainID ChainID, sender common.Address, nonce uint64) (uint64, error) {
-	d.nonceMtx.Lock()
-	defer d.nonceMtx.Unlock()
-
-	expectedNextNonce, found := d.expectedNextNonce[sender]
-
-	if !found {
-		d.expectedNextNonce[sender] = 0
-	}
-
-	// Compare nonces and use larger.
-	if nonce < expectedNextNonce {
-		nonce = expectedNextNonce
-	}
-
-	// Update local expectation.
-	d.expectedNextNonce[sender] = nonce + 1
-
-	return nonce, nil
-}
-
-// NewLocalNoncer creates a new local noncer.
-func NewLocalNoncer() *LocalNoncer {
-	return &LocalNoncer{
+// NewSharedNoncer creates a new local noncer.
+func NewSharedNoncer() *SharedNoncer {
+	return &SharedNoncer{
 		expectedNextNonce: make(map[common.Address]uint64),
 		nonceMtx:          &sync.Mutex{},
-	}
-}
-
-// NewGlobalNoncer initializes a global noncer that handles the nonce across different chains and contract backends. It is set outside of the contract backend because
-// is shared across different contract backends.
-func NewGlobalNoncer() *GlobalNoncer {
-	return &GlobalNoncer{
-		expectedNextNonce: make(map[common.Address]uint64),
-		nonceMtx:          make(map[common.Address]*sync.Mutex),
 	}
 }
 
@@ -161,7 +128,7 @@ func NewContractBackend(cf ContractInterface, chainID ChainID, tr Transactor, tx
 	cb := ContractBackend{
 		ContractInterface: cf,
 		tr:                tr,
-		noncer:            NewGlobalNoncer(),
+		noncer:            NewSharedNoncer(),
 		txFinalityDepth:   txFinalityDepth,
 		chainID:           chainID,
 	}
