@@ -181,11 +181,11 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 	nonFundingErrg := perror.NewGatherer()
 	for _, err := range perror.Causes(errg.Wait()) {
 		if channel.IsAssetFundingError(err) && err != nil {
-			fudingErr, ok := err.(*channel.AssetFundingError)
+			fundingErr, ok := err.(*channel.AssetFundingError)
 			if !ok {
 				return fmt.Errorf("wrong type: expected %T, got %T", &channel.AssetFundingError{}, err)
 			}
-			fundingErrs = append(fundingErrs, fudingErr)
+			fundingErrs = append(fundingErrs, fundingErr)
 		} else if err != nil {
 			nonFundingErrg.Add(err)
 		}
