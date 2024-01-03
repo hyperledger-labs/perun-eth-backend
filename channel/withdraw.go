@@ -35,20 +35,19 @@ import (
 	"perun.network/go-perun/log"
 )
 
-// Withdraw ensures that a channel has been concluded and the final outcome
+// Withdraw ensures that a channel has been concluded and the final outcome.
 // withdrawn from the asset holders.
 func (a *Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, subStates channel.StateMap) error {
 	if err := a.ensureConcluded(ctx, req, subStates); err != nil {
 		return errors.WithMessage(err, "ensure Concluded")
 	}
-
 	if err := a.checkConcludedState(ctx, req, subStates); err != nil {
 		return errors.WithMessage(err, "check concluded state")
 	}
-
 	return errors.WithMessage(a.ensureWithdrawn(ctx, req), "ensure Withdrawn")
 }
 
+// ensureWithdrawn ensures that the channel has been withdrawn from the asset.
 func (a *Adjudicator) ensureWithdrawn(ctx context.Context, req channel.AdjudicatorReq) error {
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -75,7 +74,7 @@ func (a *Adjudicator) ensureWithdrawn(ctx context.Context, req channel.Adjudicat
 			}
 			defer sub.Close()
 
-			// Check for past event
+			// Check for past event.
 			if err := sub.ReadPast(ctx, events); err != nil {
 				return errors.WithMessage(err, "reading past events")
 			}
@@ -90,7 +89,7 @@ func (a *Adjudicator) ensureWithdrawn(ctx context.Context, req channel.Adjudicat
 				return errors.WithMessage(err, "withdrawing assets failed")
 			}
 
-			// Wait for event
+			// Wait for event.
 			go func() {
 				subErr <- sub.Read(ctx, events)
 			}()
@@ -146,13 +145,11 @@ func (a *Adjudicator) callAssetWithdraw(ctx context.Context, request channel.Adj
 		if err != nil {
 			return nil, errors.WithMessagef(err, "creating transactor for asset %d", asset.assetIndex)
 		}
-
 		tx, err := asset.Withdraw(trans, auth, sig)
 		if err != nil {
 			err = cherrors.CheckIsChainNotReachableError(err)
-			return nil, errors.WithMessagef(err, "withdrawing asset %d", asset.assetIndex)
+			return nil, errors.WithMessagef(err, "withdrawing asset %d with transaction nonce %d", asset.assetIndex, trans.Nonce)
 		}
-		log.Debugf("Sent transaction %v", tx.Hash().Hex())
 		return tx, nil
 	}()
 	if err != nil {
