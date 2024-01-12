@@ -51,16 +51,8 @@ func (a *Adjudicator) ensureConcluded(ctx context.Context, req channel.Adjudicat
 		return nil
 	}
 
-	// If the secondary flag is set, we wait for someone else to conclude.
-	concluded, err := a.waitConcludedSecondary(ctx, req)
-	if err != nil {
-		return errors.WithMessage(err, "waiting for secondary conclude")
-	} else if concluded {
-		return nil
-	}
-
 	// Wait until we can conclude.
-	err = a.waitConcludable(ctx, req)
+	err := a.waitConcludable(ctx, req)
 	if err != nil {
 		return fmt.Errorf("waiting for concludability: %w", err)
 	}
@@ -158,25 +150,6 @@ func (a *Adjudicator) checkConcludedState(
 			return errors.New("subscription closed")
 		}
 	}
-}
-
-func (a *Adjudicator) waitConcludedSecondary(ctx context.Context, req channel.AdjudicatorReq) (concluded bool, err error) {
-	// In final Register calls, as the non-initiator, we optimistically wait for
-	// the other party to send the transaction first for
-	// `secondaryWaitBlocks + TxFinalityDepth` many blocks.
-	if req.Tx.IsFinal && req.Secondary {
-		// Create subscription.
-		sub, events, subErr, err := a.createEventSub(ctx, req.Tx.ID, false)
-		if err != nil {
-			return false, errors.WithMessage(err, "subscribing")
-		}
-		defer sub.Close()
-
-		// Wait for concluded event.
-		waitBlocks := secondaryWaitBlocks + int(a.txFinalityDepth)
-		return waitConcludedForNBlocks(ctx, a, events, subErr, waitBlocks)
-	}
-	return false, nil
 }
 
 func (a *Adjudicator) conclude(ctx context.Context, req channel.AdjudicatorReq, subStates channel.StateMap) error {
