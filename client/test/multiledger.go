@@ -61,8 +61,8 @@ func SetupMultiLedgerTest(t *testing.T, testDuration time.Duration) ctest.MultiL
 	bus := wire.NewLocalBus()
 
 	// Setup clients.
-	c1 := setupClient(t, rng, l1, l2, bus)
-	c2 := setupClient(t, rng, l1, l2, bus)
+	c1 := setupClient(t, rng, l1, l2, bus, true)
+	c2 := setupClient(t, rng, l1, l2, bus, false)
 
 	// Fund accounts.
 	l1.simSetup.SimBackend.FundAddress(ctx, wallet.AsEthAddr(c1.WalletAddress))
@@ -126,7 +126,7 @@ func setupLedger(ctx context.Context, t *testing.T, rng *rand.Rand, chainID *big
 	}
 }
 
-func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) ctest.MultiLedgerClient {
+func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus, egoistic bool) ctest.MultiLedgerClient {
 	t.Helper()
 	require := require.New(t)
 
@@ -154,6 +154,17 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 	multiFunder := multi.NewFunder()
 	funderL1 := ethchannel.NewFunder(cb1)
 	funderL2 := ethchannel.NewFunder(cb2)
+	if egoistic {
+		egoisticPart := make([]bool, 2)
+		egoisticPart[1] = true
+		funderL2.SetEgoisticPart(1, 2)
+		require.Equal(egoisticPart, funderL2.EgoisticPart)
+
+		egoisticChains := make(map[multi.LedgerIDMapKey]bool)
+		egoisticChains[funderL2.ChainID().MapKey()] = true
+		multiFunder.SetEgoisticChain(funderL2.ChainID(), true)
+		require.Equal(egoisticChains, multiFunder.EgoisticChains)
+	}
 	registered := funderL1.RegisterAsset(*l1.asset, ethchannel.NewETHDepositor(defaultETHGasLimit), acc.Account)
 	require.True(registered)
 	registered = funderL1.RegisterAsset(*l2.asset, ethchannel.NewNoOpDepositor(), acc.Account)
