@@ -46,10 +46,7 @@ const (
 var errTxTimedOut = errors.New("")
 
 // SharedExpected Nonce is a map of each expected next nonce of all clients.
-var (
-	SharedExpectedNonces map[ChainID]map[common.Address]uint64
-	SharedNonceMtx       map[ChainID]map[common.Address]*sync.Mutex
-)
+var SharedExpectedNonces map[ChainID]map[common.Address]uint64
 
 // SharedMutex controls the reads and writes on the nonceMtx and ecpectedNextNonce of the ContractBackend.
 var SharedMutex = &sync.Mutex{}
@@ -72,7 +69,6 @@ type Transactor interface {
 type ContractBackend struct {
 	ContractInterface
 	tr                Transactor
-	nonceMtx          map[common.Address]*sync.Mutex
 	expectedNextNonce map[common.Address]uint64
 	txFinalityDepth   uint64
 	chainID           ChainID
@@ -86,20 +82,15 @@ func NewContractBackend(cf ContractInterface, chainID ChainID, tr Transactor, tx
 	if SharedExpectedNonces == nil {
 		SharedExpectedNonces = make(map[ChainID]map[common.Address]uint64)
 	}
-	if SharedNonceMtx == nil {
-		SharedNonceMtx = make(map[ChainID]map[common.Address]*sync.Mutex)
-	}
 
 	// Check if the specific chainID entry exists in the shared maps, if not, create it.
 	if _, exists := SharedExpectedNonces[chainID]; !exists {
 		SharedExpectedNonces[chainID] = make(map[common.Address]uint64)
-		SharedNonceMtx[chainID] = make(map[common.Address]*sync.Mutex)
 	}
 	return ContractBackend{
 		ContractInterface: cf,
 		tr:                tr,
 		expectedNextNonce: SharedExpectedNonces[chainID],
-		nonceMtx:          SharedNonceMtx[chainID],
 		txFinalityDepth:   txFinalityDepth,
 		chainID:           chainID,
 	}
