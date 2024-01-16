@@ -45,7 +45,7 @@ const (
 // create a TxTimedoutError with additional context.
 var errTxTimedOut = errors.New("")
 
-// SharedExpectedNonce is a map of each expected next nonce of all clients.
+// SharedExpectedNonces is a map of each expected next nonce of all clients.
 var SharedExpectedNonces map[ChainID]map[common.Address]uint64
 
 // SharedMutex controls the reads and writes on the nonceMtx and expectedNextNonce of the ContractBackend.
