@@ -76,7 +76,7 @@ func (d *ERC20Depositor) Deposit(ctx context.Context, req DepositReq) (types.Tra
 	}
 	// variables for the return value.
 	var depResult DepositResult
-	txApproval, approvalReceived, errApproval := Approve(lock, ctx, req, token, callOpts)
+	txApproval, approvalReceived, errApproval := Approve(ctx, lock, req, token, callOpts)
 	if errApproval != nil {
 		depResult.Error = errApproval
 	}
@@ -133,7 +133,7 @@ func handleLock(lockKey string) *sync.Mutex {
 }
 
 // Approve locks the lock argument and Approves the requested balance + the current allowance of the requested account.
-func Approve(lock *sync.Mutex, ctx context.Context, req DepositReq, token *peruntoken.Peruntoken, callOpts bind.CallOpts) (*types.Transaction, bool, error) {
+func Approve(ctx context.Context, lock *sync.Mutex, req DepositReq, token *peruntoken.Peruntoken, callOpts bind.CallOpts) (*types.Transaction, bool, error) {
 	lock.Lock()
 	defer lock.Unlock()
 	allowance, err := token.Allowance(&callOpts, req.Account.Address, req.Asset.EthAddress())
