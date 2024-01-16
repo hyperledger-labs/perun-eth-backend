@@ -48,7 +48,7 @@ var errTxTimedOut = errors.New("")
 // SharedExpected Nonce is a map of each expected next nonce of all clients.
 var SharedExpectedNonces map[ChainID]map[common.Address]uint64
 
-// SharedMutex controls the reads and writes on the nonceMtx and ecpectedNextNonce of the ContractBackend.
+// SharedMutex controls the reads and writes on the nonceMtx and expectedNextNonce of the ContractBackend.
 var SharedMutex = &sync.Mutex{}
 
 // ContractInterface provides all functions needed by an ethereum backend.
@@ -179,6 +179,7 @@ func (c *ContractBackend) nonce(ctx context.Context, sender common.Address) (uin
 		return 0, errors.WithMessage(err, "fetching nonce")
 	}
 	SharedMutex.Lock()
+	defer SharedMutex.Unlock()
 	expectedNextNonce, found := c.expectedNextNonce[sender]
 	if !found {
 		c.expectedNextNonce[sender] = 0
@@ -191,7 +192,6 @@ func (c *ContractBackend) nonce(ctx context.Context, sender common.Address) (uin
 
 	// Update local expectation.
 	c.expectedNextNonce[sender] = nonce + 1
-	SharedMutex.Unlock()
 	return nonce, nil
 }
 
