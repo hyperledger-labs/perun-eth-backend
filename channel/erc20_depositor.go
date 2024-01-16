@@ -76,16 +76,16 @@ func (d *ERC20Depositor) Deposit(ctx context.Context, req DepositReq) (types.Tra
 	}
 	// variables for the return value.
 	var depResult DepositResult
-	tx1, err1, approvalReceived := Approve(lock, ctx, req, token, callOpts)
-	if err1 != nil {
-		depResult.Error = err1
+	txApproval, approvalReceived, errApproval := Approve(lock, ctx, req, token, callOpts)
+	if errApproval != nil {
+		depResult.Error = errApproval
 	}
 	if approvalReceived {
-		tx2, err := d.DepositOnly(ctx, req)
-		depResult.Transactions = []*types.Transaction{tx1, tx2}
+		txDeposit, err := d.DepositOnly(ctx, req)
+		depResult.Transactions = []*types.Transaction{txApproval, txDeposit}
 		depResult.Error = errors.WithMessage(err, "AssetHolderERC20 depositing")
 	} else {
-		depResult.Error = errors.WithMessage(err1, "PerunToken was not approved")
+		depResult.Error = errors.WithMessage(errApproval, "PerunToken was not approved")
 	}
 	return depResult.Transactions, depResult.Error
 }
@@ -132,22 +132,20 @@ func handleLock(lockKey string) *sync.Mutex {
 	return lock
 }
 
-// Locks the lock argument, runs the given function and then unlocks the lock argument.
-func Approve(lock *sync.Mutex, ctx context.Context, req DepositReq, token *peruntoken.Peruntoken, callOpts bind.CallOpts) (*types.Transaction, error, bool) {
-	depositLocksMtx.Lock()
-	defer depositLocksMtx.Unlock()
+// Approve locks the lock argument and Approves the requested balance + the current allowance of the requested account.
+func Approve(lock *sync.Mutex, ctx context.Context, req DepositReq, token *peruntoken.Peruntoken, callOpts bind.CallOpts) (*types.Transaction, bool, error) {
 	lock.Lock()
 	defer lock.Unlock()
 	allowance, err := token.Allowance(&callOpts, req.Account.Address, req.Asset.EthAddress())
 	if err != nil {
-		return nil, errors.WithMessagef(err, "could not get Allowance for asset: %x", req.Asset), false
+		return nil, false, errors.WithMessagef(err, "could not get Allowance for asset: %x", req.Asset)
 	}
 	result := new(big.Int).Add(req.Balance, allowance)
 
 	// Increase the allowance.
 	opts, err := req.CB.NewTransactor(ctx, ERC20DepositorTXGasLimit, req.Account)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "creating transactor for asset: %x", req.Asset), false
+		return nil, false, errors.WithMessagef(err, "creating transactor for asset: %x", req.Asset)
 	}
 	// Create a channel for receiving PeruntokenApproval events
 	eventSink := make(chan *peruntoken.PeruntokenApproval)
@@ -158,12 +156,12 @@ func Approve(lock *sync.Mutex, ctx context.Context, req DepositReq, token *perun
 	// Watch for Approval events and send them to the eventSink
 	subscription, err := token.WatchApproval(&bind.WatchOpts{Start: nil, Context: ctx}, eventSink, []common.Address{req.Account.Address}, []common.Address{req.Asset.EthAddress()})
 	if err != nil {
-		return nil, errors.WithMessagef(err, "Cannot listen for event"), false
+		return nil, false, errors.WithMessagef(err, "Cannot listen for event")
 	}
 	tx, err := token.Approve(opts, req.Asset.EthAddress(), result)
 	if err != nil {
 		err = cherrors.CheckIsChainNotReachableError(err)
-		return nil, errors.WithMessagef(err, "increasing allowance for asset: %x", req.Asset), false
+		return nil, false, errors.WithMessagef(err, "increasing allowance for asset: %x", req.Asset)
 	}
 	var approvalReceived bool
 	go func() {
@@ -176,5 +174,5 @@ func Approve(lock *sync.Mutex, ctx context.Context, req DepositReq, token *perun
 		}
 	}()
 	approvalReceived = <-eventReceived
-	return tx, nil, approvalReceived
+	return tx, approvalReceived, nil
 }
