@@ -40,7 +40,7 @@ type ERC20Depositor struct {
 // ERC20DepositorTXGasLimit is the limit of Gas that an `ERC20Depositor` will
 // spend per transaction when depositing funds.
 // An `IncreaseAllowance` uses ~45kGas and a `Deposit` call ~84kGas on average.
-const ERC20DepositorTXGasLimit = 100000
+const ERC20DepositorTXGasLimit = 0
 
 // Return value of ERC20Depositor.NumTx.
 const erc20DepositorNumTx = 2

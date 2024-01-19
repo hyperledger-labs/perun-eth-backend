@@ -31,7 +31,7 @@ type ETHDepositor struct{}
 // ETHDepositorGasLimit is the limit of Gas that an `ETHDepositor` will spend
 // when depositing funds.
 // A `Deposit` call uses ~47kGas on average.
-const ETHDepositorGasLimit = 50000
+const ETHDepositorGasLimit = 0
 
 // NewETHDepositor creates a new ETHDepositor.
 func NewETHDepositor() *ETHDepositor {
