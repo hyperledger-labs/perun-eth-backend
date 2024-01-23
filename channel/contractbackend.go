@@ -50,7 +50,7 @@ var (
 	SharedExpectedNonces map[ChainID]map[common.Address]uint64
 	// SharedExpectedNoncesMutex is a mutex to protect the shared expected nonces map.
 	SharedExpectedNoncesMutex = &sync.Mutex{}
-	)
+)
 
 // ContractInterface provides all functions needed by an ethereum backend.
 // Both test.SimulatedBackend and ethclient.Client implement this interface.
