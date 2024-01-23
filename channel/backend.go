@@ -91,6 +91,12 @@ func (*Backend) CalcID(p *channel.Params) (id channel.ID) {
 	return CalcID(p)
 }
 
+// NewAppID creates a new app identifier, using an empty ethereum struct.
+func (b *Backend) NewAppID() channel.AppID {
+	addr := &ethwallet.Address{}
+	return &AppID{addr}
+}
+
 // Sign signs the channel state as needed by the ethereum smart contracts.
 func (*Backend) Sign(acc wallet.Account, s *channel.State) (wallet.Sig, error) {
 	return Sign(acc, s)
@@ -152,7 +158,10 @@ func Verify(addr wallet.Address, s *channel.State, sig wallet.Sig) (bool, error)
 func ToEthParams(p *channel.Params) adjudicator.ChannelParams {
 	var app common.Address
 	if p.App != nil && !channel.IsNoApp(p.App) {
-		app = ethwallet.AsEthAddr(p.App.Def())
+		if p.App != nil && !channel.IsNoApp(p.App) {
+			appAddr := p.App.Def().(*AppID).Address
+			app = ethwallet.AsEthAddr(appAddr)
+		}
 	}
 
 	return adjudicator.ChannelParams{
