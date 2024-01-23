@@ -46,10 +46,11 @@ const (
 var errTxTimedOut = errors.New("")
 
 var (
-// SharedExpectedNonces is a map of each expected next nonce of all clients.
-SharedExpectedNoncesMutex &sync.Mutex{}
-SharedExpectedNonces map[ChainID]map[common.Address]uint64
-)
+	// SharedExpectedNonces is a map of each expected next nonce of all clients.
+	SharedExpectedNonces map[ChainID]map[common.Address]uint64
+	// SharedExpectedNoncesMutex is a mutex to protect the shared expected nonces map.
+	SharedExpectedNoncesMutex = &sync.Mutex{}
+	)
 
 // ContractInterface provides all functions needed by an ethereum backend.
 // Both test.SimulatedBackend and ethclient.Client implement this interface.
@@ -178,8 +179,8 @@ func (c *ContractBackend) nonce(ctx context.Context, sender common.Address) (uin
 		err = cherrors.CheckIsChainNotReachableError(err)
 		return 0, errors.WithMessage(err, "fetching nonce")
 	}
-	SharedMutex.Lock()
-	defer SharedMutex.Unlock()
+	SharedExpectedNoncesMutex.Lock()
+	defer SharedExpectedNoncesMutex.Unlock()
 	expectedNextNonce, found := c.expectedNextNonce[sender]
 	if !found {
 		c.expectedNextNonce[sender] = 0

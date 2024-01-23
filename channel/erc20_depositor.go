@@ -74,11 +74,10 @@ func (d *ERC20Depositor) Deposit(ctx context.Context, req DepositReq) (types.Tra
 		Pending: false,
 		Context: ctx,
 	}
-	// variables for the return value.
 	var depResult DepositResult
 	txApproval, approvalReceived, errApproval := Approve(ctx, lock, req, token, callOpts)
 	if errApproval != nil {
-		depResult.Error = errApproval
+		return nil, errors.WithMessagef(errApproval, "approving asset: %x", req.Asset)
 	}
 	if approvalReceived {
 		txDeposit, err := d.DepositOnly(ctx, req)
@@ -104,8 +103,8 @@ func (d *ERC20Depositor) DepositOnly(ctx context.Context, req DepositReq) (*type
 		return nil, errors.WithMessagef(err, "creating transactor for asset: %x", req.Asset)
 	}
 
-	tx2, err := assetholder.Deposit(opts, req.FundingID, req.Balance)
-	return tx2, err
+	tx, err := assetholder.Deposit(opts, req.FundingID, req.Balance)
+	return tx, err
 }
 
 // NumTX returns 2 since it does IncreaseAllowance and Deposit.
@@ -113,7 +112,7 @@ func (*ERC20Depositor) NumTX() uint32 {
 	return erc20DepositorNumTx
 }
 
-// Create key from account address and asset to only lock the process when hub deposits the same asset at the same time.
+// Create key from account address and asset to ensure only one deposit for an asset is performed at the same time.
 func lockKey(account common.Address, asset common.Address) string {
 	return fmt.Sprintf("%s-%s", account.Hex(), asset.Hex())
 }
