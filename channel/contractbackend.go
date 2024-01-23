@@ -45,11 +45,11 @@ const (
 // create a TxTimedoutError with additional context.
 var errTxTimedOut = errors.New("")
 
+var (
 // SharedExpectedNonces is a map of each expected next nonce of all clients.
-var SharedExpectedNonces map[ChainID]map[common.Address]uint64
-
-// SharedMutex controls the reads and writes on the nonceMtx and expectedNextNonce of the ContractBackend.
-var SharedMutex = &sync.Mutex{}
+SharedExpectedNoncesMutex &sync.Mutex{}
+SharedExpectedNonces map[ChainID]map[common.Address]uint64
+)
 
 // ContractInterface provides all functions needed by an ethereum backend.
 // Both test.SimulatedBackend and ethclient.Client implement this interface.
