@@ -17,23 +17,16 @@ package channel
 import (
 	"context"
 	"fmt"
-
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/pkg/errors"
-
 	"github.com/perun-network/perun-eth-backend/bindings"
 	"github.com/perun-network/perun-eth-backend/bindings/adjudicator"
-	cherrors "github.com/perun-network/perun-eth-backend/channel/errors"
 	"github.com/perun-network/perun-eth-backend/subscription"
+	"github.com/pkg/errors"
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/log"
 )
 
 const (
-	secondaryWaitBlocks = 2
-	adjEventBuffSize    = 10
-	adjHeaderBuffSize   = 10
+	adjEventBuffSize = 10
 )
 
 // ensureConcluded ensures that conclude or concludeFinal (for non-final and
@@ -307,46 +300,4 @@ func updateEventType(channelID [32]byte) subscription.EventFactory {
 			Filter: [][]interface{}{{channelID}},
 		}
 	}
-}
-
-// waitConcludedForNBlocks waits for up to numBlocks blocks for a Concluded
-// event on the concluded channel. If an event is emitted, true is returned.
-// Otherwise, if numBlocks blocks have passed, false is returned.
-//
-// cr is the ChainReader used for setting up a block header subscription. sub is
-// the Concluded event subscription instance.
-func waitConcludedForNBlocks(ctx context.Context,
-	cr ethereum.ChainReader,
-	concluded <-chan *subscription.Event,
-	subErr <-chan error,
-	numBlocks int,
-) (bool, error) {
-	h := make(chan *types.Header, adjHeaderBuffSize)
-	hsub, err := cr.SubscribeNewHead(ctx, h)
-	if err != nil {
-		err = cherrors.CheckIsChainNotReachableError(err)
-		return false, errors.WithMessage(err, "subscribing to new blocks")
-	}
-	defer hsub.Unsubscribe()
-	for i := 0; i < numBlocks; i++ {
-		select {
-		case <-h: // do nothing, wait another block
-		case _e := <-concluded: // other participant performed transaction
-			e, ok := _e.Data.(*adjudicator.AdjudicatorChannelUpdate)
-			if !ok {
-				log.Panic("wrong event type")
-			}
-			if e.Phase == phaseConcluded {
-				return true, nil
-			}
-		case <-ctx.Done():
-			return false, errors.Wrap(ctx.Err(), "context cancelled")
-		case err = <-hsub.Err():
-			err = cherrors.CheckIsChainNotReachableError(err)
-			return false, errors.WithMessage(err, "header subscription error")
-		case err = <-subErr:
-			return false, errors.WithMessage(err, "event subscription error")
-		}
-	}
-	return false, nil
 }
