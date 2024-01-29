@@ -83,7 +83,6 @@ func testConcludeFinal(t *testing.T, numParts int) {
 			err := s.Adjs[i].Register(ctx, req, nil)
 
 			require.NoError(t, err, "Withdrawing should succeed")
-
 		})
 	}
 	ct.Wait("register")

@@ -15,8 +15,9 @@
 package test
 
 import (
-	"github.com/perun-network/perun-eth-backend/channel"
 	"math/rand"
+
+	"github.com/perun-network/perun-eth-backend/channel"
 	pchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/channel/test"
 )
