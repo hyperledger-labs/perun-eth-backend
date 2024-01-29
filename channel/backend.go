@@ -158,9 +158,9 @@ func Verify(addr wallet.Address, s *channel.State, sig wallet.Sig) (bool, error)
 func ToEthParams(p *channel.Params) adjudicator.ChannelParams {
 	var app common.Address
 	if p.App != nil && !channel.IsNoApp(p.App) {
-		if p.App != nil && !channel.IsNoApp(p.App) {
-			appAddr := p.App.Def().(*AppID).Address
-			app = ethwallet.AsEthAddr(appAddr)
+		appDef, ok := p.App.Def().(*AppID)
+		if ok {
+			app = ethwallet.AsEthAddr(appDef.Address)
 		}
 	}
 
