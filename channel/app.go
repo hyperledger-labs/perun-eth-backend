@@ -15,9 +15,10 @@
 package channel
 
 import (
+	"math/rand"
+
 	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
 	ethtestwallet "github.com/perun-network/perun-eth-backend/wallet/test"
-	"math/rand"
 	"perun.network/go-perun/channel"
 )
 
@@ -47,13 +48,11 @@ func (a AppID) Key() channel.AppIDKey {
 		panic(err)
 	}
 	return channel.AppIDKey(b)
-
 }
 
 // MarshalBinary marshals the contents of AppID into a byte string.
 func (a AppID) MarshalBinary() ([]byte, error) {
 	data, err := a.Address.MarshalBinary()
-
 	if err != nil {
 		return nil, err
 	}

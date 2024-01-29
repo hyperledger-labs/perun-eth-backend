@@ -21,9 +21,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/pkg/errors"
-
 	ethchannel "github.com/perun-network/perun-eth-backend/channel"
+	"github.com/pkg/errors"
 
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/log"

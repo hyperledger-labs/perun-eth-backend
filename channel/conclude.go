@@ -17,6 +17,7 @@ package channel
 import (
 	"context"
 	"fmt"
+
 	"github.com/perun-network/perun-eth-backend/bindings"
 	"github.com/perun-network/perun-eth-backend/bindings/adjudicator"
 	"github.com/perun-network/perun-eth-backend/subscription"
