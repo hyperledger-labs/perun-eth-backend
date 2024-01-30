@@ -159,9 +159,10 @@ func ToEthParams(p *channel.Params) adjudicator.ChannelParams {
 	var app common.Address
 	if p.App != nil && !channel.IsNoApp(p.App) {
 		appDef, ok := p.App.Def().(*AppID)
-		if ok {
-			app = ethwallet.AsEthAddr(appDef.Address)
+		if !ok {
+			panic("appDef is not of type *AppID")
 		}
+		app = ethwallet.AsEthAddr(appDef.Address)
 	}
 
 	return adjudicator.ChannelParams{
