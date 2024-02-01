@@ -53,11 +53,13 @@ type Adjudicator struct {
 	mu psync.Mutex
 	// txSender is sending the TX.
 	txSender accounts.Account
+	// gasLimit is the gas limit for all transactions to the Adjudicator.
+	gasLimit uint64
 }
 
 // NewAdjudicator creates a new ethereum adjudicator. The receiver is the
 // on-chain address that receives withdrawals.
-func NewAdjudicator(backend ContractBackend, contract common.Address, receiver common.Address, txSender accounts.Account) *Adjudicator {
+func NewAdjudicator(backend ContractBackend, contract common.Address, receiver common.Address, txSender accounts.Account, gasLimit uint64) *Adjudicator {
 	contr, err := adjudicator.NewAdjudicator(contract, backend)
 	if err != nil {
 		panic("Could not create a new instance of adjudicator")
@@ -71,6 +73,7 @@ func NewAdjudicator(backend ContractBackend, contract common.Address, receiver c
 		Receiver:        receiver,
 		txSender:        txSender,
 		log:             log.WithField("txSender", txSender.Address),
+		gasLimit:        gasLimit,
 	}
 }
 
@@ -153,7 +156,7 @@ func (a *Adjudicator) call(ctx context.Context, req channel.AdjudicatorReq, fn a
 		}
 		defer a.mu.Unlock()
 
-		trans, err := a.NewTransactor(ctx, GasLimit, a.txSender)
+		trans, err := a.NewTransactor(ctx, a.gasLimit, a.txSender)
 		if err != nil {
 			return nil, errors.WithMessage(err, "creating transactor")
 		}

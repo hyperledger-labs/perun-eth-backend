@@ -94,10 +94,10 @@ func newFunderSetup(rng *rand.Rand) (
 		accs[i] = accounts.Account{Address: ethwallet.AsEthAddr(wallettest.NewRandomAddress(rng))}
 	}
 	// Use an ETH depositor with random addresses at index 0.
-	depositors[0] = ethchannel.NewETHDepositor()
+	depositors[0] = ethchannel.NewETHDepositor(50000)
 	// Use an ERC20 depositor with random addresses at index 1.
 	token := wallettest.NewRandomAddress(rng)
-	depositors[1] = ethchannel.NewERC20Depositor(ethwallet.AsEthAddr(token))
+	depositors[1] = ethchannel.NewERC20Depositor(ethwallet.AsEthAddr(token), 100000)
 	return funder, assets, depositors, accs
 }
 
@@ -432,8 +432,8 @@ func newNFunders(
 		require.NoError(t, err)
 
 		funders[i] = ethchannel.NewFunder(cb)
-		require.True(t, funders[i].RegisterAsset(*asset1, ethchannel.NewETHDepositor(), acc))
-		require.True(t, funders[i].RegisterAsset(*asset2, ethchannel.NewERC20Depositor(token), acc))
+		require.True(t, funders[i].RegisterAsset(*asset1, ethchannel.NewETHDepositor(50000), acc))
+		require.True(t, funders[i].RegisterAsset(*asset2, ethchannel.NewERC20Depositor(token, 100000), acc))
 	}
 
 	// The challenge duration needs to be really large, since the auto-mining of
