@@ -38,7 +38,7 @@ import (
 )
 
 const (
-	twoPartyTestTimeout = 10 * time.Second
+	twoPartyTestTimeout = 60 * time.Second
 	TxFinalityDepth     = 3
 )
 

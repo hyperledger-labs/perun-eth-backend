@@ -45,6 +45,13 @@ const (
 // create a TxTimedoutError with additional context.
 var errTxTimedOut = errors.New("")
 
+var (
+	// SharedExpectedNonces is a map of each expected next nonce of all clients.
+	SharedExpectedNonces map[ChainID]map[common.Address]uint64
+	// SharedExpectedNoncesMutex is a mutex to protect the shared expected nonces map.
+	SharedExpectedNoncesMutex = &sync.Mutex{}
+)
+
 // ContractInterface provides all functions needed by an ethereum backend.
 // Both test.SimulatedBackend and ethclient.Client implement this interface.
 type ContractInterface interface {
@@ -63,7 +70,6 @@ type Transactor interface {
 type ContractBackend struct {
 	ContractInterface
 	tr                Transactor
-	nonceMtx          *sync.Mutex
 	expectedNextNonce map[common.Address]uint64
 	txFinalityDepth   uint64
 	chainID           ChainID
@@ -73,11 +79,19 @@ type ContractBackend struct {
 // txFinalityDepth defines in how many consecutive blocks a TX has to be
 // included to be considered final. Must be at least 1.
 func NewContractBackend(cf ContractInterface, chainID ChainID, tr Transactor, txFinalityDepth uint64) ContractBackend {
+	// Check if the shared maps are initialized, if not, initialize them.
+	if SharedExpectedNonces == nil {
+		SharedExpectedNonces = make(map[ChainID]map[common.Address]uint64)
+	}
+
+	// Check if the specific chainID entry exists in the shared maps, if not, create it.
+	if _, exists := SharedExpectedNonces[chainID]; !exists {
+		SharedExpectedNonces[chainID] = make(map[common.Address]uint64)
+	}
 	return ContractBackend{
 		ContractInterface: cf,
 		tr:                tr,
-		expectedNextNonce: make(map[common.Address]uint64),
-		nonceMtx:          &sync.Mutex{},
+		expectedNextNonce: SharedExpectedNonces[chainID],
 		txFinalityDepth:   txFinalityDepth,
 		chainID:           chainID,
 	}
@@ -165,10 +179,8 @@ func (c *ContractBackend) nonce(ctx context.Context, sender common.Address) (uin
 		err = cherrors.CheckIsChainNotReachableError(err)
 		return 0, errors.WithMessage(err, "fetching nonce")
 	}
-
-	// Look up expected next nonce locally.
-	c.nonceMtx.Lock()
-	defer c.nonceMtx.Unlock()
+	SharedExpectedNoncesMutex.Lock()
+	defer SharedExpectedNoncesMutex.Unlock()
 	expectedNextNonce, found := c.expectedNextNonce[sender]
 	if !found {
 		c.expectedNextNonce[sender] = 0
