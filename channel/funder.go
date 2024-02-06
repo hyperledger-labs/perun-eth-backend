@@ -226,6 +226,25 @@ func (f *Funder) fundAssets(ctx context.Context, assets []channel.Asset, channel
 		egoistic = f.EgoisticPart[req.Idx]
 	}
 
+	contracts := make([]assetHolder, len(assets))
+	for i, asset := range assets {
+		// Bind contract.
+		assetIdx, ok := assetIdx(req.State.Assets, asset)
+		if !ok {
+			errg.Add(errors.New("asset not found in funding request"))
+			continue
+		}
+		contract := bindAssetHolder(f.ContractBackend, asset, assetIdx)
+		contracts[i] = contract
+	}
+
+	if egoistic {
+		err := f.WaitForOthersFundingConfirmation(ctx, req, contracts, fundingIDs)
+		if err != nil {
+			errg.Add(errors.WithMessage(err, "funding asset"))
+		}
+	}
+
 	for i, asset := range assets {
 		// Bind contract.
 		assetIdx, ok := assetIdx(req.State.Assets, asset)
@@ -235,19 +254,10 @@ func (f *Funder) fundAssets(ctx context.Context, assets []channel.Asset, channel
 		}
 		contract := bindAssetHolder(f.ContractBackend, asset, assetIdx)
 
-		if egoistic {
-			err := f.EgoisticWaitForFundingConfirmation(ctx, req, contract, fundingIDs)
-			if err != nil {
-				f.log.WithField("asset", asset).WithError(err).Error("Could not fund asset")
-				errg.Add(errors.WithMessage(err, "funding asset"))
-				continue
-			}
-		} else {
-			// Wait for the funding event in a goroutine.
-			errg.Go(func() error {
-				return f.waitForFundingConfirmation(ctx, req, contract, fundingIDs)
-			})
-		}
+		// Wait for the funding event in a goroutine.
+		errg.Go(func() error {
+			return f.waitForFundingConfirmation(ctx, req, contract, fundingIDs)
+		})
 
 		// Send the funding TX.
 		tx, err := f.sendFundingTx(ctx, asset, req, contract, fundingIDs[req.Idx])
@@ -427,76 +437,84 @@ loop:
 	return nil
 }
 
-// EgoisticWaitForFundingConfirmation waits for the confirmation events on the blockchain that
-// all peers except oneself (request.Idx) successfully funded the channel for the specified asset
+// WaitForOthersFundingConfirmation waits for the confirmation events on the blockchain that
+// all peers except oneself (request.Idx) successfully funded the channel for all assets
 // according to the funding agreement.
-func (f *Funder) EgoisticWaitForFundingConfirmation(ctx context.Context, request channel.FundingReq, asset assetHolder, fundingIDs [][32]byte) error {
-	// If asset on different ledger, return.
-	a := request.State.Assets[asset.assetIndex]
-	ethAsset, ok := a.(*Asset)
-	if !ok {
-		return fmt.Errorf("wrong type: expected *Asset, got %T", a)
-	}
-	if ethAsset.ChainID.MapKey() != f.chainID.MapKey() {
-		return nil
-	}
+func (f *Funder) WaitForOthersFundingConfirmation(ctx context.Context, request channel.FundingReq, assets []assetHolder, fundingIDs [][32]byte) error {
+	var totalBalanceForOther *big.Int = big.NewInt(0)
 
-	// Subscribe to events.
-	deposited, sub, subErr, err := f.subscribeDeposited(ctx, asset.contract, fundingIDs...)
-	if err != nil {
-		return errors.WithMessage(err, "subscribing to deposited event")
+	// Iterate over each asset to sum up the total balance for other participants.
+	for _, asset := range request.Agreement {
+		for i, bal := range asset {
+			if channel.Index(i) != request.Idx {
+            		totalBalanceForOther.Add(totalBalanceForOther, bal)
+			}
+		}		
 	}
-	defer sub.Close()
-
-	remainingAll := request.Agreement.Clone()[asset.assetIndex]
-	// Create a new remainingOthers slice excluding the balance of the current participant.
-	remainingOthers := make([]*big.Int, 0, len(remainingAll)-1)
-	for i, bal := range remainingAll {
-		if channel.Index(i) != request.Idx {
-			remainingOthers = append(remainingOthers, bal)
+	for _, asset := range assets {
+		// If asset on different ledger, return.
+		a := request.State.Assets[asset.assetIndex]
+		ethAsset, ok := a.(*Asset)
+		if !ok {
+			return fmt.Errorf("wrong type: expected *Asset, got %T", a)
 		}
-	}
+		if ethAsset.ChainID.MapKey() != f.chainID.MapKey() {
+			return nil
+		}
 
-	// Calculate the total of the remainingOthers balances.
-	remainingTotal := channel.Balances([][]*big.Int{remainingOthers}).Sum()[0]
-	if remainingTotal.Cmp(big.NewInt(0)) <= 0 {
-		return nil
-	}
-loop:
-	for {
-		select {
-		case rawEvent := <-deposited:
-			event, ok := rawEvent.Data.(*assetholder.AssetholderDeposited)
-			if !ok {
-				log.Panic("wrong event type")
+		// Subscribe to events.
+		deposited, sub, subErr, err := f.subscribeDeposited(ctx, asset.contract, fundingIDs...)
+		if err != nil {
+			return errors.WithMessage(err, "subscribing to deposited event")
+		}
+		defer sub.Close()
+
+		remainingAll := request.Agreement.Clone()[asset.assetIndex]
+		// Create a new remainingOthers slice excluding the balance of the current participant.
+		remainingOthers := make([]*big.Int, 0, len(remainingAll)-1)
+		for i, bal := range remainingAll {
+			if channel.Index(i) != request.Idx {
+				remainingOthers = append(remainingOthers, bal)
 			}
-			log := f.log.WithField("fundingID", event.FundingID)
+		}
 
-			idx := partIdx(event.FundingID, fundingIDs)
-			// Ignore if the current participant should have deposited.
-			if channel.Index(idx) != request.Idx {
-				continue
-			}
+		// If other Peers do not have to fund current asset, continue to next asset.
+		remainingTotal := channel.Balances([][]*big.Int{remainingOthers}).Sum()[0]
+		if remainingTotal.Cmp(big.NewInt(0)) <= 0 {
+			continue
+		}
 
-			remainingForPart := remainingOthers[idx]
-			remainingForPart.Sub(remainingForPart, event.Amount)
-			log.Debugf("peer[%d]: got: %v, remainingOthers for [%d, %d] = %v", request.Idx, event.Amount, asset.assetIndex, idx, remainingForPart)
-
-			// Exit loop if fully funded.
-			remainingTotal := channel.Balances([][]*big.Int{remainingOthers}).Sum()[0]
-			if remainingTotal.Cmp(big.NewInt(0)) <= 0 {
-				break loop
-			}
-		case <-ctx.Done():
-			return fundingTimeoutError(remainingOthers, asset)
-		case err := <-subErr:
-			// Resolve race between ctx and subErr, as ctx fires both events.
+		if totalBalanceForOther.Cmp(big.NewInt(0)) <= 0 {
+			return nil
+		}
+	loop:
+		for {
 			select {
+			case rawEvent := <-deposited:
+				event, ok := rawEvent.Data.(*assetholder.AssetholderDeposited)
+				if !ok {
+					log.Panic("wrong event type")
+				}
+
+				idx := partIdx(event.FundingID, fundingIDs)
+				// Ignore if the current participant should have deposited.
+				if channel.Index(idx) != request.Idx {
+					totalBalanceForOther.Sub(totalBalanceForOther, event.Amount)
+				}
+				if totalBalanceForOther.Cmp(big.NewInt(0)) <= 0 {
+					break loop
+				}
 			case <-ctx.Done():
 				return fundingTimeoutError(remainingOthers, asset)
-			default:
+			case err := <-subErr:
+				// Resolve race between ctx and subErr, as ctx fires both events.
+				select {
+				case <-ctx.Done():
+					return fundingTimeoutError(remainingOthers, asset)
+				default:
+				}
+				return err
 			}
-			return err
 		}
 	}
 	return nil
