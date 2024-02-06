@@ -45,9 +45,7 @@ func TestProgression(t *testing.T) {
 	}
 
 	appAddress := deployMockApp(t, backendSetup)
-	appAddrBackend := appAddress.(*ethwallet.Address)
-	appID := &ethchannel.AppID{Address: appAddrBackend}
-	app := channel.NewMockApp(appID)
+	app := channel.NewMockApp(appAddress)
 	channel.RegisterApp(app)
 
 	execConfig := &clienttest.ProgressionExecConfig{
