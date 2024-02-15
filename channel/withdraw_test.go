@@ -125,6 +125,7 @@ func TestWithdrawZeroBalance(t *testing.T) {
 }
 
 // shouldFunders decides who should fund. 1 indicates funding, 0 indicates skipping.
+
 //nolint:thelper // Not a helper.
 func testWithdrawZeroBalance(t *testing.T, n int) {
 	rng := pkgtest.Prng(t)
