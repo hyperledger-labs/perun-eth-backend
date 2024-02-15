@@ -82,6 +82,7 @@ func NewFunder(backend ContractBackend) *Funder {
 	}
 }
 
+// SetEgoisticPart sets the egoistic part of the funder.
 func (f *Funder) SetEgoisticPart(idx channel.Index, numParts int) {
 	f.mtx.Lock()
 	defer f.mtx.Unlock()
@@ -220,10 +221,13 @@ func (f *Funder) fundAssets(ctx context.Context, assets []channel.Asset, channel
 	errg := perror.NewGatherer()
 	fundingIDs := FundingIDs(channelID, req.Params.Parts...)
 
-	// TODO: We need a check whether the length matches and whether only one idx is set to true.
 	egoistic := false
 	if len(f.EgoisticPart) != 0 {
 		egoistic = f.EgoisticPart[req.Idx]
+		err := checkEgoisticPart(f.EgoisticPart)
+		if err != nil {
+			errg.Add(errors.WithMessage(err, "checking egoistic part"))
+		}
 	}
 
 	contracts := make([]assetHolder, len(assets))
@@ -441,16 +445,7 @@ loop:
 // all peers except oneself (request.Idx) successfully funded the channel for all assets
 // according to the funding agreement.
 func (f *Funder) WaitForOthersFundingConfirmation(ctx context.Context, request channel.FundingReq, assets []assetHolder, fundingIDs [][32]byte) error {
-	var totalBalanceForOther *big.Int = big.NewInt(0)
-
-	// Iterate over each asset to sum up the total balance for other participants.
-	for _, asset := range request.Agreement {
-		for i, bal := range asset {
-			if channel.Index(i) != request.Idx {
-            		totalBalanceForOther.Add(totalBalanceForOther, bal)
-			}
-		}		
-	}
+	totalBalanceForOther := calculateTotalBalances(request)
 	for _, asset := range assets {
 		// If asset on different ledger, return.
 		a := request.State.Assets[asset.assetIndex]
@@ -469,17 +464,7 @@ func (f *Funder) WaitForOthersFundingConfirmation(ctx context.Context, request c
 		}
 		defer sub.Close()
 
-		remainingAll := request.Agreement.Clone()[asset.assetIndex]
-		// Create a new remainingOthers slice excluding the balance of the current participant.
-		remainingOthers := make([]*big.Int, 0, len(remainingAll)-1)
-		for i, bal := range remainingAll {
-			if channel.Index(i) != request.Idx {
-				remainingOthers = append(remainingOthers, bal)
-			}
-		}
-
-		// If other Peers do not have to fund current asset, continue to next asset.
-		remainingTotal := channel.Balances([][]*big.Int{remainingOthers}).Sum()[0]
+		remainingTotal, remainingOthers := compareBalances(request, asset.assetIndex)
 		if remainingTotal.Cmp(big.NewInt(0)) <= 0 {
 			continue
 		}
@@ -584,4 +569,47 @@ func (f *Funder) NumTX(req channel.FundingReq) (sum uint32, err error) {
 		sum += depositor.NumTX()
 	}
 	return
+}
+
+// checkEgoisticPart checks if more than one entries are set to true. If so it returns an error.
+func checkEgoisticPart(egoisticPart []bool) error {
+	trueCount := 0
+	for _, v := range egoisticPart {
+		if v {
+			trueCount++
+			if trueCount > 1 {
+				return errors.New("more than one entry is true")
+			}
+		}
+	}
+	return nil
+}
+
+// calculateTotalBalances calculates the total balance for other participants.
+func calculateTotalBalances(request channel.FundingReq) *big.Int {
+	var totalBalanceForOther = big.NewInt(0)
+
+	// Iterate over each asset to sum up the total balance for other participants.
+	for _, asset := range request.Agreement {
+		for i, bal := range asset {
+			if channel.Index(i) != request.Idx {
+				totalBalanceForOther.Add(totalBalanceForOther, bal)
+			}
+		}
+	}
+	return totalBalanceForOther
+}
+
+// compareBalances creates a slice from the balances without the current participant and returns it and the total sum over it.
+func compareBalances(request channel.FundingReq, assetIndex channel.Index) (*big.Int, []*big.Int) {
+	remainingAll := request.Agreement.Clone()[assetIndex]
+	// Create a new remainingOthers slice excluding the balance of the current participant.
+	remainingOthers := make([]*big.Int, 0, len(remainingAll)-1)
+	for i, bal := range remainingAll {
+		if channel.Index(i) != request.Idx {
+			remainingOthers = append(remainingOthers, bal)
+		}
+	}
+	remainingTotal := channel.Balances([][]*big.Int{remainingOthers}).Sum()[0]
+	return remainingTotal, remainingOthers
 }
