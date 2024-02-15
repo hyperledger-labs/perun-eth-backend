@@ -472,37 +472,47 @@ func (f *Funder) WaitForOthersFundingConfirmation(ctx context.Context, request c
 		if totalBalanceForOther.Cmp(big.NewInt(0)) <= 0 {
 			return nil
 		}
-	loop:
-		for {
-			select {
-			case rawEvent := <-deposited:
-				event, ok := rawEvent.Data.(*assetholder.AssetholderDeposited)
-				if !ok {
-					log.Panic("wrong event type")
-				}
 
-				idx := partIdx(event.FundingID, fundingIDs)
-				// Ignore if the current participant should have deposited.
-				if channel.Index(idx) != request.Idx {
-					totalBalanceForOther.Sub(totalBalanceForOther, event.Amount)
-				}
-				if totalBalanceForOther.Cmp(big.NewInt(0)) <= 0 {
-					break loop
-				}
-			case <-ctx.Done():
-				return fundingTimeoutError(remainingOthers, asset)
-			case err := <-subErr:
-				// Resolve race between ctx and subErr, as ctx fires both events.
-				select {
-				case <-ctx.Done():
-					return fundingTimeoutError(remainingOthers, asset)
-				default:
-				}
-				return err
-			}
+		newBalance, err := f.waitForFundingEvents(ctx, deposited, subErr, remainingOthers, totalBalanceForOther, fundingIDs, request, asset)
+		if err != nil {
+			return err
 		}
+		totalBalanceForOther = newBalance
 	}
 	return nil
+}
+
+// waitForFundingEvents waits for the confirmation events and returns the updated balance.
+func (f *Funder) waitForFundingEvents(ctx context.Context, deposited <-chan *subscription.Event, subErr <-chan error, remainingOthers []*big.Int, totalBalanceForOther *big.Int, fundingIDs [][32]byte, request channel.FundingReq, asset assetHolder) (*big.Int, error) {
+loop:
+	for {
+		select {
+		case rawEvent := <-deposited:
+			event, ok := rawEvent.Data.(*assetholder.AssetholderDeposited)
+			if !ok {
+				log.Panic("wrong event type")
+			}
+
+			idx := partIdx(event.FundingID, fundingIDs)
+			// Ignore if the current participant should have deposited.
+			if channel.Index(idx) != request.Idx {
+				totalBalanceForOther.Sub(totalBalanceForOther, event.Amount)
+			}
+			if totalBalanceForOther.Cmp(big.NewInt(0)) <= 0 {
+				break loop
+			}
+		case <-ctx.Done():
+			return totalBalanceForOther, fundingTimeoutError(remainingOthers, asset)
+		case err := <-subErr:
+			select {
+			case <-ctx.Done():
+				return totalBalanceForOther, fundingTimeoutError(remainingOthers, asset)
+			default:
+			}
+			return totalBalanceForOther, err
+		}
+	}
+	return totalBalanceForOther, nil
 }
 
 func fundingTimeoutError(remaining []channel.Bal, asset assetHolder) error {
