@@ -26,7 +26,7 @@ import (
 
 // ETHDepositor deposits funds into the `AssetHolderETH` contract.
 // It has no state and is therefore completely reusable.
-type ETHDepositor struct{
+type ETHDepositor struct {
 	GasLimit uint64
 }
 

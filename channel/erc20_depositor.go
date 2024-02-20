@@ -141,7 +141,6 @@ func (d *ERC20Depositor) Approve(ctx context.Context, lock *sync.Mutex, req Depo
 		return nil, false, errors.WithMessagef(err, "Cannot listen for event")
 	}
 	tx, err := token.Approve(opts, req.Asset.EthAddress(), result)
-
 	if err != nil {
 		err = cherrors.CheckIsChainNotReachableError(err)
 		return nil, false, errors.WithMessagef(err, "increasing allowance for asset: %x", req.Asset)
