@@ -34,13 +34,9 @@ import (
 // ERC20Depositor deposits tokens into the `AssetHolderERC20` contract.
 // It is bound to a token but can be reused to deposit multiple times.
 type ERC20Depositor struct {
-	Token common.Address
+	Token    common.Address
+	GasLimit uint64
 }
-
-// ERC20DepositorTXGasLimit is the limit of Gas that an `ERC20Depositor` will
-// spend per transaction when depositing funds.
-// An `IncreaseAllowance` uses ~45kGas and a `Deposit` call ~84kGas on average.
-const ERC20DepositorTXGasLimit = 100000
 
 // Return value of ERC20Depositor.NumTx.
 const erc20DepositorNumTx = 2
@@ -56,8 +52,11 @@ type DepositResult struct {
 }
 
 // NewERC20Depositor creates a new ERC20Depositor.
-func NewERC20Depositor(token common.Address) *ERC20Depositor {
-	return &ERC20Depositor{Token: token}
+func NewERC20Depositor(token common.Address, gasLimit uint64) *ERC20Depositor {
+	return &ERC20Depositor{
+		Token:    token,
+		GasLimit: gasLimit,
+	}
 }
 
 // Deposit approves the value to be swapped and calls DepositOnly.
@@ -65,17 +64,12 @@ func (d *ERC20Depositor) Deposit(ctx context.Context, req DepositReq) (types.Tra
 	lockKey := lockKey(req.Account.Address, req.Asset.EthAddress())
 	lock := handleLock(lockKey)
 
-	// Bind an `ERC20` instance.
-	token, err := peruntoken.NewPeruntoken(d.Token, req.CB)
-	if err != nil {
-		return nil, errors.Wrapf(err, "binding ERC20 contract at: %x", d.Token)
-	}
 	callOpts := bind.CallOpts{
 		Pending: false,
 		Context: ctx,
 	}
 	var depResult DepositResult
-	txApproval, approvalReceived, errApproval := Approve(ctx, lock, req, token, callOpts)
+	txApproval, approvalReceived, errApproval := d.Approve(ctx, lock, req, callOpts)
 	if errApproval != nil {
 		return nil, errors.WithMessagef(errApproval, "approving asset: %x", req.Asset)
 	}
@@ -98,7 +92,7 @@ func (d *ERC20Depositor) DepositOnly(ctx context.Context, req DepositReq) (*type
 		return nil, errors.Wrapf(err, "binding AssetHolderERC20 contract at: %x", req.Asset)
 	}
 	// Deposit.
-	opts, err := req.CB.NewTransactor(ctx, ERC20DepositorTXGasLimit, req.Account)
+	opts, err := req.CB.NewTransactor(ctx, d.GasLimit, req.Account)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "creating transactor for asset: %x", req.Asset)
 	}
@@ -112,37 +106,26 @@ func (*ERC20Depositor) NumTX() uint32 {
 	return erc20DepositorNumTx
 }
 
-// Create key from account address and asset to ensure only one deposit for an asset is performed at the same time.
-func lockKey(account common.Address, asset common.Address) string {
-	return fmt.Sprintf("%s-%s", account.Hex(), asset.Hex())
-}
-
-// Retrieves Lock for specific key.
-func handleLock(lockKey string) *sync.Mutex {
-	depositLocksMtx.Lock()
-	defer depositLocksMtx.Unlock()
-
-	if lock, exists := depositLocks[lockKey]; exists {
-		return lock
-	}
-
-	lock := &sync.Mutex{}
-	depositLocks[lockKey] = lock
-	return lock
-}
-
 // Approve locks the lock argument and Approves the requested balance + the current allowance of the requested account.
-func Approve(ctx context.Context, lock *sync.Mutex, req DepositReq, token *peruntoken.Peruntoken, callOpts bind.CallOpts) (*types.Transaction, bool, error) {
+func (d *ERC20Depositor) Approve(ctx context.Context, lock *sync.Mutex, req DepositReq, callOpts bind.CallOpts) (*types.Transaction, bool, error) {
 	lock.Lock()
 	defer lock.Unlock()
+
+	// Bind an `ERC20` instance.
+	token, err := peruntoken.NewPeruntoken(d.Token, req.CB)
+	if err != nil {
+		return nil, false, errors.Wrapf(err, "binding ERC20 contract at: %x", d.Token)
+	}
+
 	allowance, err := token.Allowance(&callOpts, req.Account.Address, req.Asset.EthAddress())
 	if err != nil {
 		return nil, false, errors.WithMessagef(err, "could not get Allowance for asset: %x", req.Asset)
 	}
+
 	result := new(big.Int).Add(req.Balance, allowance)
 
 	// Increase the allowance.
-	opts, err := req.CB.NewTransactor(ctx, ERC20DepositorTXGasLimit, req.Account)
+	opts, err := req.CB.NewTransactor(ctx, d.GasLimit, req.Account)
 	if err != nil {
 		return nil, false, errors.WithMessagef(err, "creating transactor for asset: %x", req.Asset)
 	}
@@ -162,6 +145,7 @@ func Approve(ctx context.Context, lock *sync.Mutex, req DepositReq, token *perun
 		err = cherrors.CheckIsChainNotReachableError(err)
 		return nil, false, errors.WithMessagef(err, "increasing allowance for asset: %x", req.Asset)
 	}
+
 	var approvalReceived bool
 	go func() {
 		select {
@@ -174,4 +158,23 @@ func Approve(ctx context.Context, lock *sync.Mutex, req DepositReq, token *perun
 	}()
 	approvalReceived = <-eventReceived
 	return tx, approvalReceived, nil
+}
+
+// Create key from account address and asset to ensure only one deposit for an asset is performed at the same time.
+func lockKey(account common.Address, asset common.Address) string {
+	return fmt.Sprintf("%s-%s", account.Hex(), asset.Hex())
+}
+
+// Retrieves Lock for specific key.
+func handleLock(lockKey string) *sync.Mutex {
+	depositLocksMtx.Lock()
+	defer depositLocksMtx.Unlock()
+
+	if lock, exists := depositLocks[lockKey]; exists {
+		return lock
+	}
+
+	lock := &sync.Mutex{}
+	depositLocks[lockKey] = lock
+	return lock
 }

@@ -33,8 +33,6 @@ import (
 )
 
 const (
-	// GasLimit is the max amount of gas we want to send per transaction.
-	GasLimit = 1000000
 	// How many blocks we query into the past for events.
 	startBlockOffset            = 100
 	contractBackendHeadBuffSize = 10

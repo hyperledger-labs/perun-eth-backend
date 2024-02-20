@@ -43,7 +43,8 @@ import (
 )
 
 const (
-	txGasLimit = 100000
+	txERC20GasLimit = 100000
+	txETHGasLimit   = 50000
 )
 
 func TestFunder_RegisterAsset_IsAssetRegistered(t *testing.T) {
@@ -94,10 +95,10 @@ func newFunderSetup(rng *rand.Rand) (
 		accs[i] = accounts.Account{Address: ethwallet.AsEthAddr(wallettest.NewRandomAddress(rng))}
 	}
 	// Use an ETH depositor with random addresses at index 0.
-	depositors[0] = ethchannel.NewETHDepositor()
+	depositors[0] = ethchannel.NewETHDepositor(txETHGasLimit)
 	// Use an ERC20 depositor with random addresses at index 1.
 	token := wallettest.NewRandomAddress(rng)
-	depositors[1] = ethchannel.NewERC20Depositor(ethwallet.AsEthAddr(token))
+	depositors[1] = ethchannel.NewERC20Depositor(ethwallet.AsEthAddr(token), txERC20GasLimit)
 	return funder, assets, depositors, accs
 }
 
@@ -432,8 +433,8 @@ func newNFunders(
 		require.NoError(t, err)
 
 		funders[i] = ethchannel.NewFunder(cb)
-		require.True(t, funders[i].RegisterAsset(*asset1, ethchannel.NewETHDepositor(), acc))
-		require.True(t, funders[i].RegisterAsset(*asset2, ethchannel.NewERC20Depositor(token), acc))
+		require.True(t, funders[i].RegisterAsset(*asset1, ethchannel.NewETHDepositor(txETHGasLimit), acc))
+		require.True(t, funders[i].RegisterAsset(*asset2, ethchannel.NewERC20Depositor(token, txERC20GasLimit), acc))
 	}
 
 	// The challenge duration needs to be really large, since the auto-mining of
@@ -462,7 +463,7 @@ func fundERC20(ctx context.Context, cb ethchannel.ContractBackend, from accounts
 		return errors.WithMessagef(err, "binding AssetHolderERC20 contract at: %v", asset)
 	}
 	// Transfer.
-	opts, err := cb.NewTransactor(ctx, txGasLimit, from)
+	opts, err := cb.NewTransactor(ctx, txERC20GasLimit, from)
 	if err != nil {
 		return errors.WithMessagef(err, "creating transactor for asset: %v", asset)
 	}
