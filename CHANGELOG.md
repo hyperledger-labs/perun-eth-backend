@@ -6,7 +6,7 @@
 ### Fixed
 - Asset.UnmarshallBinary [#36]
 - Restore compatibility between go-perun post-0.10.6 and eth-backend [#44]
-- Include settle secondary [#47] (https://github.com/hyperledger-labs/perun-eth-backend/pull/47)
+- Include settle secondary [#47]
 
 [#33]: https://github.com/hyperledger-labs/perun-eth-backend/pull/33
 [#36]: https://github.com/hyperledger-labs/perun-eth-backend/pull/36
