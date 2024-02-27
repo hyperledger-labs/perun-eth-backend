@@ -597,7 +597,7 @@ func checkEgoisticPart(egoisticPart []bool) error {
 
 // calculateTotalBalances calculates the total balance for other participants.
 func calculateTotalBalances(request channel.FundingReq) *big.Int {
-	var totalBalanceForOther = big.NewInt(0)
+	totalBalanceForOther := big.NewInt(0)
 	// Iterate over each asset to sum up the total balance for other participants.
 	for _, asset := range request.Agreement {
 		for i, bal := range asset {
