@@ -164,7 +164,6 @@ func (r *RegisteredSub) Err() error {
 	return <-r.err
 }
 
-//nolint:funlen
 func (a *Adjudicator) convertEvent(ctx context.Context, e *adjudicator.AdjudicatorChannelUpdate) (channel.AdjudicatorEvent, error) {
 	base := channel.NewAdjudicatorEventBase(e.ChannelID, NewBlockTimeout(a.ContractInterface, e.Timeout), e.Version)
 	switch e.Phase {
