@@ -37,6 +37,9 @@ type SimAdjudicator struct {
 	sb *SimulatedBackend
 }
 
+// adjustAdjudicatorGasLimit is the gas limit for the adjudicator contract.
+const adjudicatorGasLimit = uint64(1000000)
+
 // NewSimAdjudicator returns a new SimAdjudicator for the given backend. The
 // backend must be a SimulatedBackend or it panics.
 func NewSimAdjudicator(backend ethchannel.ContractBackend, contract common.Address, receiver common.Address, acc accounts.Account) *SimAdjudicator {
@@ -45,7 +48,7 @@ func NewSimAdjudicator(backend ethchannel.ContractBackend, contract common.Addre
 		panic("SimAdjudicator can only be created with a SimulatedBackend.")
 	}
 	return &SimAdjudicator{
-		Adjudicator: *ethchannel.NewAdjudicator(backend, contract, receiver, acc),
+		Adjudicator: *ethchannel.NewAdjudicator(backend, contract, receiver, acc, adjudicatorGasLimit),
 		sb:          sb,
 	}
 }
