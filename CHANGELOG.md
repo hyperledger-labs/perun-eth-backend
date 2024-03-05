@@ -1,4 +1,4 @@
-## [0.5.0] - 2023-02-22
+## [0.5.0] Athos - 2023-02-22
 ### Changed
 - CI: Use git diff instead of go test [#33]
 - Remove IncreaseAllowance & add shared nonce [#43]
