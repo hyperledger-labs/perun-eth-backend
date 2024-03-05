@@ -14,7 +14,7 @@ Improved Contract Compatibility, Swap Parallelization and other fixes.
 - Add ability to set the gas limits instead of using fixed values: [#46]
 - Add pointer receiver to Asset.UnmarshallBinary to return the unmarshalled value instead of the default: [#36]
 
-### Fixed [:boom:]
+### Fixed
 - Fix the order from Asset.MarshalBinary: [#36]
 - Restore compatibility between go-perun post-0.10.6 and eth-backend: [#44]
 
