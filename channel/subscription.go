@@ -172,10 +172,12 @@ func (a *Adjudicator) convertEvent(ctx context.Context, e *adjudicator.Adjudicat
 		if err != nil {
 			return nil, errors.WithMessage(err, "fetching call data")
 		}
+
 		ch, ok := args.signedState(e.ChannelID)
 		if !ok {
 			return nil, errors.Errorf("channel not found in calldata: %v", e.ChannelID)
 		}
+
 		var app channel.App
 		var zeroAddress common.Address
 		if ch.Params.App == zeroAddress {

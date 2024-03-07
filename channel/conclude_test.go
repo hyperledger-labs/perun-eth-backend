@@ -71,18 +71,28 @@ func testConcludeFinal(t *testing.T, numParts int) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTxTimeout)
 	defer cancel()
 	ct = pkgtest.NewConcurrent(t)
+	initiator := int(rng.Int31n(int32(numParts))) // pick a random initiator
 	for i := 0; i < numParts; i++ {
 		i := i
 		go ct.StageN("register", numParts, func(t pkgtest.ConcT) {
 			req := channel.AdjudicatorReq{
-				Params: params,
-				Acc:    s.Accs[i],
-				Idx:    channel.Index(i),
-				Tx:     tx,
+				Params:    params,
+				Acc:       s.Accs[i],
+				Idx:       channel.Index(i),
+				Tx:        tx,
+				Secondary: (i != initiator),
 			}
-			err := s.Adjs[i].Register(ctx, req, nil)
-
+			diff, err := test.NonceDiff(s.Accs[i].Address(), s.Adjs[i], func() error {
+				return s.Adjs[i].Register(ctx, req, nil)
+			})
 			require.NoError(t, err, "Withdrawing should succeed")
+			if !req.Secondary {
+				// The Initiator must send a TX.
+				require.Equal(t, diff, 1)
+			} else {
+				// Everyone else must NOT send a TX.
+				require.Equal(t, diff, 0)
+			}
 		})
 	}
 	ct.Wait("register")
@@ -244,10 +254,11 @@ func register(ctx context.Context, adj *test.SimAdjudicator, accounts []*keystor
 	}
 
 	req := channel.AdjudicatorReq{
-		Params: ch.params,
-		Acc:    accounts[0],
-		Idx:    0,
-		Tx:     tx,
+		Params:    ch.params,
+		Acc:       accounts[0],
+		Idx:       0,
+		Tx:        tx,
+		Secondary: false,
 	}
 	return adj.Register(ctx, req, sub)
 }
@@ -266,10 +277,11 @@ func withdraw(ctx context.Context, adj *test.SimAdjudicator, accounts []*keystor
 
 	for i, a := range accounts {
 		req := channel.AdjudicatorReq{
-			Params: c.params,
-			Acc:    a,
-			Idx:    channel.Index(i),
-			Tx:     tx,
+			Params:    c.params,
+			Acc:       a,
+			Idx:       channel.Index(i),
+			Tx:        tx,
+			Secondary: i != 0,
 		}
 
 		if err := adj.Withdraw(ctx, req, subStates); err != nil {
