@@ -57,6 +57,7 @@ type assetHolder struct {
 type Funder struct {
 	mtx sync.RWMutex
 
+	// Egoistic Part discloses if a participant should fund last.
 	EgoisticPart []bool
 
 	ContractBackend
@@ -238,8 +239,7 @@ func (f *Funder) fundAssets(ctx context.Context, assets []channel.Asset, channel
 			errg.Add(errors.New("asset not found in funding request"))
 			continue
 		}
-		contract := bindAssetHolder(f.ContractBackend, asset, assetIdx)
-		contracts[i] = contract
+		contracts[i] = bindAssetHolder(f.ContractBackend, asset, assetIdx)
 	}
 
 	if egoistic {
