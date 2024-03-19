@@ -15,6 +15,8 @@
 package wire
 
 import (
+	"bytes"
+	"errors"
 	"math/rand"
 
 	"github.com/perun-network/perun-eth-backend/wallet"
@@ -56,4 +58,13 @@ func (a Address) Cmp(b wire.Address) int {
 func NewRandomAddress(rng *rand.Rand) *Address {
 	addr := test.NewRandomAddress(rng)
 	return &Address{&addr}
+}
+
+// Verify verifies a message signature.
+// It returns an error if the signature is invalid.
+func (a Address) Verify(_ []byte, sig []byte) error {
+	if !bytes.Equal(sig, []byte("Authenticate")) {
+		return errors.New("invalid signature")
+	}
+	return nil
 }

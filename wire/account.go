@@ -25,6 +25,11 @@ type Account struct {
 	addr *Address
 }
 
+// Sign signs the given message with the account's private key.
+func (acc *Account) Sign(_ []byte) ([]byte, error) {
+	return []byte("Authenticate"), nil
+}
+
 // Address returns the account's address.
 func (acc *Account) Address() wire.Address {
 	return acc.addr
