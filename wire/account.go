@@ -25,6 +25,10 @@ type Account struct {
 	addr *Address
 }
 
+func (acc *Account) Sign(msg []byte) ([]byte, error) {
+	return acc.Sign(msg)
+}
+
 // Address returns the account's address.
 func (acc *Account) Address() wire.Address {
 	return acc.addr
