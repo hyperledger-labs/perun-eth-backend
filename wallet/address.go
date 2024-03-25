@@ -70,7 +70,9 @@ func (a *Address) Equal(addr wallet.Address) bool {
 }
 
 // Cmp checks ordering of two addresses.
-//  0 if a==b,
+//
+//	0 if a==b,
+//
 // -1 if a < b,
 // +1 if a > b.
 // https://godoc.org/bytes#Compare

@@ -1,4 +1,4 @@
-// Copyright 2022 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,19 +15,40 @@
 package wire
 
 import (
+	"crypto/ecdsa"
 	"math/rand"
 
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto/secp256k1"
+	"github.com/perun-network/perun-eth-backend/wallet"
+	"github.com/pkg/errors"
 	"perun.network/go-perun/wire"
 )
+
+// SigLen length of a signature in byte.
+// ref https://godoc.org/github.com/ethereum/go-ethereum/crypto/secp256k1#Sign
+// ref https://github.com/ethereum/go-ethereum/blob/54b271a86dd748f3b0bcebeaf678dc34e0d6177a/crypto/signature_cgo.go#L66
+const SigLen = 65
+
+// sigVSubtract value that is subtracted from the last byte of a signature if
+// the last bytes exceeds it.
+const sigVSubtract = 27
 
 // Account is a wire account.
 type Account struct {
 	addr *Address
+	key  *ecdsa.PrivateKey
 }
 
 // Sign signs the given message with the account's private key.
-func (acc *Account) Sign(_ []byte) ([]byte, error) {
-	return []byte("Authenticate"), nil
+func (acc *Account) Sign(data []byte) ([]byte, error) {
+	hash := PrefixedHash(data)
+	sig, err := crypto.Sign(hash, acc.key)
+	if err != nil {
+		return nil, errors.Wrap(err, "SignHash")
+	}
+	sig[64] += 27
+	return sig, nil
 }
 
 // Address returns the account's address.
@@ -37,7 +58,15 @@ func (acc *Account) Address() wire.Address {
 
 // NewRandomAccount generates a new random account.
 func NewRandomAccount(rng *rand.Rand) *Account {
+	privateKey, err := ecdsa.GenerateKey(secp256k1.S256(), rng)
+	if err != nil {
+		panic(err)
+	}
+
+	addr := crypto.PubkeyToAddress(privateKey.PublicKey)
+
 	return &Account{
-		addr: NewRandomAddress(rng),
+		addr: &Address{wallet.AsWalletAddr(addr)},
+		key:  privateKey,
 	}
 }

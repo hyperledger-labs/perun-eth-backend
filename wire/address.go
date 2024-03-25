@@ -15,12 +15,12 @@
 package wire
 
 import (
-	"bytes"
-	"errors"
 	"math/rand"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/perun-network/perun-eth-backend/wallet"
 	"github.com/perun-network/perun-eth-backend/wallet/test"
+	"github.com/pkg/errors"
 
 	"perun.network/go-perun/wire"
 )
@@ -32,7 +32,7 @@ type Address struct {
 
 // NewAddress returns a new address.
 func NewAddress() *Address {
-	return &Address{}
+	return &Address{Address: &wallet.Address{}}
 }
 
 // Equal returns whether the two addresses are equal.
@@ -41,6 +41,7 @@ func (a Address) Equal(b wire.Address) bool {
 	if !ok {
 		panic("wrong type")
 	}
+
 	return a.Address.Equal(bTyped.Address)
 }
 
@@ -62,9 +63,28 @@ func NewRandomAddress(rng *rand.Rand) *Address {
 
 // Verify verifies a message signature.
 // It returns an error if the signature is invalid.
-func (a Address) Verify(_ []byte, sig []byte) error {
-	if !bytes.Equal(sig, []byte("Authenticate")) {
-		return errors.New("invalid signature")
+func (a Address) Verify(msg []byte, sig []byte) error {
+	hash := PrefixedHash(msg)
+	sigCopy := make([]byte, SigLen)
+	copy(sigCopy, sig)
+	if len(sigCopy) == SigLen && (sigCopy[SigLen-1] >= sigVSubtract) {
+		sigCopy[SigLen-1] -= sigVSubtract
+	}
+	pk, err := crypto.SigToPub(hash, sigCopy)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	addr := crypto.PubkeyToAddress(*pk)
+	if !a.Equal(&Address{wallet.AsWalletAddr(addr)}) {
+		return errors.New("signature verification failed")
 	}
 	return nil
+}
+
+// PrefixedHash adds an ethereum specific prefix to the hash of given data, rehashes the results
+// and returns it.
+func PrefixedHash(data []byte) []byte {
+	hash := crypto.Keccak256(data)
+	prefix := []byte("\x19Ethereum Signed Message:\n32")
+	return crypto.Keccak256(prefix, hash)
 }
