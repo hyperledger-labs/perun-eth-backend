@@ -34,6 +34,7 @@ func TestAddress(t *testing.T) {
 		return wire.NewRandomAddress(rng)
 	})
 }
+
 func TestSignatures(t *testing.T) {
 	acc := wire.NewRandomAccount(pkgtest.Prng(t))
 	sig, err := acc.Sign(dataToSign)
