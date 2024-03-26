@@ -61,8 +61,58 @@ func SetupMultiLedgerTest(t *testing.T, testDuration time.Duration) ctest.MultiL
 	bus := wire.NewLocalBus()
 
 	// Setup clients.
-	c1 := setupClient(t, rng, l1, l2, bus, true)
-	c2 := setupClient(t, rng, l1, l2, bus, false)
+	c1 := setupClient(t, rng, l1, l2, bus)
+	c2 := setupClient(t, rng, l1, l2, bus)
+
+	// Fund accounts.
+	l1.simSetup.SimBackend.FundAddress(ctx, wallet.AsEthAddr(c1.WalletAddress))
+	l1.simSetup.SimBackend.FundAddress(ctx, wallet.AsEthAddr(c2.WalletAddress))
+	l2.simSetup.SimBackend.FundAddress(ctx, wallet.AsEthAddr(c1.WalletAddress))
+	l2.simSetup.SimBackend.FundAddress(ctx, wallet.AsEthAddr(c2.WalletAddress))
+
+	//nolint:gomnd
+	return ctest.MultiLedgerSetup{
+		Client1: c1,
+		Client2: c2,
+		Asset1:  l1.asset,
+		Asset2:  l2.asset,
+		InitBalances: channel.Balances{
+			{EtherToWei(8), EtherToWei(2)}, // Asset 1.
+			{EtherToWei(2), EtherToWei(8)}, // Asset 2.
+		},
+		UpdateBalances1: channel.Balances{
+			{EtherToWei(5), EtherToWei(5)}, // Asset 1.
+			{EtherToWei(3), EtherToWei(7)}, // Asset 2.
+		},
+		UpdateBalances2: channel.Balances{
+			{EtherToWei(1), EtherToWei(9)}, // Asset 1.
+			{EtherToWei(5), EtherToWei(5)}, // Asset 2.
+		},
+		BalanceDelta: EtherToWei(0.00012),
+	}
+}
+
+// SetupMultiLedgerTest creates a multi-ledger test setup.
+func EgoisticTest(t *testing.T, testDuration time.Duration) ctest.MultiLedgerSetup {
+	t.Helper()
+	rng := test.Prng(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), testDuration)
+	defer cancel()
+
+	l1 := setupLedger(ctx, t, rng, big.NewInt(1337)) //nolint:gomnd
+	l2 := setupLedger(ctx, t, rng, big.NewInt(1338)) //nolint:gomnd
+	l3 := setupLedger(ctx, t, rng, big.NewInt(134))  //nolint:gomnd
+
+	// Setup message bus.
+	bus := wire.NewLocalBus()
+
+	// Setup clients.
+	c1 := setupClient(t, rng, l1, l2, bus)
+	c2 := setupClient(t, rng, l1, l2, bus)
+
+	// Setup clients.
+	TestEgoisticLedger(t, rng, l1, l2, l3)
 
 	// Fund accounts.
 	l1.simSetup.SimBackend.FundAddress(ctx, wallet.AsEthAddr(c1.WalletAddress))
@@ -126,7 +176,7 @@ func setupLedger(ctx context.Context, t *testing.T, rng *rand.Rand, chainID *big
 	}
 }
 
-func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus, egoistic bool) ctest.MultiLedgerClient {
+func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) ctest.MultiLedgerClient {
 	t.Helper()
 	require := require.New(t)
 
@@ -154,17 +204,7 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus, 
 	multiFunder := multi.NewFunder()
 	funderL1 := ethchannel.NewFunder(cb1)
 	funderL2 := ethchannel.NewFunder(cb2)
-	if egoistic {
-		egoisticPart := make([]bool, 2)
-		egoisticPart[1] = true
-		funderL2.SetEgoisticPart(1, 2)
-		require.Equal(egoisticPart, funderL2.EgoisticPart)
 
-		egoisticChains := make(map[multi.LedgerIDMapKey]bool)
-		egoisticChains[funderL2.ChainID().MapKey()] = true
-		multiFunder.SetEgoisticChain(funderL2.ChainID(), true)
-		require.Equal(egoisticChains, multiFunder.EgoisticChains)
-	}
 	registered := funderL1.RegisterAsset(*l1.asset, ethchannel.NewETHDepositor(defaultETHGasLimit), acc.Account)
 	require.True(registered)
 	registered = funderL1.RegisterAsset(*l2.asset, ethchannel.NewNoOpDepositor(), acc.Account)
@@ -210,6 +250,70 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus, 
 		BalanceReader1: l1.simSetup.SimBackend.NewBalanceReader(acc.Address()),
 		BalanceReader2: l2.simSetup.SimBackend.NewBalanceReader(acc.Address()),
 	}
+}
+
+func TestEgoisticLedger(t *testing.T, rng *rand.Rand, l1, l2, l3 testLedger) {
+	t.Helper()
+	require := require.New(t)
+
+	// Setup wallet and account.
+	w := wtest.RandomWallet().(*keystore.Wallet)
+	acc := w.NewRandomAccount(rng).(*keystore.Account)
+
+	// Setup contract backends.
+	signer1 := l1.simSetup.SimBackend.Signer
+	cb1 := ethchannel.NewContractBackend(
+		l1.simSetup.CB,
+		l1.ChainID(),
+		keystore.NewTransactor(*w, signer1),
+		l1.simSetup.CB.TxFinalityDepth(),
+	)
+	signer2 := l2.simSetup.SimBackend.Signer
+	cb2 := ethchannel.NewContractBackend(
+		l2.simSetup.CB,
+		l2.ChainID(),
+		keystore.NewTransactor(*w, signer2),
+		l2.simSetup.CB.TxFinalityDepth(),
+	)
+
+	signer3 := l3.simSetup.SimBackend.Signer
+	cb3 := ethchannel.NewContractBackend(
+		l3.simSetup.CB,
+		l3.ChainID(),
+		keystore.NewTransactor(*w, signer3),
+		l3.simSetup.CB.TxFinalityDepth(),
+	)
+
+	// Setup funder.
+	multiFunder := multi.NewFunder()
+	funderL1 := ethchannel.NewFunder(cb1)
+	funderL2 := ethchannel.NewFunder(cb2)
+	funderL3 := ethchannel.NewFunder(cb3)
+	egoisticPart := make([]bool, 3)
+	egoisticPart[1] = true
+	funderL2.SetEgoisticPart(1, 3)
+	require.Equal(egoisticPart, funderL2.EgoisticPart)
+
+	egoisticChains := make(map[multi.LedgerIDMapKey]bool)
+	egoisticChains[funderL2.ChainID().MapKey()] = true
+	multiFunder.SetEgoisticChain(funderL2.ChainID(), true)
+	require.Equal(egoisticChains, multiFunder.EgoisticChains)
+
+	registered := funderL1.RegisterAsset(*l1.asset, ethchannel.NewETHDepositor(defaultETHGasLimit), acc.Account)
+	require.True(registered)
+	registered = funderL1.RegisterAsset(*l2.asset, ethchannel.NewNoOpDepositor(), acc.Account)
+	require.True(registered)
+	registered = funderL2.RegisterAsset(*l1.asset, ethchannel.NewNoOpDepositor(), acc.Account)
+	require.True(registered)
+	registered = funderL2.RegisterAsset(*l2.asset, ethchannel.NewETHDepositor(defaultETHGasLimit), acc.Account)
+	require.True(registered)
+	registered = funderL3.RegisterAsset(*l1.asset, ethchannel.NewNoOpDepositor(), acc.Account)
+	require.True(registered)
+	registered = funderL3.RegisterAsset(*l2.asset, ethchannel.NewETHDepositor(defaultETHGasLimit), acc.Account)
+	require.True(registered)
+	multiFunder.RegisterFunder(l1.ChainID(), funderL1)
+	multiFunder.RegisterFunder(l2.ChainID(), funderL2)
+	multiFunder.RegisterFunder(l3.ChainID(), funderL3)
 }
 
 // EtherToWei converts eth to wei.

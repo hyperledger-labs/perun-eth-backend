@@ -44,3 +44,11 @@ func TestMultiLedgerDispute(t *testing.T) {
 	mlt := test.SetupMultiLedgerTest(t, testDuration)
 	ctest.TestMultiLedgerDispute(ctx, t, mlt, challengeDuration)
 }
+
+func TestEgoisticMultiLedger(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), testDuration)
+	defer cancel()
+
+	mlt := test.EgoisticTest(t, testDuration)
+	ctest.TestMultiLedgerDispute(ctx, t, mlt, challengeDuration)
+}
