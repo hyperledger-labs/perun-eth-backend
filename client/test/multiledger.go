@@ -92,7 +92,7 @@ func SetupMultiLedgerTest(t *testing.T, testDuration time.Duration) ctest.MultiL
 	}
 }
 
-// SetupMultiLedgerTest creates a multi-ledger test setup.
+// EgoisticTest creates a egoistic multi-ledger test setup and tests egoistic functions.
 func EgoisticTest(t *testing.T, testDuration time.Duration) ctest.MultiLedgerSetup {
 	t.Helper()
 	rng := test.Prng(t)
@@ -112,7 +112,7 @@ func EgoisticTest(t *testing.T, testDuration time.Duration) ctest.MultiLedgerSet
 	c2 := setupClient(t, rng, l1, l2, bus)
 
 	// Setup clients.
-	TestEgoisticLedger(t, rng, l1, l2, l3)
+	testEgoisticLedger(t, rng, l1, l2, l3)
 
 	// Fund accounts.
 	l1.simSetup.SimBackend.FundAddress(ctx, wallet.AsEthAddr(c1.WalletAddress))
@@ -252,7 +252,7 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 	}
 }
 
-func TestEgoisticLedger(t *testing.T, rng *rand.Rand, l1, l2, l3 testLedger) {
+func testEgoisticLedger(t *testing.T, rng *rand.Rand, l1, l2, l3 testLedger) {
 	t.Helper()
 	require := require.New(t)
 
@@ -289,9 +289,10 @@ func TestEgoisticLedger(t *testing.T, rng *rand.Rand, l1, l2, l3 testLedger) {
 	funderL1 := ethchannel.NewFunder(cb1)
 	funderL2 := ethchannel.NewFunder(cb2)
 	funderL3 := ethchannel.NewFunder(cb3)
-	egoisticPart := make([]bool, 3)
+	signers := 3
+	egoisticPart := make([]bool, signers)
 	egoisticPart[1] = true
-	funderL2.SetEgoisticPart(1, 3)
+	funderL2.SetEgoisticPart(1, signers)
 	require.Equal(egoisticPart, funderL2.EgoisticPart)
 
 	egoisticChains := make(map[multi.LedgerIDMapKey]bool)
