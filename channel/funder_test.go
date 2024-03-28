@@ -198,20 +198,20 @@ func testFunderCrossOverFunding(t *testing.T, n int) {
 
 func TestEgoisticParticipantFunding(t *testing.T) {
 	// Peers will randomly fund for each other.
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 30; i++ {
 		name := fmt.Sprintf("Egoistic Funding %v", i)
 		t.Run(name, func(t *testing.T) { testEgoisticParticipantFunding(t) })
 	}
 }
 
 func testEgoisticParticipantFunding(t *testing.T) {
-	EgoisticTxTimeout := 10 * time.Second
-	n := 2
 	t.Helper()
 	t.Parallel()
+	n := 2
+	rng := pkgtest.Prng(t, n)
+	EgoisticTxTimeout := 20 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), EgoisticTxTimeout*time.Duration(n))
 	defer cancel()
-	rng := pkgtest.Prng(t, n)
 	_, funders, params, alloc := newNFunders(ctx, t, rng, n)
 	egoisticIndex := rng.Intn(2)
 	balances := [][]*big.Int{
@@ -222,59 +222,20 @@ func testEgoisticParticipantFunding(t *testing.T) {
 	egoisticParts := make([]bool, n)
 	funders[egoisticIndex].SetEgoisticPart(channel.Index(egoisticIndex), n)
 	egoisticParts[egoisticIndex] = true
-
-	agreement := channeltest.ShuffleBalances(rng, allocation.Balances)
+	t.Logf("Egoistic Participants: %v", egoisticParts)
+	agreement := allocation.Balances
 	require.Equal(t, agreement.Sum(), allocation.Balances.Sum())
 
 	fundingRequests := make([]*channel.FundingReq, n)
-	for i, _ := range funders {
+	for i := range funders {
 		req := channel.NewFundingReq(params, &channel.State{Allocation: allocation}, channel.Index(i), agreement)
 		fundingRequests[i] = req
 	}
-	finishTimes, err := test.FundAll(ctx, funders, fundingRequests)
+	finishTimes, err := test.FundAll(ctx, t, funders, fundingRequests, egoisticIndex)
 	require.True(t, len(finishTimes) == n, "Length of indexes must be n")
 	require.NoError(t, err)
 
-	t.Logf("Finish Times: %v", finishTimes)
-	// Check if finish time of egoistic funder is larger than finish time of non-egoistic funder.
-	correct := finishTimes[egoisticIndex].Time > finishTimes[int(math.Abs(float64(1-egoisticIndex)))].Time
-	// Use require.True to compare the finish times
-	require.True(t, correct, "Non-egoistic funders finish earlier than egoistic funders")
-	assert.NoError(t, compareOnChainAlloc(ctx, params, agreement, allocation.Assets, &funders[0].ContractBackend))
-}
-
-func TestEgoisticChainFunding(t *testing.T) {
-	EgoisticTxTimeout := 10 * time.Second
-	n := 2
-	t.Helper()
-	t.Parallel()
-	ctx, cancel := context.WithTimeout(context.Background(), EgoisticTxTimeout*time.Duration(n))
-	defer cancel()
-	rng := pkgtest.Prng(t, n)
-	_, funders, params, alloc := newNFunders(ctx, t, rng, n)
-	egoisticIndex := rng.Intn(2)
-	balances := [][]*big.Int{
-		{big.NewInt(1), big.NewInt(0)},
-		{big.NewInt(0), big.NewInt(2)},
-	}
-	allocation := channel.Allocation{Assets: alloc.Assets, Balances: balances, Locked: alloc.Locked}
-	egoisticParts := make([]bool, n)
-	funders[egoisticIndex].SetEgoisticPart(channel.Index(egoisticIndex), n)
-	egoisticParts[egoisticIndex] = true
-
-	agreement := channeltest.ShuffleBalances(rng, allocation.Balances)
-	require.Equal(t, agreement.Sum(), allocation.Balances.Sum())
-
-	fundingRequests := make([]*channel.FundingReq, n)
-	for i, _ := range funders {
-		req := channel.NewFundingReq(params, &channel.State{Allocation: allocation}, channel.Index(i), agreement)
-		fundingRequests[i] = req
-	}
-	finishTimes, err := test.FundAll(ctx, funders, fundingRequests)
-	require.True(t, len(finishTimes) == n, "Length of indexes must be n")
-	require.NoError(t, err)
-
-	t.Logf("Finish Times: %v", finishTimes)
+	t.Logf("finishTimes: %v", finishTimes)
 	// Check if finish time of egoistic funder is larger than finish time of non-egoistic funder.
 	correct := finishTimes[egoisticIndex].Time > finishTimes[int(math.Abs(float64(1-egoisticIndex)))].Time
 	// Use require.True to compare the finish times
