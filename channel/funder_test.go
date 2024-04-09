@@ -1,4 +1,4 @@
-// Copyright 2019 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@ package channel_test
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -192,6 +194,53 @@ func testFunderCrossOverFunding(t *testing.T, n int) {
 	ct.Wait("funding")
 	// Check result balances
 	assert.NoError(t, compareOnChainAlloc(ctx, params, agreement, alloc.Assets, &funders[0].ContractBackend))
+}
+
+func TestEgoisticParticipantFunding(t *testing.T) {
+	// Peers will randomly fund for each other.
+	for i := 0; i < 30; i++ {
+		name := fmt.Sprintf("Egoistic Funding %v", i)
+		t.Run(name, func(t *testing.T) { testEgoisticParticipantFunding(t) })
+	}
+}
+
+func testEgoisticParticipantFunding(t *testing.T) {
+	t.Helper()
+	t.Parallel()
+	n := 2
+	rng := pkgtest.Prng(t, n)
+	EgoisticTxTimeout := 20 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), EgoisticTxTimeout*time.Duration(n))
+	defer cancel()
+	_, funders, params, alloc := newNFunders(ctx, t, rng, n)
+	egoisticIndex := rng.Intn(2)
+	balances := [][]*big.Int{
+		{big.NewInt(1), big.NewInt(0)},
+		{big.NewInt(0), big.NewInt(2)},
+	}
+	allocation := channel.Allocation{Assets: alloc.Assets, Balances: balances, Locked: alloc.Locked}
+	egoisticParts := make([]bool, n)
+	funders[egoisticIndex].SetEgoisticPart(channel.Index(egoisticIndex), n)
+	egoisticParts[egoisticIndex] = true
+	t.Logf("Egoistic Participants: %v", egoisticParts)
+	agreement := allocation.Balances
+	require.Equal(t, agreement.Sum(), allocation.Balances.Sum())
+
+	fundingRequests := make([]*channel.FundingReq, n)
+	for i := range funders {
+		req := channel.NewFundingReq(params, &channel.State{Allocation: allocation}, channel.Index(i), agreement)
+		fundingRequests[i] = req
+	}
+	finishTimes, err := test.FundAll(ctx, t, funders, fundingRequests, egoisticIndex)
+	require.True(t, len(finishTimes) == n, "Length of indexes must be n")
+	require.NoError(t, err)
+
+	t.Logf("finishTimes: %v", finishTimes)
+	// Check if finish time of egoistic funder is larger than finish time of non-egoistic funder.
+	correct := finishTimes[egoisticIndex].Time > finishTimes[int(math.Abs(float64(1-egoisticIndex)))].Time
+	// Use require.True to compare the finish times
+	require.True(t, correct, "Non-egoistic funders finish earlier than egoistic funders")
+	assert.NoError(t, compareOnChainAlloc(ctx, params, agreement, allocation.Assets, &funders[0].ContractBackend))
 }
 
 func TestFunder_ZeroBalance(t *testing.T) {
