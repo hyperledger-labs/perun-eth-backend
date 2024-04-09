@@ -222,7 +222,7 @@ func (s *SimulatedBackend) Reorg(ctx context.Context, depth uint64, reorder Reor
 	defer s.sbMtx.Unlock()
 
 	// parent at current - depth.
-	parentN := new(big.Int).Sub(s.Blockchain().CurrentBlock().Number(), big.NewInt(int64(depth)))
+	parentN := new(big.Int).Sub(s.Blockchain().CurrentHeader().Number, big.NewInt(int64(depth)))
 	parent, err := s.BlockByNumber(ctx, parentN)
 	if err != nil {
 		return errors.Wrap(err, "retrieving reorg parent")
