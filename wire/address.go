@@ -78,6 +78,12 @@ func (a Address) Verify(msg []byte, sig []byte) error {
 	if !a.Equal(&Address{wallet.AsWalletAddr(addr)}) {
 		return errors.New("signature verification failed")
 	}
+
+	// Verify the signature
+	if !crypto.VerifySignature(crypto.FromECDSAPub(pk), hash, sigCopy[:len(sigCopy)-1]) {
+		return errors.New("signature verification failed")
+	}
+
 	return nil
 }
 

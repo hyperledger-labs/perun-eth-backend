@@ -35,7 +35,7 @@ func TestAddress(t *testing.T) {
 	})
 }
 
-func TestSignatures(t *testing.T) {
+func TestSignatures_Success(t *testing.T) {
 	acc := wire.NewRandomAccount(pkgtest.Prng(t))
 	sig, err := acc.Sign(dataToSign)
 	assert.NoError(t, err, "Sign with new account should succeed")
@@ -43,4 +43,61 @@ func TestSignatures(t *testing.T) {
 	assert.Equal(t, len(sig), wire.SigLen, "Ethereum signature has wrong length")
 	err = acc.Address().Verify(dataToSign, sig)
 	assert.NoError(t, err, "Verification should succeed")
+}
+
+func TestSignatures_ModifyData_Failure(t *testing.T) {
+	acc := wire.NewRandomAccount(pkgtest.Prng(t))
+	sig, err := acc.Sign(dataToSign)
+	assert.NoError(t, err, "Sign with new account should succeed")
+	assert.NotNil(t, sig)
+
+	// Modify a single byte of the signed data
+	modifiedData := make([]byte, len(dataToSign))
+	copy(modifiedData, dataToSign)
+	modifiedData[0] ^= 0x01
+
+	err = acc.Address().Verify(modifiedData, sig)
+	assert.Error(t, err, "Verification should fail with modified data")
+}
+
+func TestSignatures_ModifySignature_Failure(t *testing.T) {
+	acc := wire.NewRandomAccount(pkgtest.Prng(t))
+	sig, err := acc.Sign(dataToSign)
+	assert.NoError(t, err, "Sign with new account should succeed")
+	assert.NotNil(t, sig)
+
+	// Modify a single byte of the signature (first 64 bytes)
+	modifiedSig := make([]byte, len(sig))
+	copy(modifiedSig, sig)
+	modifiedSig[0] ^= 0x01
+
+	err = acc.Address().Verify(dataToSign, modifiedSig)
+	assert.Error(t, err, "Verification should fail with modified signature")
+}
+
+func TestSignatures_ModifyLastByteOfSignature_Failure(t *testing.T) {
+	acc := wire.NewRandomAccount(pkgtest.Prng(t))
+	sig, err := acc.Sign(dataToSign)
+	assert.NoError(t, err, "Sign with new account should succeed")
+	assert.NotNil(t, sig)
+
+	// Modify the last byte of the signature
+	modifiedSig := make([]byte, len(sig))
+	copy(modifiedSig, sig)
+	modifiedSig[len(sig)-1] ^= 0x01
+
+	err = acc.Address().Verify(dataToSign, modifiedSig)
+	assert.Error(t, err, "Verification should fail with modified signature")
+}
+
+func TestSignatures_WrongAccount_Failure(t *testing.T) {
+	acc := wire.NewRandomAccount(pkgtest.Prng(t))
+	sig, err := acc.Sign(dataToSign)
+	assert.NoError(t, err, "Sign with new account should succeed")
+	assert.NotNil(t, sig)
+
+	// Verify with a wrong account
+	wrongAcc := wire.NewRandomAccount(pkgtest.Prng(t))
+	err = wrongAcc.Address().Verify(dataToSign, sig)
+	assert.Error(t, err, "Verification should fail with wrong account")
 }
