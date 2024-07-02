@@ -76,10 +76,11 @@ func MakeRoleSetups(rng *rand.Rand, s *ethctest.Setup, names []string) []clientt
 
 // MakeNetRoleSetups creates a two party client test setup with the provided names and uses the default TLS-bus from go-perun.
 func MakeNetRoleSetups(t *testing.T, rng *rand.Rand, s *ethctest.Setup, names []string) []clienttest.RoleSetup {
+	t.Helper()
 	setups := make([]clienttest.RoleSetup, len(names))
 	commonName := "127.0.0.1"
 	sans := []string{"127.0.0.1", "localhost"}
-	tlsConfigs, err := simple.GenerateSelfSignedCertConfigs(commonName, sans, len(names))
+	tlsConfigs, err := GenerateSelfSignedCertConfigs(commonName, sans, len(names))
 	if err != nil {
 		panic("Error generating TLS configs: " + err.Error())
 	}
@@ -122,13 +123,12 @@ func MakeNetRoleSetups(t *testing.T, rng *rand.Rand, s *ethctest.Setup, names []
 			Errors:            make(chan error),
 			BalanceReader:     s.SimBackend.NewBalanceReader(s.Accs[i].Address()),
 		}
-
 	}
-
 	return setups
 }
 
 func makeSimpleDialersListeners(t *testing.T, tlsConfigs []*tls.Config, hosts []string) ([]*simple.Dialer, []*simple.Listener) {
+	t.Helper()
 	dialers := make([]*simple.Dialer, len(tlsConfigs))
 	listeners := make([]*simple.Listener, len(tlsConfigs))
 
@@ -144,7 +144,7 @@ func makeSimpleDialersListeners(t *testing.T, tlsConfigs []*tls.Config, hosts []
 
 func findFreePort() (int, error) {
 	// Create a listener on a random port to get an available port.
-	l, err := net.Listen("tcp", ":0") // Use ":0" to bind to a random free port
+	l, err := net.Listen("tcp", "127.0.0.1:0") // Use ":0" to bind to a random free port
 	if err != nil {
 		return 0, err
 	}
