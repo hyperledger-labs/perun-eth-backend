@@ -645,12 +645,8 @@ honnef.co/go/tools v0.0.0-20190418001031-e561f6794a2a/go.mod h1:rf3lG4BRIbNafJWh
 honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.1-2019.2.3/go.mod h1:a3bituU0lyd329TUQxRnasdCoJDkEUEAqEt0JzvZhAg=
 honnef.co/go/tools v0.1.3/go.mod h1:NgwopIslSNH47DimFoV78dnkksY2EFtX0ajyb3K/las=
-perun.network/go-perun v0.11.1-0.20240312125059-3811fdb76baf h1:eTmgN9p2Uo48c+8Jiya67wnRakZEBoXlG3fWOSXlPw0=
-perun.network/go-perun v0.11.1-0.20240312125059-3811fdb76baf/go.mod h1:VfCebjZTnFrQRcjbkK1s1l+H71MKW7jodpFQBdP7tRQ=
-perun.network/go-perun v0.11.1-0.20240702081131-cb43155f8c80 h1:xwNXTc6yyv5ch/MQe9QKzLyWS14EaS6hc00x/agd+gc=
-perun.network/go-perun v0.11.1-0.20240702081131-cb43155f8c80/go.mod h1:VfCebjZTnFrQRcjbkK1s1l+H71MKW7jodpFQBdP7tRQ=
-perun.network/go-perun v0.11.1-0.20240702085953-7002772cf1ce h1:ADv90PmdR39SHZ+iINHWv7CJnI6kJyCiwvM9GcMRFzw=
-perun.network/go-perun v0.11.1-0.20240702085953-7002772cf1ce/go.mod h1:VfCebjZTnFrQRcjbkK1s1l+H71MKW7jodpFQBdP7tRQ=
+perun.network/go-perun v0.11.1-0.20240326094100-011cfdf0ea51 h1:fIM4nKc6OKkBX/gJrCTMMFmxeoFTE1DAerndDW/njVc=
+perun.network/go-perun v0.11.1-0.20240326094100-011cfdf0ea51/go.mod h1:VfCebjZTnFrQRcjbkK1s1l+H71MKW7jodpFQBdP7tRQ=
 polycry.pt/poly-go v0.0.0-20220301085937-fb9d71b45a37 h1:iA5GzEa/hHfVlQpimEjPV09NATwHXxSjWNB0VVodtew=
 polycry.pt/poly-go v0.0.0-20220301085937-fb9d71b45a37/go.mod h1:XUBrNtqgEhN3EEOP/5gh7IBd3xVHKidCjXDZfl9+kMU=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
