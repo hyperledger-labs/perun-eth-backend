@@ -15,6 +15,7 @@
 package wire
 
 import (
+	"log"
 	"math/rand"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -36,7 +37,7 @@ func NewAddress() *Address {
 }
 
 // Equal returns whether the two addresses are equal.
-func (a Address) Equal(b wire.Address) bool {
+func (a *Address) Equal(b wire.Address) bool {
 	bTyped, ok := b.(*Address)
 	if !ok {
 		panic("wrong type")
@@ -47,7 +48,7 @@ func (a Address) Equal(b wire.Address) bool {
 
 // Cmp compares the byte representation of two addresses. For `a.Cmp(b)`
 // returns -1 if a < b, 0 if a == b, 1 if a > b.
-func (a Address) Cmp(b wire.Address) int {
+func (a *Address) Cmp(b wire.Address) int {
 	bTyped, ok := b.(*Address)
 	if !ok {
 		panic("wrong type")
@@ -63,7 +64,8 @@ func NewRandomAddress(rng *rand.Rand) *Address {
 
 // Verify verifies a message signature.
 // It returns an error if the signature is invalid.
-func (a Address) Verify(msg []byte, sig []byte) error {
+func (a *Address) Verify(msg []byte, sig []byte) error {
+	log.Print("Address.Verify called")
 	hash := PrefixedHash(msg)
 	sigCopy := make([]byte, SigLen)
 	copy(sigCopy, sig)

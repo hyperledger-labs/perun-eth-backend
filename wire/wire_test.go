@@ -18,7 +18,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/perun-network/perun-eth-backend/wire"
+	ethwire "github.com/perun-network/perun-eth-backend/wire"
 	"github.com/stretchr/testify/assert"
 	perunwire "perun.network/go-perun/wire"
 	"perun.network/go-perun/wire/test"
@@ -29,24 +29,24 @@ var dataToSign = []byte("SomeLongDataThatShouldBeSignedPlease")
 
 func TestAddress(t *testing.T) {
 	test.TestAddressImplementation(t, func() perunwire.Address {
-		return wire.NewAddress()
+		return ethwire.NewAddress()
 	}, func(rng *rand.Rand) perunwire.Address {
-		return wire.NewRandomAddress(rng)
+		return ethwire.NewRandomAddress(rng)
 	})
 }
 
 func TestSignatures_Success(t *testing.T) {
-	acc := wire.NewRandomAccount(pkgtest.Prng(t))
+	acc := ethwire.NewRandomAccount(pkgtest.Prng(t))
 	sig, err := acc.Sign(dataToSign)
 	assert.NoError(t, err, "Sign with new account should succeed")
 	assert.NotNil(t, sig)
-	assert.Equal(t, len(sig), wire.SigLen, "Ethereum signature has wrong length")
+	assert.Equal(t, len(sig), ethwire.SigLen, "Ethereum signature has wrong length")
 	err = acc.Address().Verify(dataToSign, sig)
 	assert.NoError(t, err, "Verification should succeed")
 }
 
 func TestSignatures_ModifyData_Failure(t *testing.T) {
-	acc := wire.NewRandomAccount(pkgtest.Prng(t))
+	acc := ethwire.NewRandomAccount(pkgtest.Prng(t))
 	sig, err := acc.Sign(dataToSign)
 	assert.NoError(t, err, "Sign with new account should succeed")
 	assert.NotNil(t, sig)
@@ -61,7 +61,7 @@ func TestSignatures_ModifyData_Failure(t *testing.T) {
 }
 
 func TestSignatures_ModifySignature_Failure(t *testing.T) {
-	acc := wire.NewRandomAccount(pkgtest.Prng(t))
+	acc := ethwire.NewRandomAccount(pkgtest.Prng(t))
 	sig, err := acc.Sign(dataToSign)
 	assert.NoError(t, err, "Sign with new account should succeed")
 	assert.NotNil(t, sig)
@@ -76,7 +76,7 @@ func TestSignatures_ModifySignature_Failure(t *testing.T) {
 }
 
 func TestSignatures_ModifyLastByteOfSignature_Failure(t *testing.T) {
-	acc := wire.NewRandomAccount(pkgtest.Prng(t))
+	acc := ethwire.NewRandomAccount(pkgtest.Prng(t))
 	sig, err := acc.Sign(dataToSign)
 	assert.NoError(t, err, "Sign with new account should succeed")
 	assert.NotNil(t, sig)
@@ -91,13 +91,15 @@ func TestSignatures_ModifyLastByteOfSignature_Failure(t *testing.T) {
 }
 
 func TestSignatures_WrongAccount_Failure(t *testing.T) {
-	acc := wire.NewRandomAccount(pkgtest.Prng(t))
+	accPrng := pkgtest.Prng(t)
+	acc := ethwire.NewRandomAccount(accPrng)
 	sig, err := acc.Sign(dataToSign)
 	assert.NoError(t, err, "Sign with new account should succeed")
 	assert.NotNil(t, sig)
 
 	// Verify with a wrong account
-	wrongAcc := wire.NewRandomAccount(pkgtest.Prng(t))
+	wrongAcc := ethwire.NewRandomAccount(accPrng)
+	assert.False(t, acc.Address().Equal(wrongAcc.Address()), "Accounts should be different")
 	err = wrongAcc.Address().Verify(dataToSign, sig)
 	assert.Error(t, err, "Verification should fail with wrong account")
 }

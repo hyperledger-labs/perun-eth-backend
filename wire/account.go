@@ -16,6 +16,7 @@ package wire
 
 import (
 	"crypto/ecdsa"
+	"log"
 	"math/rand"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -62,6 +63,7 @@ func NewRandomAccount(rng *rand.Rand) *Account {
 	if err != nil {
 		panic(err)
 	}
+	log.Print("Generated new account with address ", crypto.PubkeyToAddress(privateKey.PublicKey).Hex())
 
 	addr := crypto.PubkeyToAddress(privateKey.PublicKey)
 
