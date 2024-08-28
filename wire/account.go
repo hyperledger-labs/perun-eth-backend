@@ -31,8 +31,8 @@ func (acc *Account) Sign(_ []byte) ([]byte, error) {
 }
 
 // Address returns the account's address.
-func (acc *Account) Address() wire.Address {
-	return acc.addr
+func (acc *Account) Address() map[int]wire.Address {
+	return map[int]wire.Address{1: acc.addr}
 }
 
 // NewRandomAccount generates a new random account.

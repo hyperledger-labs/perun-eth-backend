@@ -88,11 +88,12 @@ func TestAdjudicator_PureFunctions(t *testing.T) {
 func testCalcID(t *testing.T, rng *rand.Rand, contr *adjudicator.Adjudicator, opts *bind.CallOpts) {
 	t.Helper()
 	for i := 0; i < 100; i++ {
-		params := test.NewRandomParams(rng)
+		opt := test.WithBackend(1)
+		params := test.NewRandomParams(rng, opt)
 		ethParams := channel.ToEthParams(params)
 		ethID, err := contr.ChannelID(opts, ethParams)
 		require.NoError(t, err)
-		chID := channel.CalcID(params)
+		chID, _ := channel.CalcID(params)
 
 		require.NoError(t, err)
 		require.Equal(t, chID, ethID)
@@ -128,11 +129,11 @@ func TestGenericTests(t *testing.T) {
 }
 
 func newChannelSetup(rng *rand.Rand) *test.Setup {
-	params, state := test.NewRandomParamsAndState(rng, test.WithNumLocked(int(rng.Int31n(4)+1)))
-	params2, state2 := test.NewRandomParamsAndState(rng, test.WithIsFinal(!state.IsFinal), test.WithNumLocked(int(rng.Int31n(4)+1)))
+	params, state := test.NewRandomParamsAndState(rng, test.WithNumLocked(int(rng.Int31n(4)+1)), test.WithBackend(1))
+	params2, state2 := test.NewRandomParamsAndState(rng, test.WithIsFinal(!state.IsFinal), test.WithNumLocked(int(rng.Int31n(4)+1)), test.WithBackend(1))
 
-	createAddr := func() perunwallet.Address {
-		return wallettest.NewRandomAddress(rng)
+	createAddr := func() map[int]perunwallet.Address {
+		return map[int]perunwallet.Address{1: wallettest.NewRandomAddress(rng)}
 	}
 
 	return &test.Setup{

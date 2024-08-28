@@ -53,7 +53,7 @@ func TestWallet_Contains(t *testing.T) {
 		"Expected wallet not to contain an empty account")
 
 	acc := w.NewAccount()
-	assert.True(t, w.Contains(ethwallet.AsEthAddr(acc.Address())), "Expected wallet to contain account")
+	assert.True(t, w.Contains(ethwallet.AsEthAddr(acc.Address()[1])), "Expected wallet to contain account")
 }
 
 func TestSignatures(t *testing.T) {
@@ -61,7 +61,7 @@ func TestSignatures(t *testing.T) {
 	sign, err := acc.SignData(dataToSign)
 	assert.NoError(t, err, "Sign with new account should succeed")
 	assert.Equal(t, len(sign), ethwallet.SigLen, "Ethereum signature has wrong length")
-	valid, err := new(ethwallet.Backend).VerifySignature(dataToSign, sign, acc.Address())
+	valid, err := new(ethwallet.Backend).VerifySignature(dataToSign, sign, acc.Address()[1])
 	assert.True(t, valid, "Verification should succeed")
 	assert.NoError(t, err, "Verification should succeed")
 }

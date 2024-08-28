@@ -48,7 +48,7 @@ func testConcludeFinal(t *testing.T, numParts int) {
 	// create valid state and params
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
-		channeltest.WithParts(s.Parts...),
+		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(true),
 		channeltest.WithLedgerChannel(true),
@@ -82,7 +82,7 @@ func testConcludeFinal(t *testing.T, numParts int) {
 				Tx:        tx,
 				Secondary: (i != initiator),
 			}
-			diff, err := test.NonceDiff(s.Accs[i].Address(), s.Adjs[i], func() error {
+			diff, err := test.NonceDiff(s.Accs[i].Address()[1], s.Adjs[i], func() error {
 				return s.Adjs[i].Register(ctx, req, nil)
 			})
 			require.NoError(t, err, "Withdrawing should succeed")
@@ -198,10 +198,10 @@ type paramsAndState struct {
 	state  *channel.State
 }
 
-func makeRandomChannel(rng *rand.Rand, participants []wallet.Address, asset channel.Asset, challengeDuration uint64, ledger bool) paramsAndState {
+func makeRandomChannel(rng *rand.Rand, participants []map[int]wallet.Address, asset channel.Asset, challengeDuration uint64, ledger bool) paramsAndState {
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
-		channeltest.WithParts(participants...),
+		channeltest.WithParts(participants),
 		channeltest.WithAssets(asset),
 		channeltest.WithIsFinal(false),
 		channeltest.WithNumLocked(0),

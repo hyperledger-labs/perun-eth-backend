@@ -17,6 +17,7 @@ package simple_test
 import (
 	"crypto/ecdsa"
 	"math/rand"
+	"perun.network/go-perun/wallet"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -53,7 +54,7 @@ func TestUnlock(t *testing.T) {
 	setup, simpleWallet := newSetup(t, pkgtest.Prng(t))
 
 	missingAddr := common.BytesToAddress(setup.AddressMarshalled)
-	_, err := simpleWallet.Unlock(ethwallet.AsWalletAddr(missingAddr))
+	_, err := simpleWallet.Unlock(map[int]wallet.Address{1: ethwallet.AsWalletAddr(missingAddr)})
 	assert.Error(t, err, "should error on unlocking missing address")
 
 	acc, err := simpleWallet.Unlock(setup.AddressInWallet)
@@ -67,7 +68,7 @@ func TestWallet_Contains(t *testing.T) {
 	missingAddr := common.BytesToAddress(setup.AddressMarshalled)
 	assert.False(t, simpleWallet.Contains(missingAddr))
 
-	assert.True(t, simpleWallet.Contains(ethwallet.AsEthAddr(setup.AddressInWallet)))
+	assert.True(t, simpleWallet.Contains(ethwallet.AsEthAddr(setup.AddressInWallet[1])))
 }
 
 func TestSignatures(t *testing.T) {
@@ -77,7 +78,7 @@ func TestSignatures(t *testing.T) {
 	assert.NoError(t, err, "Sign with new account should succeed")
 	assert.NotNil(t, sig)
 	assert.Equal(t, len(sig), ethwallet.SigLen, "Ethereum signature has wrong length")
-	valid, err := new(ethwallet.Backend).VerifySignature(dataToSign, sig, acc.Address())
+	valid, err := new(ethwallet.Backend).VerifySignature(dataToSign, sig, acc.Address()[1])
 	assert.True(t, valid, "Verification should succeed")
 	assert.NoError(t, err, "Verification should succeed")
 }
@@ -96,7 +97,7 @@ func newSetup(t require.TestingT, prng *rand.Rand) (*test.Setup, *simple.Wallet)
 
 	randomKeyIndex := prng.Intn(numAccounts)
 	addr := crypto.PubkeyToAddress(privateKeys[randomKeyIndex].PublicKey)
-	acc, err := simpleWallet.Unlock(ethwallet.AsWalletAddr(addr))
+	acc, err := simpleWallet.Unlock(map[int]wallet.Address{1: ethwallet.AsWalletAddr(addr)})
 	require.NoError(t, err)
 	require.NotNil(t, acc)
 

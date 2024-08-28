@@ -539,10 +539,10 @@ func partIdx(partID [32]byte, fundingIDs [][32]byte) int {
 
 // FundingIDs returns a slice the same size as the number of passed participants
 // where each entry contains the hash Keccak256(channel id || participant address).
-func FundingIDs(channelID channel.ID, participants ...perunwallet.Address) [][32]byte {
+func FundingIDs(channelID channel.ID, participants ...map[int]perunwallet.Address) [][32]byte {
 	ids := make([][32]byte, len(participants))
 	for idx, pID := range participants {
-		address, ok := pID.(*wallet.Address)
+		address, ok := pID[1].(*wallet.Address)
 		if !ok {
 			log.Panic("wrong address type")
 		}

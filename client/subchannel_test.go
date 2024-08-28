@@ -44,7 +44,7 @@ func TestSubChannelHappy(t *testing.T) {
 
 	// Build configuration.
 	baseCfg := clienttest.MakeBaseExecConfig(
-		[2]wire.Address{setups[A].Identity.Address(), setups[B].Identity.Address()},
+		[2]map[int]wire.Address{setups[A].Identity.Address(), setups[B].Identity.Address()},
 		s.Asset,
 		[2]*big.Int{big.NewInt(100), big.NewInt(100)},
 		client.WithoutApp(),
@@ -97,7 +97,7 @@ func TestSubChannelDispute(t *testing.T) {
 	roles[B].SetStages(stages)
 
 	baseCfg := clienttest.MakeBaseExecConfig(
-		[2]wire.Address{setups[A].Identity.Address(), setups[B].Identity.Address()},
+		[2]map[int]wire.Address{setups[A].Identity.Address(), setups[B].Identity.Address()},
 		s.Asset,
 		[2]*big.Int{big.NewInt(100), big.NewInt(100)},
 		client.WithoutApp(),

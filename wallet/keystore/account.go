@@ -29,8 +29,8 @@ type Account struct {
 }
 
 // Address returns the ethereum address of this account.
-func (a *Account) Address() wallet.Address {
-	return (*ethwallet.Address)(&a.Account.Address)
+func (a *Account) Address() map[int]wallet.Address {
+	return map[int]wallet.Address{1: (*ethwallet.Address)(&a.Account.Address)}
 }
 
 // SignData is used to sign data with this account.

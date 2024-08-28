@@ -163,7 +163,7 @@ func (a *Adjudicator) callAssetWithdraw(ctx context.Context, request channel.Adj
 }
 
 func (a *Adjudicator) newWithdrawalAuth(request channel.AdjudicatorReq, asset assetHolder) (assetholder.AssetHolderWithdrawalAuth, []byte, error) {
-	fid := FundingID(request.Tx.ID, request.Params.Parts[request.Idx])
+	fid := FundingID(request.Tx.ID, request.Params.Parts[request.Idx][1])
 	bal, err := asset.Assetholder.Holdings(nil, fid)
 	if err != nil {
 		return assetholder.AssetHolderWithdrawalAuth{}, nil, fmt.Errorf("getting balance: %w", err)
@@ -171,7 +171,7 @@ func (a *Adjudicator) newWithdrawalAuth(request channel.AdjudicatorReq, asset as
 
 	auth := assetholder.AssetHolderWithdrawalAuth{
 		ChannelID:   request.Params.ID(),
-		Participant: wallet.AsEthAddr(request.Acc.Address()),
+		Participant: wallet.AsEthAddr(request.Acc.Address()[1]),
 		Receiver:    a.Receiver,
 		Amount:      bal,
 	}

@@ -65,7 +65,7 @@ func TestSubscribeRegistered(t *testing.T) {
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
 		channeltest.WithChallengeDuration(uint64(100*time.Second)),
-		channeltest.WithParts(s.Parts...),
+		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(false),
 		channeltest.WithLedgerChannel(true),

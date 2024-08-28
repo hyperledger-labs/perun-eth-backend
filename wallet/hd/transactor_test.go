@@ -124,7 +124,7 @@ func newTransactorSetup(t *testing.T, prng *rand.Rand, hideSignHash bool, signer
 		ChainID:    chainID,
 		TxType:     txType,
 		Tr:         hd.NewTransactor(hdWallet.Wallet(), signer),
-		ValidAcc:   accounts.Account{Address: wallet.AsEthAddr(validAcc.Address())},
+		ValidAcc:   accounts.Account{Address: wallet.AsEthAddr(validAcc.Address()[1])},
 		MissingAcc: accounts.Account{Address: common.HexToAddress(missingAddr)},
 	}
 }

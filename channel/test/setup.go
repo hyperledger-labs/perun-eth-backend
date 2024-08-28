@@ -50,12 +50,12 @@ type (
 	// Setup holds a complete test setup for channel backend testing.
 	Setup struct {
 		SimSetup
-		Accs    []*keystore.Account  // on-chain funders and channel participant accounts
-		Parts   []wallet.Address     // channel participants
-		Recvs   []*ethwallet.Address // on-chain receivers of withdrawn funds
-		Funders []*ethchannel.Funder // funders, bound to respective account
-		Adjs    []*SimAdjudicator    // adjudicator, withdrawal bound to respecive receivers
-		Asset   *ethchannel.Asset    // the asset
+		Accs    []*keystore.Account          // on-chain funders and channel participant accounts
+		Parts   []map[int]wallet.Address     // channel participants
+		Recvs   []map[int]*ethwallet.Address // on-chain receivers of withdrawn funds
+		Funders []*ethchannel.Funder         // funders, bound to respective account
+		Adjs    []*SimAdjudicator            // adjudicator, withdrawal bound to respecive receivers
+		Asset   *ethchannel.Asset            // the asset
 	}
 )
 
@@ -101,8 +101,8 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 	s := &Setup{
 		SimSetup: *NewSimSetup(t, rng, txFinalityDepth, blockInterval),
 		Accs:     make([]*keystore.Account, n),
-		Parts:    make([]wallet.Address, n),
-		Recvs:    make([]*ethwallet.Address, n),
+		Parts:    make([]map[int]wallet.Address, n),
+		Recvs:    make([]map[int]*ethwallet.Address, n),
 		Funders:  make([]*ethchannel.Funder, n),
 		Adjs:     make([]*SimAdjudicator, n),
 	}
@@ -120,7 +120,7 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 		s.Accs[i] = ksWallet.NewRandomAccount(rng).(*keystore.Account)
 		s.Parts[i] = s.Accs[i].Address()
 		s.SimBackend.FundAddress(ctx, s.Accs[i].Account.Address)
-		s.Recvs[i] = ksWallet.NewRandomAccount(rng).Address().(*ethwallet.Address)
+		s.Recvs[i] = map[int]*ethwallet.Address{1: ksWallet.NewRandomAccount(rng).Address()[1].(*ethwallet.Address)}
 		cb := ethchannel.NewContractBackend(
 			s.SimBackend,
 			ethchannel.MakeChainID(s.SimBackend.ChainID()),
@@ -129,7 +129,7 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 		)
 		s.Funders[i] = ethchannel.NewFunder(cb)
 		require.True(t, s.Funders[i].RegisterAsset(*s.Asset, ethchannel.NewETHDepositor(defaultETHGasLimit), s.Accs[i].Account))
-		s.Adjs[i] = NewSimAdjudicator(cb, adjudicator, common.Address(*s.Recvs[i]), s.Accs[i].Account)
+		s.Adjs[i] = NewSimAdjudicator(cb, adjudicator, common.Address(*s.Recvs[i][1]), s.Accs[i].Account)
 	}
 
 	return s

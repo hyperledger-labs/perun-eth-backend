@@ -25,7 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	ethchannel "github.com/perun-network/perun-eth-backend/channel"
 	chtest "github.com/perun-network/perun-eth-backend/channel/test"
-	"github.com/perun-network/perun-eth-backend/wallet"
+	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
 	"github.com/perun-network/perun-eth-backend/wallet/keystore"
 	ethwire "github.com/perun-network/perun-eth-backend/wire"
 	"github.com/stretchr/testify/require"
@@ -34,6 +34,7 @@ import (
 	"perun.network/go-perun/channel/multi"
 	"perun.network/go-perun/client"
 	ctest "perun.network/go-perun/client/test"
+	"perun.network/go-perun/wallet"
 	wtest "perun.network/go-perun/wallet/test"
 	"perun.network/go-perun/watcher/local"
 	"perun.network/go-perun/wire"
@@ -65,10 +66,10 @@ func SetupMultiLedgerTest(t *testing.T, testDuration time.Duration) ctest.MultiL
 	c2 := setupClient(t, rng, l1, l2, bus)
 
 	// Fund accounts.
-	l1.simSetup.SimBackend.FundAddress(ctx, wallet.AsEthAddr(c1.WalletAddress))
-	l1.simSetup.SimBackend.FundAddress(ctx, wallet.AsEthAddr(c2.WalletAddress))
-	l2.simSetup.SimBackend.FundAddress(ctx, wallet.AsEthAddr(c1.WalletAddress))
-	l2.simSetup.SimBackend.FundAddress(ctx, wallet.AsEthAddr(c2.WalletAddress))
+	l1.simSetup.SimBackend.FundAddress(ctx, ethwallet.AsEthAddr(c1.WalletAddress[1]))
+	l1.simSetup.SimBackend.FundAddress(ctx, ethwallet.AsEthAddr(c2.WalletAddress[1]))
+	l2.simSetup.SimBackend.FundAddress(ctx, ethwallet.AsEthAddr(c1.WalletAddress[1]))
+	l2.simSetup.SimBackend.FundAddress(ctx, ethwallet.AsEthAddr(c2.WalletAddress[1]))
 
 	//nolint:gomnd
 	return ctest.MultiLedgerSetup{
@@ -99,8 +100,8 @@ type testLedger struct {
 	asset       *ethchannel.Asset
 }
 
-func (l testLedger) ChainID() ethchannel.ChainID {
-	return ethchannel.MakeChainID(l.simSetup.SimBackend.ChainID())
+func (l testLedger) AssetID() multi.AssetID {
+	return multi.AssetID{1, ethchannel.MakeChainID(l.simSetup.SimBackend.ChainID())}
 }
 
 func setupLedger(ctx context.Context, t *testing.T, rng *rand.Rand, chainID *big.Int) testLedger {
@@ -138,14 +139,14 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 	signer1 := l1.simSetup.SimBackend.Signer
 	cb1 := ethchannel.NewContractBackend(
 		l1.simSetup.CB,
-		l1.ChainID(),
+		l1.AssetID().LedgerId.(ethchannel.ChainID),
 		keystore.NewTransactor(*w, signer1),
 		l1.simSetup.CB.TxFinalityDepth(),
 	)
 	signer2 := l2.simSetup.SimBackend.Signer
 	cb2 := ethchannel.NewContractBackend(
 		l2.simSetup.CB,
-		l2.ChainID(),
+		l2.AssetID().LedgerId.(ethchannel.ChainID),
 		keystore.NewTransactor(*w, signer2),
 		l2.simSetup.CB.TxFinalityDepth(),
 	)
@@ -162,25 +163,25 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 	require.True(registered)
 	registered = funderL2.RegisterAsset(*l2.asset, ethchannel.NewETHDepositor(defaultETHGasLimit), acc.Account)
 	require.True(registered)
-	multiFunder.RegisterFunder(l1.ChainID(), funderL1)
-	multiFunder.RegisterFunder(l2.ChainID(), funderL2)
+	multiFunder.RegisterFunder(l1.AssetID(), funderL1)
+	multiFunder.RegisterFunder(l2.AssetID(), funderL2)
 
 	// Setup adjudicator.
 	multiAdj := multi.NewAdjudicator()
 	adjL1 := chtest.NewSimAdjudicator(*l1.simSetup.CB, l1.adjudicator, acc.Account.Address, acc.Account)
 	adjL2 := chtest.NewSimAdjudicator(*l2.simSetup.CB, l2.adjudicator, acc.Account.Address, acc.Account)
-	multiAdj.RegisterAdjudicator(l1.ChainID(), adjL1)
-	multiAdj.RegisterAdjudicator(l2.ChainID(), adjL2)
+	multiAdj.RegisterAdjudicator(l1.AssetID(), adjL1)
+	multiAdj.RegisterAdjudicator(l2.AssetID(), adjL2)
 
 	// Setup watcher.
 	watcher, err := local.NewWatcher(multiAdj)
 	require.NoError(err)
 
-	walletAddr := acc.Address().(*wallet.Address)
+	walletAddr := acc.Address()[1].(*ethwallet.Address)
 	wireAddr := &ethwire.Address{Address: walletAddr}
 
 	c, err := client.New(
-		wireAddr,
+		map[int]wire.Address{1: wireAddr},
 		bus,
 		multiFunder,
 		multiAdj,
@@ -193,11 +194,11 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 		Client:         c,
 		Adjudicator1:   adjL1,
 		Adjudicator2:   adjL2,
-		WireAddress:    wireAddr,
-		WalletAddress:  walletAddr,
+		WireAddress:    map[int]wire.Address{1: wireAddr},
+		WalletAddress:  map[int]wallet.Address{1: walletAddr},
 		Events:         make(chan channel.AdjudicatorEvent),
-		BalanceReader1: l1.simSetup.SimBackend.NewBalanceReader(acc.Address()),
-		BalanceReader2: l2.simSetup.SimBackend.NewBalanceReader(acc.Address()),
+		BalanceReader1: l1.simSetup.SimBackend.NewBalanceReader(acc.Address()[1]),
+		BalanceReader2: l2.simSetup.SimBackend.NewBalanceReader(acc.Address()[1]),
 	}
 }
 

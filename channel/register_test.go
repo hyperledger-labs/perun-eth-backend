@@ -54,7 +54,7 @@ func registerMultiple(t *testing.T, numParts int, parallel bool) {
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
 		channeltest.WithChallengeDuration(uint64(100*time.Second)),
-		channeltest.WithParts(s.Parts...),
+		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(false),
 		channeltest.WithLedgerChannel(true),
@@ -150,7 +150,7 @@ func TestRegister_FinalState(t *testing.T) {
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
 		channeltest.WithChallengeDuration(uint64(100*time.Second)),
-		channeltest.WithParts(s.Parts...),
+		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(true),
 		channeltest.WithLedgerChannel(true),
@@ -192,7 +192,7 @@ func TestRegister_CancelledContext(t *testing.T) {
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
 		channeltest.WithChallengeDuration(uint64(100*time.Second)),
-		channeltest.WithParts(s.Parts...),
+		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(false),
 		channeltest.WithLedgerChannel(true),

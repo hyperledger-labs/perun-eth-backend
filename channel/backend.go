@@ -87,14 +87,14 @@ func init() {
 type Backend struct{}
 
 // CalcID calculates the channelID as needed by the ethereum smart contracts.
-func (*Backend) CalcID(p *channel.Params) (id channel.ID) {
+func (*Backend) CalcID(p *channel.Params) (id channel.ID, err error) {
 	return CalcID(p)
 }
 
 // NewAppID creates a new app identifier, using an empty ethereum struct.
-func (b *Backend) NewAppID() channel.AppID {
+func (b *Backend) NewAppID() (channel.AppID, error) {
 	addr := &ethwallet.Address{}
-	return &AppID{addr}
+	return &AppID{addr}, nil
 }
 
 // Sign signs the channel state as needed by the ethereum smart contracts.
@@ -114,14 +114,14 @@ func (b *Backend) NewAsset() channel.Asset {
 }
 
 // CalcID calculates the channelID as needed by the ethereum smart contracts.
-func CalcID(p *channel.Params) (id channel.ID) {
+func CalcID(p *channel.Params) (id channel.ID, err error) {
 	params := ToEthParams(p)
 	bytes, err := EncodeParams(&params)
 	if err != nil {
-		log.Panicf("could not encode parameters: %v", err)
+		return id, errors.WithMessage(err, "could not encode parameters")
 	}
 	// Hash encoded params.
-	return crypto.Keccak256Hash(bytes)
+	return crypto.Keccak256Hash(bytes), nil
 }
 
 // HashState calculates the hash of a state as needed by the ethereum smart contracts.
@@ -230,10 +230,10 @@ func EncodeState(state *adjudicator.ChannelState) ([]byte, error) {
 }
 
 // pwToCommonAddresses converts an array of perun/ethwallet.Addresses to common.Addresses.
-func pwToCommonAddresses(addr []wallet.Address) []common.Address {
+func pwToCommonAddresses(addr []map[int]wallet.Address) []common.Address {
 	cAddrs := make([]common.Address, len(addr))
 	for i, part := range addr {
-		cAddrs[i] = ethwallet.AsEthAddr(part)
+		cAddrs[i] = ethwallet.AsEthAddr(part[1])
 	}
 	return cAddrs
 }

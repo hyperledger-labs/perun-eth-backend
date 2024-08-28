@@ -33,6 +33,11 @@ var _ wallet.Address = (*Address)(nil)
 // Address represents an ethereum address as a perun address.
 type Address common.Address
 
+// BackendID returns the official identifier for the eth-backend.
+func (a *Address) BackendID() int {
+	return 1
+}
+
 // bytes returns the address as a byte slice.
 func (a *Address) bytes() []byte {
 	return (*common.Address)(a).Bytes()
@@ -70,7 +75,9 @@ func (a *Address) Equal(addr wallet.Address) bool {
 }
 
 // Cmp checks ordering of two addresses.
-//  0 if a==b,
+//
+//	0 if a==b,
+//
 // -1 if a < b,
 // +1 if a > b.
 // https://godoc.org/bytes#Compare

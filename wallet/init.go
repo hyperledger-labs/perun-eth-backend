@@ -19,5 +19,5 @@ import (
 )
 
 func init() {
-	wallet.SetBackend(new(Backend))
+	wallet.SetBackend(new(Backend), 1)
 }

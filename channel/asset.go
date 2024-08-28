@@ -79,6 +79,10 @@ type (
 	AssetMapKey string
 )
 
+func (a Asset) AssetID() multi.AssetID {
+	return multi.AssetID{BackendID: 1, LedgerId: a.ChainID}
+}
+
 // MapKey returns the asset's map key representation.
 func (a Asset) MapKey() AssetMapKey {
 	d, err := a.MarshalBinary()
