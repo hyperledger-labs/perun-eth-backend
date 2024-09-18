@@ -36,6 +36,7 @@ const (
 	phaseDispute = iota
 	phaseForceExec
 	phaseConcluded
+	ethereumAddressLength = 20
 )
 
 var (
@@ -158,11 +159,15 @@ func Verify(addr wallet.Address, s *channel.State, sig wallet.Sig) (bool, error)
 func ToEthParams(p *channel.Params) adjudicator.ChannelParams {
 	var app common.Address
 	if p.App != nil && !channel.IsNoApp(p.App) {
-		appDef, ok := p.App.Def().(*AppID)
-		if !ok {
-			panic("appDef is not of type *AppID")
+		appDef, ok := p.App.Def().(channel.AppID)
+		ethAddress, err := ExtractEthereumAddress(appDef)
+		if err != nil {
+			log.Panicf("error extracting Ethereum address: %v", err)
 		}
-		app = ethwallet.AsEthAddr(appDef.Address)
+		if !ok {
+			panic("appDef is not of type channel.AppID")
+		}
+		app = ethAddress
 	}
 
 	return adjudicator.ChannelParams{
@@ -173,6 +178,24 @@ func ToEthParams(p *channel.Params) adjudicator.ChannelParams {
 		LedgerChannel:     p.LedgerChannel,
 		VirtualChannel:    p.VirtualChannel,
 	}
+}
+
+// ExtractEthereumAddress extracts an Ethereum address from the given channel.AppID.
+func ExtractEthereumAddress(appID channel.AppID) (common.Address, error) {
+	// Marshal the AppID into bytes
+	addressBytes, err := appID.MarshalBinary()
+	if err != nil {
+		return common.Address{}, errors.WithMessage(err, "failed to marshal AppID")
+	}
+
+	// Ensure the byte length is correct for an Ethereum address (20 bytes)
+	if len(addressBytes) != ethereumAddressLength {
+		return common.Address{}, errors.WithMessagef(err, "invalid length for Ethereum address: %d", len(addressBytes))
+	}
+
+	// Convert the byte slice to an Ethereum address
+	ethAddress := common.BytesToAddress(addressBytes)
+	return ethAddress, nil
 }
 
 // ToEthState converts a channel.State to a ChannelState struct.
