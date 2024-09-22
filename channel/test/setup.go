@@ -50,12 +50,12 @@ type (
 	// Setup holds a complete test setup for channel backend testing.
 	Setup struct {
 		SimSetup
-		Accs    []*keystore.Account          // on-chain funders and channel participant accounts
-		Parts   []map[int]wallet.Address     // channel participants
-		Recvs   []map[int]*ethwallet.Address // on-chain receivers of withdrawn funds
-		Funders []*ethchannel.Funder         // funders, bound to respective account
-		Adjs    []*SimAdjudicator            // adjudicator, withdrawal bound to respecive receivers
-		Asset   *ethchannel.Asset            // the asset
+		Accs    []*keystore.Account                       // on-chain funders and channel participant accounts
+		Parts   []map[wallet.BackendID]wallet.Address     // channel participants
+		Recvs   []map[wallet.BackendID]*ethwallet.Address // on-chain receivers of withdrawn funds
+		Funders []*ethchannel.Funder                      // funders, bound to respective account
+		Adjs    []*SimAdjudicator                         // adjudicator, withdrawal bound to respecive receivers
+		Asset   *ethchannel.Asset                         // the asset
 	}
 )
 
@@ -101,8 +101,8 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 	s := &Setup{
 		SimSetup: *NewSimSetup(t, rng, txFinalityDepth, blockInterval),
 		Accs:     make([]*keystore.Account, n),
-		Parts:    make([]map[int]wallet.Address, n),
-		Recvs:    make([]map[int]*ethwallet.Address, n),
+		Parts:    make([]map[wallet.BackendID]wallet.Address, n),
+		Recvs:    make([]map[wallet.BackendID]*ethwallet.Address, n),
 		Funders:  make([]*ethchannel.Funder, n),
 		Adjs:     make([]*SimAdjudicator, n),
 	}
@@ -118,9 +118,9 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
 	for i := 0; i < n; i++ {
 		s.Accs[i] = ksWallet.NewRandomAccount(rng).(*keystore.Account)
-		s.Parts[i] = s.Accs[i].Address()
+		s.Parts[i] = map[wallet.BackendID]wallet.Address{1: s.Accs[i].Address()}
 		s.SimBackend.FundAddress(ctx, s.Accs[i].Account.Address)
-		s.Recvs[i] = map[int]*ethwallet.Address{1: ksWallet.NewRandomAccount(rng).Address()[1].(*ethwallet.Address)}
+		s.Recvs[i] = map[wallet.BackendID]*ethwallet.Address{1: ksWallet.NewRandomAccount(rng).Address().(*ethwallet.Address)}
 		cb := ethchannel.NewContractBackend(
 			s.SimBackend,
 			ethchannel.MakeChainID(s.SimBackend.ChainID()),

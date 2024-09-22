@@ -17,6 +17,7 @@ package channel_test
 import (
 	"context"
 	"fmt"
+	"perun.network/go-perun/wallet"
 	"sync"
 	"testing"
 	"time"
@@ -56,6 +57,7 @@ func withdrawMultipleConcurrentFinal(t *testing.T, numParts int, parallel bool) 
 		rng,
 		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
+		channeltest.WithBackend(1),
 		channeltest.WithIsFinal(false),
 		channeltest.WithLedgerChannel(true),
 	)
@@ -93,7 +95,7 @@ func withdrawMultipleConcurrentFinal(t *testing.T, numParts int, parallel bool) 
 				time.Sleep(sleepDuration)
 				req := channel.AdjudicatorReq{
 					Params: params,
-					Acc:    s.Accs[i],
+					Acc:    map[wallet.BackendID]wallet.Account{1: s.Accs[i]},
 					Idx:    channel.Index(i),
 					Tx:     tx,
 				}
@@ -107,7 +109,7 @@ func withdrawMultipleConcurrentFinal(t *testing.T, numParts int, parallel bool) 
 		for i := 0; i < numParts; i++ {
 			req := channel.AdjudicatorReq{
 				Params: params,
-				Acc:    s.Accs[i],
+				Acc:    map[wallet.BackendID]wallet.Account{1: s.Accs[i]},
 				Idx:    channel.Index(i),
 				Tx:     tx,
 			}
@@ -133,6 +135,7 @@ func testWithdrawZeroBalance(t *testing.T, n int) {
 	// create valid state and params
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
+		channeltest.WithBackend(1),
 		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(true),
@@ -162,7 +165,7 @@ func testWithdrawZeroBalance(t *testing.T, n int) {
 	// register
 	req := channel.AdjudicatorReq{
 		Params: params,
-		Acc:    s.Accs[0],
+		Acc:    map[wallet.BackendID]wallet.Account{1: s.Accs[0]},
 		Tx:     testSignState(t, s.Accs, state),
 		Idx:    0,
 	}
@@ -172,10 +175,10 @@ func testWithdrawZeroBalance(t *testing.T, n int) {
 	// withdraw
 	for i, _adj := range s.Adjs {
 		adj := _adj
-		req.Acc = s.Accs[i]
+		req.Acc = map[wallet.BackendID]wallet.Account{1: s.Accs[i]}
 		req.Idx = channel.Index(i)
 		// check that the nonce stays the same for zero balance withdrawals
-		diff, err := test.NonceDiff(s.Accs[i].Address()[1], adj, func() error {
+		diff, err := test.NonceDiff(s.Accs[i].Address(), adj, func() error {
 			return adj.Withdraw(context.Background(), req, nil)
 		})
 		require.NoError(t, err)
@@ -195,6 +198,7 @@ func TestWithdraw(t *testing.T) {
 	// create valid state and params
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
+		channeltest.WithBackend(1),
 		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(false),
@@ -208,7 +212,7 @@ func TestWithdraw(t *testing.T) {
 	require.NoError(t, s.Funders[0].Fund(fundingCtx, *fundingReq), "funding should succeed")
 	req := channel.AdjudicatorReq{
 		Params: params,
-		Acc:    s.Accs[0],
+		Acc:    map[wallet.BackendID]wallet.Account{1: s.Accs[0]},
 		Idx:    channel.Index(0),
 	}
 
@@ -238,12 +242,12 @@ func TestWithdraw(t *testing.T) {
 	t.Run("Withdrawal idempotence", func(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			// get nonce
-			oldNonce, err := s.Adjs[0].PendingNonceAt(context.Background(), ethwallet.AsEthAddr(s.Accs[0].Address()[1]))
+			oldNonce, err := s.Adjs[0].PendingNonceAt(context.Background(), ethwallet.AsEthAddr(s.Accs[0].Address()))
 			require.NoError(t, err)
 			// withdraw
 			testWithdraw(t, true)
 			// get nonce
-			nonce, err := s.Adjs[0].PendingNonceAt(context.Background(), ethwallet.AsEthAddr(s.Accs[0].Address()[1]))
+			nonce, err := s.Adjs[0].PendingNonceAt(context.Background(), ethwallet.AsEthAddr(s.Accs[0].Address()))
 			require.NoError(t, err)
 			assert.Equal(t, oldNonce, nonce, "Nonce must not change in subsequent withdrawals")
 		}
@@ -259,6 +263,7 @@ func TestWithdrawNonFinal(t *testing.T) {
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
 		channeltest.WithChallengeDuration(60),
+		channeltest.WithBackend(1),
 		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(false),
@@ -280,7 +285,7 @@ func TestWithdrawNonFinal(t *testing.T) {
 	// register
 	req := channel.AdjudicatorReq{
 		Params: params,
-		Acc:    s.Accs[0],
+		Acc:    map[wallet.BackendID]wallet.Account{1: s.Accs[0]},
 		Idx:    0,
 		Tx:     testSignState(t, s.Accs, state),
 	}

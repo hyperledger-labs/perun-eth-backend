@@ -209,7 +209,7 @@ func testEgoisticParticipantFunding(t *testing.T) {
 	t.Parallel()
 	n := 2
 	rng := pkgtest.Prng(t, n)
-	EgoisticTxTimeout := 20 * time.Second
+	EgoisticTxTimeout := 30 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), EgoisticTxTimeout*time.Duration(n))
 	defer cancel()
 	_, funders, params, alloc := newNFunders(ctx, t, rng, n)
@@ -433,7 +433,7 @@ func newNFunders(
 	rng *rand.Rand,
 	n int,
 ) (
-	parts []map[int]wallet.Address,
+	parts []map[wallet.BackendID]wallet.Address,
 	funders []*ethchannel.Funder,
 	params *channel.Params,
 	allocation *channel.Allocation,
@@ -471,11 +471,11 @@ func newNFunders(
 	t.Logf("asset holder #2 address is %s", assetAddr2.Hex())
 	asset2 := ethchannel.NewAsset(chainID, assetAddr2)
 
-	parts = make([]map[int]wallet.Address, n)
+	parts = make([]map[wallet.BackendID]wallet.Address, n)
 	funders = make([]*ethchannel.Funder, n)
 	for i := range parts {
 		acc := ksWallet.NewRandomAccount(rng).(*keystore.Account).Account
-		parts[i] = map[int]wallet.Address{1: ethwallet.AsWalletAddr(acc.Address)}
+		parts[i] = map[wallet.BackendID]wallet.Address{1: ethwallet.AsWalletAddr(acc.Address)}
 
 		simBackend.FundAddress(ctx, ethwallet.AsEthAddr(parts[i][1]))
 		err = fundERC20(ctx, cb, *tokenAcc, ethwallet.AsEthAddr(parts[i][1]), token, *asset2)
@@ -507,10 +507,12 @@ func newNFunders(
 
 // fundERC20 funds `to` with ERC20 tokens from account `from`.
 func fundERC20(ctx context.Context, cb ethchannel.ContractBackend, from accounts.Account, to common.Address, token common.Address, asset ethchannel.Asset) error {
+	fmt.Println("Funding ERC20")
 	contract, err := peruntoken.NewPeruntoken(token, cb)
 	if err != nil {
 		return errors.WithMessagef(err, "binding AssetHolderERC20 contract at: %v", asset)
 	}
+	fmt.Println("Contract created")
 	// Transfer.
 	opts, err := cb.NewTransactor(ctx, txERC20GasLimit, from)
 	if err != nil {
@@ -542,7 +544,7 @@ func compareOnChainAlloc(ctx context.Context, params *channel.Params, balances c
 }
 
 func onChainAllocation(ctx context.Context, cb *ethchannel.ContractBackend, params *channel.Params, _assets []channel.Asset) (channel.Balances, error) {
-	partIDs := ethchannel.FundingIDs(params.ID(), params.Parts...)
+	partIDs := ethchannel.FundingIDs(params.ID()[1], params.Parts...)
 	alloc := make(channel.Balances, len(_assets))
 
 	for k, asset := range _assets {

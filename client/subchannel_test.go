@@ -17,6 +17,7 @@ package client_test
 import (
 	"context"
 	"math/big"
+	"perun.network/go-perun/wallet"
 	"testing"
 
 	ethchanneltest "github.com/perun-network/perun-eth-backend/channel/test"
@@ -44,8 +45,9 @@ func TestSubChannelHappy(t *testing.T) {
 
 	// Build configuration.
 	baseCfg := clienttest.MakeBaseExecConfig(
-		[2]map[int]wire.Address{setups[A].Identity.Address(), setups[B].Identity.Address()},
+		[2]map[wallet.BackendID]wire.Address{wire.AddressMapfromAccountMap(setups[A].Identity), wire.AddressMapfromAccountMap(setups[B].Identity)},
 		s.Asset,
+		1,
 		[2]*big.Int{big.NewInt(100), big.NewInt(100)},
 		client.WithoutApp(),
 	)
@@ -97,8 +99,9 @@ func TestSubChannelDispute(t *testing.T) {
 	roles[B].SetStages(stages)
 
 	baseCfg := clienttest.MakeBaseExecConfig(
-		[2]map[int]wire.Address{setups[A].Identity.Address(), setups[B].Identity.Address()},
+		[2]map[wallet.BackendID]wire.Address{wire.AddressMapfromAccountMap(setups[A].Identity), wire.AddressMapfromAccountMap(setups[B].Identity)},
 		s.Asset,
+		1,
 		[2]*big.Int{big.NewInt(100), big.NewInt(100)},
 		client.WithoutApp(),
 	)

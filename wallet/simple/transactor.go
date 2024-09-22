@@ -16,8 +16,6 @@ package simple
 
 import (
 	stderrors "errors"
-	"perun.network/go-perun/wallet"
-
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -46,7 +44,7 @@ func IsErrWrongAddrType(err error) bool {
 // NewTransactor returns a TransactOpts for the given account. It errors if the
 // account is not contained in the wallet of the transactor factory.
 func (t *Transactor) NewTransactor(account accounts.Account) (*bind.TransactOpts, error) {
-	walletAcc, err := t.Wallet.Unlock(map[int]wallet.Address{1: ethwallet.AsWalletAddr(account.Address)})
+	walletAcc, err := t.Wallet.Unlock(ethwallet.AsWalletAddr(account.Address))
 	if err != nil {
 		return nil, err
 	}

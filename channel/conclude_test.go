@@ -50,6 +50,7 @@ func testConcludeFinal(t *testing.T, numParts int) {
 		rng,
 		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
+		channeltest.WithBackend(1),
 		channeltest.WithIsFinal(true),
 		channeltest.WithLedgerChannel(true),
 	)
@@ -77,12 +78,12 @@ func testConcludeFinal(t *testing.T, numParts int) {
 		go ct.StageN("register", numParts, func(t pkgtest.ConcT) {
 			req := channel.AdjudicatorReq{
 				Params:    params,
-				Acc:       s.Accs[i],
+				Acc:       map[wallet.BackendID]wallet.Account{1: s.Accs[i]},
 				Idx:       channel.Index(i),
 				Tx:        tx,
 				Secondary: (i != initiator),
 			}
-			diff, err := test.NonceDiff(s.Accs[i].Address()[1], s.Adjs[i], func() error {
+			diff, err := test.NonceDiff(s.Accs[i].Address(), s.Adjs[i], func() error {
 				return s.Adjs[i].Register(ctx, req, nil)
 			})
 			require.NoError(t, err, "Withdrawing should succeed")
@@ -105,7 +106,7 @@ func TestAdjudicator_ConcludeWithSubChannels(t *testing.T) {
 		numParts                  = 2
 		maxCountSubChannels       = 3
 		maxCountSubSubChannels    = 3
-		minFundingTXBlocksTimeout = 200
+		minFundingTXBlocksTimeout = 600
 		minChallengeDuration      = minFundingTXBlocksTimeout
 		maxChallengeDuration      = 3600
 		challengeDurationSpread   = maxChallengeDuration - minChallengeDuration
@@ -174,7 +175,7 @@ func TestAdjudicator_ConcludeWithSubChannels(t *testing.T) {
 
 func toSubChannelsRecursive(ch paramsAndState, m channelMap) (states []paramsAndState) {
 	for _, x := range ch.state.Locked {
-		ch, ok := m[x.ID]
+		ch, ok := m[x.ID[1]]
 		if !ok {
 			panic("sub-state not found")
 		}
@@ -189,7 +190,7 @@ type channelMap map[channel.ID]paramsAndState
 
 func (m channelMap) Add(states ...paramsAndState) {
 	for _, s := range states {
-		m[s.state.ID] = s
+		m[s.state.ID[1]] = s
 	}
 }
 
@@ -198,11 +199,12 @@ type paramsAndState struct {
 	state  *channel.State
 }
 
-func makeRandomChannel(rng *rand.Rand, participants []map[int]wallet.Address, asset channel.Asset, challengeDuration uint64, ledger bool) paramsAndState {
+func makeRandomChannel(rng *rand.Rand, participants []map[wallet.BackendID]wallet.Address, asset channel.Asset, challengeDuration uint64, ledger bool) paramsAndState {
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
 		channeltest.WithParts(participants),
 		channeltest.WithAssets(asset),
+		channeltest.WithBackend(1),
 		channeltest.WithIsFinal(false),
 		channeltest.WithNumLocked(0),
 		channeltest.WithoutApp(),
@@ -255,7 +257,7 @@ func register(ctx context.Context, adj *test.SimAdjudicator, accounts []*keystor
 
 	req := channel.AdjudicatorReq{
 		Params:    ch.params,
-		Acc:       accounts[0],
+		Acc:       map[wallet.BackendID]wallet.Account{1: accounts[0]},
 		Idx:       0,
 		Tx:        tx,
 		Secondary: false,
@@ -278,7 +280,7 @@ func withdraw(ctx context.Context, adj *test.SimAdjudicator, accounts []*keystor
 	for i, a := range accounts {
 		req := channel.AdjudicatorReq{
 			Params:    c.params,
-			Acc:       a,
+			Acc:       map[wallet.BackendID]wallet.Account{1: a},
 			Idx:       channel.Index(i),
 			Tx:        tx,
 			Secondary: i != 0,

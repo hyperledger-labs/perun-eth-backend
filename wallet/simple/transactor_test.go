@@ -87,7 +87,7 @@ func newTransactorSetup(t require.TestingT, prng *rand.Rand, signer types.Signer
 		ChainID:    chainID,
 		TxType:     txType,
 		Tr:         simple.NewTransactor(simpleWallet, signer),
-		ValidAcc:   accounts.Account{Address: wallet.AsEthAddr(validAcc.Address()[1])},
+		ValidAcc:   accounts.Account{Address: wallet.AsEthAddr(validAcc.Address())},
 		MissingAcc: accounts.Account{Address: common.HexToAddress(missingAddr)},
 	}
 }

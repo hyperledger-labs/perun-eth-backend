@@ -32,8 +32,8 @@ type Account struct {
 }
 
 // Address returns the Ethereum address of this account.
-func (a *Account) Address() map[int]wallet.Address {
-	return map[int]wallet.Address{1: ethwallet.AsWalletAddr(a.Account.Address)}
+func (a *Account) Address() wallet.Address {
+	return ethwallet.AsWalletAddr(a.Account.Address)
 }
 
 // SignData is used to sign data with this account.

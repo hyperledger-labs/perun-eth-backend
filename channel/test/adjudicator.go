@@ -17,6 +17,7 @@ package test
 import (
 	"context"
 	"fmt"
+	"perun.network/go-perun/wallet"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -55,7 +56,7 @@ func NewSimAdjudicator(backend ethchannel.ContractBackend, contract common.Addre
 
 // Subscribe returns a RegisteredEvent subscription on the simulated
 // blockchain backend.
-func (a *SimAdjudicator) Subscribe(ctx context.Context, chID channel.ID) (channel.AdjudicatorSubscription, error) {
+func (a *SimAdjudicator) Subscribe(ctx context.Context, chID map[wallet.BackendID]channel.ID) (channel.AdjudicatorSubscription, error) {
 	sub, err := a.Adjudicator.Subscribe(ctx, chID)
 	if err != nil {
 		return nil, err

@@ -132,8 +132,8 @@ func newChannelSetup(rng *rand.Rand) *test.Setup {
 	params, state := test.NewRandomParamsAndState(rng, test.WithNumLocked(int(rng.Int31n(4)+1)), test.WithBackend(1))
 	params2, state2 := test.NewRandomParamsAndState(rng, test.WithIsFinal(!state.IsFinal), test.WithNumLocked(int(rng.Int31n(4)+1)), test.WithBackend(1))
 
-	createAddr := func() map[int]perunwallet.Address {
-		return map[int]perunwallet.Address{1: wallettest.NewRandomAddress(rng)}
+	createAddr := func() map[perunwallet.BackendID]perunwallet.Address {
+		return map[perunwallet.BackendID]perunwallet.Address{1: wallettest.NewRandomAddress(rng)}
 	}
 
 	return &test.Setup{

@@ -16,6 +16,8 @@ package test
 
 import (
 	"math/rand"
+	"perun.network/go-perun/wallet"
+	wtest "perun.network/go-perun/wallet/test"
 	"time"
 
 	ethctest "github.com/perun-network/perun-eth-backend/channel/test"
@@ -47,17 +49,17 @@ func MakeRoleSetups(rng *rand.Rand, s *ethctest.Setup, names []string) []clientt
 		}
 		setups[i] = clienttest.RoleSetup{
 			Name:        names[i],
-			Identity:    wiretest.NewRandomAccount(rng),
+			Identity:    wiretest.NewRandomAccountMap(rng, 1),
 			Bus:         bus,
 			Funder:      s.Funders[i],
 			Adjudicator: s.Adjs[i],
 			Watcher:     watcher,
-			Wallet:      ethwtest.NewTmpWallet(),
+			Wallet:      map[wallet.BackendID]wtest.Wallet{1: ethwtest.NewTmpWallet()},
 			Timeout:     DefaultTimeout,
 			// Scaled due to simbackend automining progressing faster than real time.
 			ChallengeDuration: challengeDurationBlocks * uint64(time.Second/BlockInterval),
 			Errors:            make(chan error),
-			BalanceReader:     s.SimBackend.NewBalanceReader(s.Accs[i].Address()[1]),
+			BalanceReader:     s.SimBackend.NewBalanceReader(s.Accs[i].Address()),
 		}
 	}
 	return setups

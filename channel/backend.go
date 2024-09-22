@@ -45,6 +45,7 @@ var (
 	abiUint256, _ = abi.NewType("uint256", "", nil)
 	abiAddress, _ = abi.NewType("address", "", nil)
 	abiBytes32, _ = abi.NewType("bytes32", "", nil)
+	abiBytes, _   = abi.NewType("bytes", "", nil)
 	abiParams     abi.Type
 	abiState      abi.Type
 	abiProgress   abi.Method
@@ -177,8 +178,18 @@ func ToEthParams(p *channel.Params) adjudicator.ChannelParams {
 
 // ToEthState converts a channel.State to a ChannelState struct.
 func ToEthState(s *channel.State) adjudicator.ChannelState {
+	backends := make([]*big.Int, len(s.Allocation.Assets))
+	channelIDs := make([]channel.ID, len(s.Allocation.Assets))
+	for i := range s.Allocation.Assets { // we assume that for each asset there is an element in backends corresponding to the backendID the asset belongs to.
+		backends[i] = big.NewInt(int64(s.Allocation.Backends[i]))
+		channelIDs[i] = s.ID[s.Allocation.Backends[i]]
+	}
 	locked := make([]adjudicator.ChannelSubAlloc, len(s.Locked))
 	for i, sub := range s.Locked {
+		subIDs := make([]channel.ID, len(backends))
+		for j := range subIDs {
+			subIDs[j] = sub.ID[s.Allocation.Backends[j]]
+		}
 		// Create index map.
 		indexMap := make([]uint16, s.NumParts())
 		if len(sub.IndexMap) == 0 {
@@ -191,10 +202,11 @@ func ToEthState(s *channel.State) adjudicator.ChannelState {
 			}
 		}
 
-		locked[i] = adjudicator.ChannelSubAlloc{ID: sub.ID, Balances: sub.Bals, IndexMap: indexMap}
+		locked[i] = adjudicator.ChannelSubAlloc{ID: subIDs, Balances: sub.Bals, IndexMap: indexMap}
 	}
 	outcome := adjudicator.ChannelAllocation{
-		Assets:   assetsToEthAssets(s.Allocation.Assets),
+		Assets:   assetsToEthAssets(s.Allocation.Assets, s.Allocation.Backends),
+		Backends: backends,
 		Balances: s.Balances,
 		Locked:   locked,
 	}
@@ -207,7 +219,7 @@ func ToEthState(s *channel.State) adjudicator.ChannelState {
 		log.Panicf("error encoding app data: %v", err)
 	}
 	return adjudicator.ChannelState{
-		ChannelID: s.ID,
+		ChannelID: channelIDs,
 		Version:   s.Version,
 		Outcome:   outcome,
 		AppData:   appData,
@@ -230,28 +242,50 @@ func EncodeState(state *adjudicator.ChannelState) ([]byte, error) {
 }
 
 // pwToCommonAddresses converts an array of perun/ethwallet.Addresses to common.Addresses.
-func pwToCommonAddresses(addr []map[int]wallet.Address) []common.Address {
-	cAddrs := make([]common.Address, len(addr))
+func pwToCommonAddresses(addr []map[wallet.BackendID]wallet.Address) []adjudicator.ChannelParticipant {
+	cAddrs := make([]adjudicator.ChannelParticipant, len(addr))
 	for i, part := range addr {
-		cAddrs[i] = ethwallet.AsEthAddr(part[1])
+		for j, address := range part {
+			if address.BackendID() == 1 && j == 1 {
+				cAddrs[i].EthAddress = ethwallet.AsEthAddr(address)
+				cAddrs[i].CcAddress = make([]byte, 0)
+			} else {
+				addBytes, err := address.MarshalBinary()
+				if err != nil {
+					log.Panicf("error encoding unknown address: %v", err)
+				}
+				cAddrs[i].CcAddress = addBytes
+			}
+		}
 	}
 	return cAddrs
 }
 
 // FromEthState converts a ChannelState to a channel.State struct.
 func FromEthState(app channel.App, s *adjudicator.ChannelState) channel.State {
+	channelIDs := make(map[wallet.BackendID]channel.ID)
+	backends := make([]wallet.BackendID, len(s.Outcome.Backends))
+	for i, b := range s.Outcome.Backends {
+		backends[i] = wallet.BackendID(b.Int64())
+		channelIDs[backends[i]] = s.ChannelID[i]
+	}
 	locked := make([]channel.SubAlloc, len(s.Outcome.Locked))
 	for i, sub := range s.Outcome.Locked {
+		subIDs := make(map[wallet.BackendID]channel.ID)
+		for j := range s.Outcome.Backends {
+			subIDs[backends[j]] = sub.ID[j]
+		}
 		indexMap := makeIndexMap(sub.IndexMap)
-		locked[i] = *channel.NewSubAlloc(sub.ID, sub.Balances, indexMap)
+		locked[i] = *channel.NewSubAlloc(subIDs, sub.Balances, indexMap)
 	}
 	alloc := channel.Allocation{
-		Assets:   fromEthAssets(s.Outcome.Assets),
+		Assets:   fromEthAssets(s.Outcome.Assets, backends),
 		Balances: s.Outcome.Balances,
+		Backends: backends,
 		Locked:   locked,
 	}
 	// Check allocation dimensions
-	if len(alloc.Assets) != len(alloc.Balances) || len(s.Outcome.Balances) != len(alloc.Balances) {
+	if len(alloc.Assets) != len(alloc.Balances) || len(s.Outcome.Balances) != len(alloc.Balances) || len(alloc.Backends) != len(alloc.Assets) {
 		log.Panic("invalid allocation dimensions")
 	}
 
@@ -261,7 +295,7 @@ func FromEthState(app channel.App, s *adjudicator.ChannelState) channel.State {
 	}
 
 	return channel.State{
-		ID:         s.ChannelID,
+		ID:         channelIDs,
 		Version:    s.Version,
 		Allocation: alloc,
 		App:        app,
@@ -279,25 +313,47 @@ func makeIndexMap(m []uint16) []channel.Index {
 }
 
 // assetsToEthAssets converts an array of Assets to adjudicator.ChannelAsset.
-func assetsToEthAssets(assets []channel.Asset) []adjudicator.ChannelAsset {
+func assetsToEthAssets(assets []channel.Asset, bIDs []wallet.BackendID) []adjudicator.ChannelAsset {
 	cAddrs := make([]adjudicator.ChannelAsset, len(assets))
 	for i, a := range assets {
-		asset, ok := a.(*Asset)
-		if !ok {
-			log.Panicf("wrong address type: %T", asset)
-		}
-		cAddrs[i] = adjudicator.ChannelAsset{
-			ChainID: asset.ChainID.Int,
-			Holder:  asset.EthAddress(),
+		// This means the Asset was defined in this backend.
+		if bIDs[i] == 1 {
+			asset, ok := a.(*Asset)
+			if !ok {
+				log.Panicf("wrong address type: %T", asset)
+			}
+			cAddrs[i] = adjudicator.ChannelAsset{
+				ChainID:   asset.ChainID.Int,
+				EthHolder: asset.EthAddress(),
+				CcHolder:  make([]byte, 0),
+			}
+		} else {
+			asset, err := a.MarshalBinary()
+			if err != nil {
+				log.Panicf("error encoding asset: %v", err)
+			}
+			cAddrs[i] = adjudicator.ChannelAsset{
+				ChainID:   big.NewInt(0),
+				EthHolder: common.HexToAddress("0x0000000000000000000000000000000000000000"),
+				CcHolder:  asset,
+			}
 		}
 	}
 	return cAddrs
 }
 
-func fromEthAssets(assets []adjudicator.ChannelAsset) []channel.Asset {
+func fromEthAssets(assets []adjudicator.ChannelAsset, bIDs []wallet.BackendID) []channel.Asset {
 	_assets := make([]channel.Asset, len(assets))
 	for i, a := range assets {
-		_assets[i] = NewAsset(a.ChainID, a.Holder)
+		if bIDs[i] == 1 {
+			_assets[i] = NewAsset(a.ChainID, a.EthHolder)
+		} else {
+			_assets[i] = &Asset{}
+			err := _assets[i].UnmarshalBinary(a.CcHolder)
+			if err != nil {
+				log.Panicf("error decoding asset: %v", err)
+			}
+		}
 	}
 	return _assets
 }

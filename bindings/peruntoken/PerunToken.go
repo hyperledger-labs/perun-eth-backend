@@ -26,6 +26,7 @@ var (
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
+	_ = abi.ConvertType
 )
 
 // PeruntokenMetaData contains all meta data concerning the Peruntoken contract.
@@ -156,11 +157,11 @@ func NewPeruntokenFilterer(address common.Address, filterer bind.ContractFiltere
 
 // bindPeruntoken binds a generic wrapper to an already deployed contract.
 func bindPeruntoken(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(PeruntokenABI))
+	parsed, err := PeruntokenMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and

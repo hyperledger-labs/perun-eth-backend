@@ -158,7 +158,7 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 
 	// Fund each asset, saving the TX in `txs` and the errors in `errg`.
 	assets := request.State.Assets
-	txs, errg := f.fundAssets(ctx, assets, channelID, request)
+	txs, errg := f.fundAssets(ctx, assets, channelID[1], request)
 
 	// Wait for the TXs to be mined.
 	for a, asset := range assets {
@@ -539,7 +539,7 @@ func partIdx(partID [32]byte, fundingIDs [][32]byte) int {
 
 // FundingIDs returns a slice the same size as the number of passed participants
 // where each entry contains the hash Keccak256(channel id || participant address).
-func FundingIDs(channelID channel.ID, participants ...map[int]perunwallet.Address) [][32]byte {
+func FundingIDs(channelID channel.ID, participants ...map[perunwallet.BackendID]perunwallet.Address) [][32]byte {
 	ids := make([][32]byte, len(participants))
 	for idx, pID := range participants {
 		address, ok := pID[1].(*wallet.Address)

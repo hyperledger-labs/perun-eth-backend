@@ -17,6 +17,7 @@ package channel
 import (
 	"context"
 	"fmt"
+	"perun.network/go-perun/wallet"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -73,7 +74,7 @@ func (a *Adjudicator) ensureConcluded(ctx context.Context, req channel.Adjudicat
 	}
 
 	// Wait for concluded event.
-	sub, events, subErr, err := a.createEventSub(ctx, req.Tx.ID, false)
+	sub, events, subErr, err := a.createEventSub(ctx, req.Tx.ID[1], false)
 	if err != nil {
 		return errors.WithMessage(err, "subscribing")
 	}
@@ -116,11 +117,12 @@ func (a *Adjudicator) checkConcludedState(
 	events := make(chan *subscription.Event, adjEventBuffSize)
 	subErr := make(chan error, 1)
 	for id := range states {
+		cId := channel.FromIDKey(id)
 		sub, err := subscription.Subscribe(
 			ctx,
 			a.ContractBackend,
 			a.bound,
-			updateEventType(id),
+			updateEventType(cId[1]),
 			startBlockOffset,
 			a.txFinalityDepth,
 		)
@@ -138,9 +140,10 @@ func (a *Adjudicator) checkConcludedState(
 	for {
 		select {
 		case e := <-events:
+			fmt.Println("Event: ", e)
 			if adjEvent, ok := e.Data.(*adjudicator.AdjudicatorChannelUpdate); ok && adjEvent.Phase == phaseConcluded {
 				id := adjEvent.ChannelID
-				v := states[id].Version
+				v := states[channel.IDKey(channel.IDMap{1: id})].Version
 				if adjEvent.Version != v {
 					return errors.Errorf("wrong version: expected %v, got %v", v, adjEvent.Version)
 				}
@@ -167,7 +170,7 @@ func (a *Adjudicator) waitConcludedSecondary(ctx context.Context, req channel.Ad
 	// `secondaryWaitBlocks + TxFinalityDepth` many blocks.
 	if req.Tx.IsFinal && req.Secondary {
 		// Create subscription.
-		sub, events, subErr, err := a.createEventSub(ctx, req.Tx.ID, false)
+		sub, events, subErr, err := a.createEventSub(ctx, req.Tx.ID[1], false)
 		if err != nil {
 			return false, errors.WithMessage(err, "subscribing")
 		}
@@ -182,7 +185,7 @@ func (a *Adjudicator) waitConcludedSecondary(ctx context.Context, req channel.Ad
 
 func (a *Adjudicator) conclude(ctx context.Context, req channel.AdjudicatorReq, subStates channel.StateMap) error {
 	// If the on-chain state resulted from forced execution, we do not have a fully-signed state and cannot call concludeFinal.
-	forceExecuted, err := a.isForceExecuted(ctx, req.Params.ID())
+	forceExecuted, err := a.isForceExecuted(ctx, req.Params.ID()[1])
 	if err != nil {
 		return errors.WithMessage(err, "checking force execution")
 	}
@@ -200,8 +203,8 @@ func (a *Adjudicator) conclude(ctx context.Context, req channel.AdjudicatorReq, 
 }
 
 // isConcluded returns whether a channel is already concluded.
-func (a *Adjudicator) isConcluded(ctx context.Context, ch channel.ID) (bool, error) {
-	sub, events, subErr, err := a.createEventSub(ctx, ch, true)
+func (a *Adjudicator) isConcluded(ctx context.Context, ch map[wallet.BackendID]channel.ID) (bool, error) {
+	sub, events, subErr, err := a.createEventSub(ctx, ch[1], true)
 	if err != nil {
 		return false, errors.WithMessage(err, "subscribing")
 	}
@@ -262,7 +265,7 @@ func (a *Adjudicator) waitConcludable(ctx context.Context, req channel.Adjudicat
 		return nil
 	}
 
-	sub, events, subErr, err := a.createEventSub(ctx, req.Tx.ID, true)
+	sub, events, subErr, err := a.createEventSub(ctx, req.Tx.ID[1], true)
 	if err != nil {
 		return errors.WithMessage(err, "subscribing")
 	}

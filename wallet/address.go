@@ -17,6 +17,7 @@ package wallet
 import (
 	"bytes"
 	"fmt"
+	"github.com/perun-network/perun-eth-backend/bindings/assetholder"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -34,7 +35,7 @@ var _ wallet.Address = (*Address)(nil)
 type Address common.Address
 
 // BackendID returns the official identifier for the eth-backend.
-func (a *Address) BackendID() int {
+func (a *Address) BackendID() wallet.BackendID {
 	return 1
 }
 
@@ -101,8 +102,37 @@ func AsEthAddr(a wallet.Address) common.Address {
 	return common.Address(*addrTyped)
 }
 
+// AsChannelParticipant is a helper function to convert a map of address interfaces back into a channelParticipant
+func AsChannelParticipant(a map[wallet.BackendID]wallet.Address) assetholder.ChannelParticipant {
+	_a := assetholder.ChannelParticipant{}
+	for i, address := range a {
+		if i == 1 {
+			addrTyped, ok := address.(*Address)
+			if !ok {
+				panic(fmt.Sprintf("wrong type: expected %T, got %T", &Address{}, a))
+			}
+			_a.EthAddress = common.Address(*addrTyped)
+		} else {
+			addBytes, err := address.MarshalBinary()
+			if err != nil {
+				panic(fmt.Sprintf("error marshalling ethereum address: %v", err))
+			}
+			_a.CcAddress = addBytes
+		}
+	}
+	return _a
+}
+
 // AsWalletAddr is a helper function to convert an ethereum address to an
 // address interface.
 func AsWalletAddr(addr common.Address) *Address {
 	return (*Address)(&addr)
+}
+
+func AddressMapfromAccountMap(accs map[wallet.BackendID]wallet.Account) map[wallet.BackendID]wallet.Address {
+	addresses := make(map[wallet.BackendID]wallet.Address)
+	for id, a := range accs {
+		addresses[id] = a.Address()
+	}
+	return addresses
 }

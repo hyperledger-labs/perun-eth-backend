@@ -93,7 +93,7 @@ func (w *Wallet) NewRandomAccount(rnd *rand.Rand) wallet.Account {
 		acc = ethAcc
 	}
 
-	_, err = w.Unlock(map[int]wallet.Address{1: (*ethwallet.Address)(&address)}) // Unlock should never return an error.
+	_, err = w.Unlock((*ethwallet.Address)(&address)) // Unlock should never return an error.
 	if err != nil {
 		log.Panic(err)
 	}
@@ -102,11 +102,10 @@ func (w *Wallet) NewRandomAccount(rnd *rand.Rand) wallet.Account {
 
 // Unlock retrieves the account with the given address and unlocks it. If there
 // is no matching account or unlocking fails, returns an error.
-func (w *Wallet) Unlock(addr map[int]wallet.Address) (wallet.Account, error) {
+func (w *Wallet) Unlock(addr wallet.Address) (wallet.Account, error) {
 	log.Debugf("Unlocking account %v", addr)
-	Addr := addr[1]
 	// Hack: create ethereum account from ethereum address.
-	ethAddr, ok := Addr.(*ethwallet.Address)
+	ethAddr, ok := addr.(*ethwallet.Address)
 	if !ok {
 		return nil, fmt.Errorf("wrong type: expected %T, got %T", &ethwallet.Address{}, addr)
 	}
@@ -139,11 +138,11 @@ func (w *Wallet) LockAll() {
 }
 
 // IncrementUsage currently does nothing. In the future, it will track the usage of keys.
-func (w *Wallet) IncrementUsage(a map[int]wallet.Address) {
+func (w *Wallet) IncrementUsage(a wallet.Address) {
 	log.Trace("IncrementUsage ", a)
 }
 
 // DecrementUsage currently does nothing. In the future, it will track the usage of keys and release unused keys.
-func (w *Wallet) DecrementUsage(a map[int]wallet.Address) {
+func (w *Wallet) DecrementUsage(a wallet.Address) {
 	log.Trace("DecrementUsage ", a)
 }

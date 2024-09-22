@@ -114,12 +114,14 @@ func toEthSignedStates(subChannels []channel.SignedState) (ethSubChannels []adju
 			State:  ToEthState(x.State),
 			Sigs:   x.Sigs,
 		}
+		log.Println("Subchannel", ethSubChannels[i].State.ChannelID, i)
 	}
 	return
 }
 
 func (a *Adjudicator) callConclude(ctx context.Context, req channel.AdjudicatorReq, subStates channel.StateMap) error {
 	ethSubStates := toEthSubStates(req.Tx.State, subStates)
+	log.Println("Concluding channel", req.Params.ID, ethSubStates)
 
 	conclude := func(
 		opts *bind.TransactOpts,
@@ -173,6 +175,7 @@ func (a *Adjudicator) call(ctx context.Context, req channel.AdjudicatorReq, fn a
 	}
 
 	_, err = a.ConfirmTransaction(ctx, tx, a.txSender)
+	log.Println("Transaction confirmed", err)
 	if errors.Is(err, errTxTimedOut) {
 		err = client.NewTxTimedoutError(txType.String(), tx.Hash().Hex(), err.Error())
 	}
@@ -189,7 +192,7 @@ func ValidateAdjudicator(ctx context.Context, backend bind.ContractCaller, adjud
 // toEthSubStates generates a channel tree in depth-first order.
 func toEthSubStates(state *channel.State, subStates channel.StateMap) (ethSubStates []adjudicator.ChannelState) {
 	for _, subAlloc := range state.Locked {
-		subState, ok := subStates[subAlloc.ID]
+		subState, ok := subStates[channel.IDKey(subAlloc.ID)]
 		if !ok {
 			log.Panic("sub-state not found")
 		}

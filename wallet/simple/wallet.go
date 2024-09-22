@@ -88,8 +88,8 @@ func (w *Wallet) NewRandomAccount(prng *rand.Rand) wallet.Account {
 
 // Unlock returns the account corresponding to the given address if the wallet
 // contains this account.
-func (w *Wallet) Unlock(address map[int]wallet.Address) (wallet.Account, error) {
-	ethAddr := address[1]
+func (w *Wallet) Unlock(address wallet.Address) (wallet.Account, error) {
+	ethAddr := address
 	if _, ok := ethAddr.(*ethwallet.Address); !ok {
 		return nil, errors.New("address must be ethwallet.Address")
 	}
@@ -106,7 +106,7 @@ func (w *Wallet) Unlock(address map[int]wallet.Address) (wallet.Account, error) 
 func (w *Wallet) LockAll() {}
 
 // IncrementUsage is called whenever a new channel is created or restored.
-func (w *Wallet) IncrementUsage(address map[int]wallet.Address) {}
+func (w *Wallet) IncrementUsage(address wallet.Address) {}
 
 // DecrementUsage is called whenever a channel is settled.
-func (w *Wallet) DecrementUsage(address map[int]wallet.Address) {}
+func (w *Wallet) DecrementUsage(address wallet.Address) {}

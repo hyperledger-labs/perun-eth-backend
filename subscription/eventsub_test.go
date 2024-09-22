@@ -71,6 +71,7 @@ func TestEventSub(t *testing.T) {
 	tokenAddr, err := ethchannel.DeployPerunToken(ctx, cb, *account, []common.Address{account.Address}, channeltest.MaxBalance)
 	require.NoError(t, err)
 	token, err := peruntoken.NewPeruntoken(tokenAddr, cb)
+	log.Println("Token Address: ", tokenAddr, err)
 	require.NoError(t, err)
 	ct := pkgtest.NewConcurrent(t)
 
@@ -81,14 +82,17 @@ func TestEventSub(t *testing.T) {
 			if i == n/4 {
 				close(waitSent)
 			}
-			log.Debug("Sending ", i)
+			log.Println("Sending ", i)
 			// Send the transaction.
 			opts, err := cb.NewTransactor(ctx, txGasLimit, *account)
+			log.Println("Transactor: ", opts, err)
 			require.NoError(t, err)
 			tx, err := token.IncreaseAllowance(opts, account.Address, big.NewInt(1))
+			log.Println("TX: ", tx, err)
 			require.NoError(t, err)
 			// Wait for the TX to be mined.
 			_, err = cb.ConfirmTransaction(ctx, tx, *account)
+			log.Println("Confirm TX: ", err)
 			require.NoError(t, err)
 		}
 	})
@@ -102,7 +106,9 @@ func TestEventSub(t *testing.T) {
 	// Setup the event sub after some events have been sent.
 	<-waitSent
 	contract := bind.NewBoundContract(tokenAddr, bindings.ABI.PerunToken, cb, cb, cb)
+	log.Println("Contract: ", contract)
 	sub, err := subscription.NewEventSub(ctx, cb, contract, eFact, 10000)
+	log.Println("Sub")
 	require.NoError(t, err)
 	go ct.Stage("sub", func(t pkgtest.ConcT) {
 		defer close(sink)
@@ -114,19 +120,21 @@ func TestEventSub(t *testing.T) {
 		// Receive `n` unique events.
 		for i := 0; i < n; i++ {
 			e := <-sink
-			log.Debug("Read ", i)
+			log.Println("Read ", i)
 			require.NotNil(t, e)
 			// It is possible to receive the same event twice.
 			if e.Log.TxHash == lastTx {
 				i--
+				log.Println("Duplicate ", i)
 			}
 			lastTx = e.Log.TxHash
-
+			log.Println("TX Hash: ", lastTx)
 			want := &peruntoken.PeruntokenApproval{
 				Owner:   account.Address,
 				Spender: account.Address,
 				Value:   big.NewInt(int64(i + 1)),
 			}
+			log.Println("Want: ", want)
 			require.Equal(t, want, e.Data)
 			require.False(t, e.Log.Removed)
 		}
@@ -166,18 +174,18 @@ func TestEventSub_Filter(t *testing.T) {
 	ct := pkgtest.NewConcurrent(t)
 
 	// Send the transaction.
-	fundingID := channeltest.NewRandomChannelID(rng)
+	fundingID := channeltest.NewRandomChannelID(rng, channeltest.WithBackend(1))
 	opts, err := cb.NewTransactor(ctx, txGasLimit, *account)
 	require.NoError(t, err)
 	opts.Value = big.NewInt(1)
-	tx, err := ah.Deposit(opts, fundingID, big.NewInt(1))
+	tx, err := ah.Deposit(opts, fundingID[1], big.NewInt(1))
 	require.NoError(t, err)
 	// Wait for the TX to be mined.
 	_, err = cb.ConfirmTransaction(ctx, tx, *account)
 	require.NoError(t, err)
 
 	// Create the filter.
-	Filter := []interface{}{fundingID}
+	Filter := []interface{}{fundingID[1]}
 	// Setup the event sub.
 	sink := make(chan *subscription.Event, 1)
 	eFact := func() *subscription.Event {
@@ -199,7 +207,7 @@ func TestEventSub_Filter(t *testing.T) {
 	e := <-sink
 	require.NotNil(t, e)
 	want := &assetholder.AssetholderDeposited{
-		FundingID: fundingID,
+		FundingID: fundingID[1],
 		Amount:    big.NewInt(int64(1)),
 	}
 	log.Debug("TX0 Hash: ", e.Log.TxHash)

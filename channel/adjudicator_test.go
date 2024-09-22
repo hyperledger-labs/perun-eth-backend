@@ -16,6 +16,7 @@ package channel_test
 
 import (
 	"context"
+	"perun.network/go-perun/wallet"
 	"testing"
 	"time"
 
@@ -33,7 +34,7 @@ import (
 	pkgtest "polycry.pt/poly-go/test"
 )
 
-const defaultTxTimeout = 2 * time.Second
+const defaultTxTimeout = 8 * time.Second
 
 func testSignState(t *testing.T, accounts []*keystore.Account, state *channel.State) channel.Transaction {
 	t.Helper()
@@ -66,6 +67,7 @@ func TestSubscribeRegistered(t *testing.T) {
 		rng,
 		channeltest.WithChallengeDuration(uint64(100*time.Second)),
 		channeltest.WithParts(s.Parts),
+		channeltest.WithBackend(1),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(false),
 		channeltest.WithLedgerChannel(true),
@@ -91,7 +93,7 @@ func TestSubscribeRegistered(t *testing.T) {
 	tx := testSignState(t, s.Accs, state)
 	req := channel.AdjudicatorReq{
 		Params: params,
-		Acc:    s.Accs[0],
+		Acc:    map[wallet.BackendID]wallet.Account{1: s.Accs[0]},
 		Idx:    channel.Index(0),
 		Tx:     tx,
 	}

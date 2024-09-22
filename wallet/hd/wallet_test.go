@@ -16,7 +16,6 @@ package hd_test
 
 import (
 	"math/rand"
-	"perun.network/go-perun/wallet"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -83,7 +82,7 @@ func TestUnlock(t *testing.T) {
 	setup, _, hdWallet := newSetup(t, pkgtest.Prng(t))
 
 	missingAddr := common.BytesToAddress(setup.AddressMarshalled)
-	_, err := hdWallet.Unlock(map[int]wallet.Address{1: ethwallet.AsWalletAddr(missingAddr)})
+	_, err := hdWallet.Unlock(ethwallet.AsWalletAddr(missingAddr))
 	assert.Error(t, err, "should error on unlocking missing address")
 
 	acc, err := hdWallet.Unlock(setup.AddressInWallet)
@@ -99,7 +98,7 @@ func TestContains(t *testing.T) {
 	missingAddr := common.BytesToAddress(setup.AddressMarshalled)
 	assert.False(t, hdWallet.Contains(missingAddr), "should not contain address of the missing account")
 
-	assert.True(t, hdWallet.Contains(ethwallet.AsEthAddr(setup.AddressInWallet[1])), "should contain valid account")
+	assert.True(t, hdWallet.Contains(ethwallet.AsEthAddr(setup.AddressInWallet)), "should contain valid account")
 }
 
 func newSetup(t require.TestingT, prng *rand.Rand) (*test.Setup, accounts.Wallet, *hd.Wallet) {

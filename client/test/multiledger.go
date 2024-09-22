@@ -132,22 +132,22 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 	require := require.New(t)
 
 	// Setup wallet and account.
-	w := wtest.RandomWallet().(*keystore.Wallet)
-	acc := w.NewRandomAccount(rng).(*keystore.Account)
+	w := map[wallet.BackendID]wtest.Wallet{1: wtest.RandomWallet().(*keystore.Wallet)}
+	acc := w[1].NewRandomAccount(rng).(*keystore.Account)
 
 	// Setup contract backends.
 	signer1 := l1.simSetup.SimBackend.Signer
 	cb1 := ethchannel.NewContractBackend(
 		l1.simSetup.CB,
 		l1.AssetID().LedgerId.(ethchannel.ChainID),
-		keystore.NewTransactor(*w, signer1),
+		keystore.NewTransactor(*w[1].(*keystore.Wallet), signer1),
 		l1.simSetup.CB.TxFinalityDepth(),
 	)
 	signer2 := l2.simSetup.SimBackend.Signer
 	cb2 := ethchannel.NewContractBackend(
 		l2.simSetup.CB,
 		l2.AssetID().LedgerId.(ethchannel.ChainID),
-		keystore.NewTransactor(*w, signer2),
+		keystore.NewTransactor(*w[1].(*keystore.Wallet), signer2),
 		l2.simSetup.CB.TxFinalityDepth(),
 	)
 
@@ -177,15 +177,15 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 	watcher, err := local.NewWatcher(multiAdj)
 	require.NoError(err)
 
-	walletAddr := acc.Address()[1].(*ethwallet.Address)
+	walletAddr := acc.Address().(*ethwallet.Address)
 	wireAddr := &ethwire.Address{Address: walletAddr}
-
+	perunWallet := map[wallet.BackendID]wallet.Wallet{1: w[1]}
 	c, err := client.New(
-		map[int]wire.Address{1: wireAddr},
+		map[wallet.BackendID]wire.Address{1: wireAddr},
 		bus,
 		multiFunder,
 		multiAdj,
-		w,
+		perunWallet,
 		watcher,
 	)
 	require.NoError(err)
@@ -194,11 +194,11 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 		Client:         c,
 		Adjudicator1:   adjL1,
 		Adjudicator2:   adjL2,
-		WireAddress:    map[int]wire.Address{1: wireAddr},
-		WalletAddress:  map[int]wallet.Address{1: walletAddr},
+		WireAddress:    map[wallet.BackendID]wire.Address{1: wireAddr},
+		WalletAddress:  map[wallet.BackendID]wallet.Address{1: walletAddr},
 		Events:         make(chan channel.AdjudicatorEvent),
-		BalanceReader1: l1.simSetup.SimBackend.NewBalanceReader(acc.Address()[1]),
-		BalanceReader2: l2.simSetup.SimBackend.NewBalanceReader(acc.Address()[1]),
+		BalanceReader1: l1.simSetup.SimBackend.NewBalanceReader(acc.Address()),
+		BalanceReader2: l2.simSetup.SimBackend.NewBalanceReader(acc.Address()),
 	}
 }
 

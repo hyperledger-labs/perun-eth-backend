@@ -17,6 +17,7 @@ package client_test
 import (
 	"context"
 	"math/big"
+	perunwallet "perun.network/go-perun/wallet"
 	"sync"
 	"testing"
 	"time"
@@ -63,8 +64,9 @@ func TestPaymentHappy(t *testing.T) {
 
 	execConfig := &clienttest.AliceBobExecConfig{
 		BaseExecConfig: clienttest.MakeBaseExecConfig(
-			[2]map[int]wire.Address{setup[A].Identity.Address(), setup[B].Identity.Address()},
+			[2]map[perunwallet.BackendID]wire.Address{wire.AddressMapfromAccountMap(setup[A].Identity), wire.AddressMapfromAccountMap(setup[B].Identity)},
 			s.Asset,
+			1,
 			[2]*big.Int{big.NewInt(100), big.NewInt(100)},
 			client.WithApp(chtest.NewRandomAppAndData(rng)),
 		),
@@ -122,8 +124,9 @@ func TestPaymentDispute(t *testing.T) {
 
 	execConfig := &clienttest.MalloryCarolExecConfig{
 		BaseExecConfig: clienttest.MakeBaseExecConfig(
-			[2]map[int]wire.Address{setup[A].Identity.Address(), setup[B].Identity.Address()},
+			[2]map[perunwallet.BackendID]wire.Address{wire.AddressMapfromAccountMap(setup[A].Identity), wire.AddressMapfromAccountMap(setup[B].Identity)},
 			s.Asset,
+			1,
 			[2]*big.Int{big.NewInt(100), big.NewInt(1)},
 			client.WithoutApp(),
 		),

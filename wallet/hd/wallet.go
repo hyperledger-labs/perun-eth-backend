@@ -112,10 +112,10 @@ func (w *Wallet) newAccount() (*Account, error) {
 
 // Unlock checks if the wallet contains the account corresponding to the given address.
 // There is no concept of unlocking in software only hd wallet.
-func (w *Wallet) Unlock(addr map[int]wallet.Address) (wallet.Account, error) {
+func (w *Wallet) Unlock(addr wallet.Address) (wallet.Account, error) {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
-	ethAddr := addr[1]
+	ethAddr := addr
 	acc := accounts.Account{Address: ethwallet.AsEthAddr(ethAddr)}
 	if !w.wallet.Contains(acc) {
 		return nil, errors.New("account not found in wallet")
@@ -130,7 +130,7 @@ func (w *Wallet) Unlock(addr map[int]wallet.Address) (wallet.Account, error) {
 func (w *Wallet) LockAll() {}
 
 // IncrementUsage implements wallet.Wallet. It is a noop.
-func (w *Wallet) IncrementUsage(a map[int]wallet.Address) {}
+func (w *Wallet) IncrementUsage(a wallet.Address) {}
 
 // DecrementUsage implements wallet.Wallet. It is a noop.
-func (w *Wallet) DecrementUsage(a map[int]wallet.Address) {}
+func (w *Wallet) DecrementUsage(a wallet.Address) {}
