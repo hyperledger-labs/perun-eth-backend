@@ -35,12 +35,12 @@ func (randomizer) NewRandomAsset(rng *rand.Rand) channel.Asset {
 func NewRandomAsset(rng *rand.Rand) *ethchannel.Asset {
 	chainID := NewRandomChainID(rng)
 	asset := ethwtest.NewRandomAddress(rng)
-	return ethchannel.NewAsset(chainID.Int, common.Address(asset))
+	return ethchannel.NewAsset(chainID.LedgerId.Int, common.Address(asset))
 }
 
-// NewRandomChainID returns a new random ChainID.
-func NewRandomChainID(rng *rand.Rand) ethchannel.ChainID {
+// NewRandomChainID returns a new random AssetID.
+func NewRandomChainID(rng *rand.Rand) ethchannel.AssetID {
 	r := rng.Uint64()
 	id := new(big.Int).SetUint64(r)
-	return ethchannel.MakeChainID(id)
+	return ethchannel.MakeAssetID(id)
 }

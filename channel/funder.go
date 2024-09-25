@@ -388,7 +388,7 @@ func (f *Funder) waitForFundingConfirmation(ctx context.Context, request channel
 	if !ok {
 		return fmt.Errorf("wrong type: expected *Asset, got %T", a)
 	}
-	if ethAsset.ChainID.MapKey() != f.chainID.MapKey() {
+	if ethAsset.LedgerID().MapKey() != f.chainID.LedgerId.MapKey() {
 		return nil
 	}
 
@@ -453,7 +453,7 @@ func (f *Funder) WaitForOthersFundingConfirmation(ctx context.Context, request c
 		if !ok {
 			return fmt.Errorf("wrong type: expected *Asset, got %T", a)
 		}
-		if ethAsset.ChainID.MapKey() != f.chainID.MapKey() {
+		if ethAsset.LedgerID().MapKey() != f.chainID.LedgerId.MapKey() {
 			return nil
 		}
 

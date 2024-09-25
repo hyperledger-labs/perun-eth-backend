@@ -41,12 +41,26 @@ type ChainID struct {
 	*big.Int
 }
 
+// AssetID identifies an asset on a specific chain.
+type AssetID struct {
+	BackendID uint32
+	LedgerId  ChainID
+}
+
 // MakeChainID makes a ChainID for the given id.
 func MakeChainID(id *big.Int) ChainID {
 	if id.Sign() < 0 {
 		panic("must not be smaller than zero")
 	}
 	return ChainID{id}
+}
+
+// MakeAssetID makes a AssetID for the given id.
+func MakeAssetID(id *big.Int) AssetID {
+	if id.Sign() < 0 {
+		panic("must not be smaller than zero")
+	}
+	return AssetID{BackendID: 1, LedgerId: MakeChainID(id)}
 }
 
 // UnmarshalBinary unmarshals the chainID from its binary representation.
@@ -71,7 +85,7 @@ func (id ChainID) MapKey() multi.LedgerIDMapKey {
 type (
 	// Asset is an Ethereum asset.
 	Asset struct {
-		ChainID     ChainID
+		ChainID     AssetID
 		AssetHolder wallet.Address
 	}
 
@@ -80,7 +94,7 @@ type (
 )
 
 func (a Asset) AssetID() multi.AssetID {
-	return multi.AssetID{BackendID: 1, LedgerId: a.ChainID}
+	return multi.AssetID{BackendID: 1, LedgerId: a.LedgerID()}
 }
 
 // MapKey returns the asset's map key representation.
@@ -96,7 +110,7 @@ func (a Asset) MapKey() AssetMapKey {
 // MarshalBinary marshals the asset into its binary representation.
 func (a Asset) MarshalBinary() ([]byte, error) {
 	var buf bytes.Buffer
-	err := perunio.Encode(&buf, a.ChainID, &a.AssetHolder)
+	err := perunio.Encode(&buf, a.ChainID.LedgerId, a.ChainID.BackendID, &a.AssetHolder)
 	if err != nil {
 		return nil, err
 	}
@@ -106,18 +120,18 @@ func (a Asset) MarshalBinary() ([]byte, error) {
 // UnmarshalBinary unmarshals the asset from its binary representation.
 func (a *Asset) UnmarshalBinary(data []byte) error {
 	buf := bytes.NewBuffer(data)
-	return perunio.Decode(buf, &a.ChainID, &a.AssetHolder)
+	return perunio.Decode(buf, &a.ChainID.LedgerId, &a.ChainID.BackendID, &a.AssetHolder)
 }
 
 // LedgerID returns the ledger ID the asset lives on.
 func (a Asset) LedgerID() multi.LedgerID {
-	return &a.ChainID
+	return &a.ChainID.LedgerId
 }
 
 // NewAsset creates a new asset from an chainID and the AssetHolder address.
 func NewAsset(chainID *big.Int, assetHolder common.Address) *Asset {
-	id := MakeChainID(chainID)
-	return &Asset{id, *wallet.AsWalletAddr(assetHolder)}
+	id := MakeAssetID(chainID)
+	return &Asset{ChainID: id, AssetHolder: *wallet.AsWalletAddr(assetHolder)}
 }
 
 // EthAddress returns the Ethereum address of the asset.
@@ -131,14 +145,14 @@ func (a Asset) Equal(b channel.Asset) bool {
 	if !ok {
 		return false
 	}
-	return a.ChainID.MapKey() == ethAsset.ChainID.MapKey() && a.EthAddress() == ethAsset.EthAddress()
+	return a.ChainID.LedgerId.MapKey() == ethAsset.ChainID.LedgerId.MapKey() && a.EthAddress() == ethAsset.EthAddress()
 }
 
 // filterAssets filters the assets for the given chainID.
-func filterAssets(assets []channel.Asset, chainID ChainID) []channel.Asset {
+func filterAssets(assets []channel.Asset, chainID AssetID) []channel.Asset {
 	var filtered []channel.Asset
 	for _, asset := range assets {
-		if a := asset.(*Asset); a.ChainID.MapKey() == chainID.MapKey() { //nolint:forcetypeassert // We would have to panic anyways.
+		if a := asset.(*Asset); a.ChainID.LedgerId.MapKey() == chainID.LedgerId.MapKey() { //nolint:forcetypeassert // We would have to panic anyways.
 			filtered = append(filtered, a)
 		}
 	}

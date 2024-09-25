@@ -9,7 +9,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	perun.network/go-perun v0.11.1-0.20240920121016-969c6a7cbaff
+	perun.network/go-perun v0.11.1-0.20240925090359-10c9b28f4e59
 	polycry.pt/poly-go v0.0.0-20220301085937-fb9d71b45a37
 )
 

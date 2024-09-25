@@ -42,7 +42,7 @@ var _ channel.Adjudicator = (*Adjudicator)(nil)
 type Adjudicator struct {
 	ContractBackend
 	// chainID specifies the chain the funder is living on.
-	chainID  ChainID
+	chainID  AssetID
 	contract *adjudicator.Adjudicator
 	bound    *bind.BoundContract
 	// The address to which we send all funds.

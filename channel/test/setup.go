@@ -78,7 +78,7 @@ func NewSimSetup(t *testing.T, rng *rand.Rand, txFinalityDepth uint64, blockInte
 	signer := types.LatestSigner(params.AllEthashProtocolChanges)
 	contractBackend := ethchannel.NewContractBackend(
 		simBackend,
-		ethchannel.MakeChainID(simBackend.ChainID()),
+		ethchannel.MakeAssetID(simBackend.ChainID()),
 		keystore.NewTransactor(*ksWallet, signer),
 		txFinalityDepth,
 	)
@@ -123,7 +123,7 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 		s.Recvs[i] = map[wallet.BackendID]*ethwallet.Address{1: ksWallet.NewRandomAccount(rng).Address().(*ethwallet.Address)}
 		cb := ethchannel.NewContractBackend(
 			s.SimBackend,
-			ethchannel.MakeChainID(s.SimBackend.ChainID()),
+			ethchannel.MakeAssetID(s.SimBackend.ChainID()),
 			keystore.NewTransactor(*ksWallet, s.SimBackend.Signer),
 			txFinalityDepth,
 		)

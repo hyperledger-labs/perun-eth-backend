@@ -139,14 +139,14 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 	signer1 := l1.simSetup.SimBackend.Signer
 	cb1 := ethchannel.NewContractBackend(
 		l1.simSetup.CB,
-		l1.AssetID().LedgerId.(ethchannel.ChainID),
+		ethchannel.MakeAssetID(l1.simSetup.SimBackend.ChainID()),
 		keystore.NewTransactor(*w[1].(*keystore.Wallet), signer1),
 		l1.simSetup.CB.TxFinalityDepth(),
 	)
 	signer2 := l2.simSetup.SimBackend.Signer
 	cb2 := ethchannel.NewContractBackend(
 		l2.simSetup.CB,
-		l2.AssetID().LedgerId.(ethchannel.ChainID),
+		ethchannel.MakeAssetID(l2.simSetup.SimBackend.ChainID()),
 		keystore.NewTransactor(*w[1].(*keystore.Wallet), signer2),
 		l2.simSetup.CB.TxFinalityDepth(),
 	)

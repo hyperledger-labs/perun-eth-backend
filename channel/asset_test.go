@@ -129,9 +129,7 @@ func Test_Asset_GenericMarshaler(t *testing.T) {
 func TestMarshalling(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	assetIn := ethchannel.Asset{
-		ChainID: ethchannel.ChainID{
-			big.NewInt(rng.Int63()),
-		},
+		ChainID:     ethchannel.MakeAssetID(big.NewInt(rng.Int63())),
 		AssetHolder: ethwallettest.NewRandomAddress(rng),
 	}
 	bytes, err := assetIn.MarshalBinary()

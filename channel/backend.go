@@ -42,10 +42,8 @@ var (
 	// compile time check that we implement the channel backend interface.
 	_ channel.Backend = new(Backend)
 	// Definition of ABI datatypes.
-	abiUint256, _ = abi.NewType("uint256", "", nil)
 	abiAddress, _ = abi.NewType("address", "", nil)
 	abiBytes32, _ = abi.NewType("bytes32", "", nil)
-	abiBytes, _   = abi.NewType("bytes", "", nil)
 	abiParams     abi.Type
 	abiState      abi.Type
 	abiProgress   abi.Method
@@ -323,7 +321,7 @@ func assetsToEthAssets(assets []channel.Asset, bIDs []wallet.BackendID) []adjudi
 				log.Panicf("wrong address type: %T", asset)
 			}
 			cAddrs[i] = adjudicator.ChannelAsset{
-				ChainID:   asset.ChainID.Int,
+				ChainID:   asset.ChainID.LedgerId.Int,
 				EthHolder: asset.EthAddress(),
 				CcHolder:  make([]byte, 0),
 			}
