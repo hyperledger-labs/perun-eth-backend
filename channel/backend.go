@@ -331,7 +331,7 @@ func assetsToEthAssets(assets []channel.Asset, bIDs []wallet.BackendID) []adjudi
 				log.Panicf("error encoding asset: %v", err)
 			}
 			cAddrs[i] = adjudicator.ChannelAsset{
-				ChainID:   big.NewInt(0),
+				ChainID:   big.NewInt(2),
 				EthHolder: common.HexToAddress("0x0000000000000000000000000000000000000000"),
 				CcHolder:  asset,
 			}
