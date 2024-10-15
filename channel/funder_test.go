@@ -80,10 +80,10 @@ func newFunderSetup(rng *rand.Rand) (
 ) {
 	n := 2
 	simBackend := test.NewSimulatedBackend()
-	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(1).(*keystore.Wallet)
 	cb := ethchannel.NewContractBackend(
 		simBackend,
-		ethchannel.MakeAssetID(simBackend.ChainID()),
+		ethchannel.MakeAssetID(ethchannel.MakeChainID(simBackend.ChainID()).Int),
 		keystore.NewTransactor(*ksWallet, simBackend.Signer),
 		TxFinalityDepth,
 	)
@@ -94,12 +94,12 @@ func newFunderSetup(rng *rand.Rand) (
 
 	for i := 0; i < n; i++ {
 		assets[i] = *test.NewRandomAsset(rng)
-		accs[i] = accounts.Account{Address: ethwallet.AsEthAddr(wallettest.NewRandomAddress(rng))}
+		accs[i] = accounts.Account{Address: ethwallet.AsEthAddr(wallettest.NewRandomAddress(rng, 1))}
 	}
 	// Use an ETH depositor with random addresses at index 0.
 	depositors[0] = ethchannel.NewETHDepositor(txETHGasLimit)
 	// Use an ERC20 depositor with random addresses at index 1.
-	token := wallettest.NewRandomAddress(rng)
+	token := wallettest.NewRandomAddress(rng, 1)
 	depositors[1] = ethchannel.NewERC20Depositor(ethwallet.AsEthAddr(token), txERC20GasLimit)
 	return funder, assets, depositors, accs
 }
@@ -444,7 +444,7 @@ func newNFunders(
 	// Start the auto-mining of blocks.
 	simBackend.StartMining(blockInterval)
 	t.Cleanup(simBackend.StopMining)
-	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(1).(*keystore.Wallet)
 
 	deployAccount := &ksWallet.NewRandomAccount(rng).(*keystore.Account).Account
 	simBackend.FundAddress(ctx, deployAccount.Address)
@@ -493,10 +493,12 @@ func newNFunders(
 		rng,
 		channeltest.WithParts(parts),
 		channeltest.WithChallengeDuration(uint64(n)*40000),
+		channeltest.WithBackend(1),
 	)
 	allocation = channeltest.NewRandomAllocation(
 		rng,
 		channeltest.WithNumParts(n),
+		channeltest.WithBackend(1),
 		channeltest.WithAssets(
 			ethchannel.NewAsset(chainID, assetAddr1),
 			ethchannel.NewAsset(chainID, assetAddr2),

@@ -42,7 +42,7 @@ func TestState_ToAndFromEth(t *testing.T) {
 		rng := pkgtest.Prng(t)
 
 		for i := 0; i < 100; i++ {
-			state := test.NewRandomState(rng)
+			state := test.NewRandomState(rng, test.WithBackend(1))
 			testToAndFromEthState(t, state)
 		}
 	})
@@ -51,7 +51,7 @@ func TestState_ToAndFromEth(t *testing.T) {
 		rng := pkgtest.Prng(t)
 
 		for i := 0; i < 100; i++ {
-			state := test.NewRandomState(rng, test.WithNumLocked(int(rng.Int31n(10))))
+			state := test.NewRandomState(rng, test.WithBackend(1), test.WithNumLocked(int(rng.Int31n(10))))
 			testToAndFromEthState(t, state)
 		}
 	})
@@ -107,7 +107,7 @@ func testCalcID(t *testing.T, rng *rand.Rand, contr *adjudicator.Adjudicator, op
 func testHashState(t *testing.T, rng *rand.Rand, contr *adjudicator.Adjudicator, opts *bind.CallOpts) {
 	t.Helper()
 	for i := 0; i < 100; i++ {
-		state := test.NewRandomState(rng)
+		state := test.NewRandomState(rng, test.WithBackend(1))
 		ethState := channel.ToEthState(state)
 		ethHash, err := contr.HashState(opts, ethState)
 		require.NoError(t, err)
@@ -133,7 +133,7 @@ func newChannelSetup(rng *rand.Rand) *test.Setup {
 	params2, state2 := test.NewRandomParamsAndState(rng, test.WithIsFinal(!state.IsFinal), test.WithNumLocked(int(rng.Int31n(4)+1)), test.WithBackend(1))
 
 	createAddr := func() map[perunwallet.BackendID]perunwallet.Address {
-		return map[perunwallet.BackendID]perunwallet.Address{1: wallettest.NewRandomAddress(rng)}
+		return map[perunwallet.BackendID]perunwallet.Address{1: wallettest.NewRandomAddress(rng, 1)}
 	}
 
 	return &test.Setup{
@@ -141,7 +141,7 @@ func newChannelSetup(rng *rand.Rand) *test.Setup {
 		Params2:       params2,
 		State:         state,
 		State2:        state2,
-		Account:       wallettest.NewRandomAccount(rng),
+		Account:       wallettest.NewRandomAccount(rng, 1),
 		RandomAddress: createAddr,
 	}
 }

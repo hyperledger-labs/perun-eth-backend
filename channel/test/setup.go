@@ -64,7 +64,7 @@ type (
 func NewSimSetup(t *testing.T, rng *rand.Rand, txFinalityDepth uint64, blockInterval time.Duration, opts ...SimBackendOpt) *SimSetup {
 	t.Helper()
 	simBackend := NewSimulatedBackend(opts...)
-	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(1).(*keystore.Wallet)
 	txAccount := ksWallet.NewRandomAccount(rng).(*keystore.Account)
 	ctx, cancel := context.WithTimeout(context.Background(), defaultSetupTimeout)
 	defer cancel()
@@ -78,7 +78,7 @@ func NewSimSetup(t *testing.T, rng *rand.Rand, txFinalityDepth uint64, blockInte
 	signer := types.LatestSigner(params.AllEthashProtocolChanges)
 	contractBackend := ethchannel.NewContractBackend(
 		simBackend,
-		ethchannel.MakeAssetID(simBackend.ChainID()),
+		ethchannel.MakeAssetID(ethchannel.MakeChainID(simBackend.ChainID()).Int),
 		keystore.NewTransactor(*ksWallet, signer),
 		txFinalityDepth,
 	)
@@ -115,7 +115,7 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 	require.NoError(t, err)
 	s.Asset = ethchannel.NewAsset(s.SimBackend.ChainID(), assetHolder)
 
-	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(1).(*keystore.Wallet)
 	for i := 0; i < n; i++ {
 		s.Accs[i] = ksWallet.NewRandomAccount(rng).(*keystore.Account)
 		s.Parts[i] = map[wallet.BackendID]wallet.Address{1: s.Accs[i].Address()}
@@ -123,7 +123,7 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 		s.Recvs[i] = map[wallet.BackendID]*ethwallet.Address{1: ksWallet.NewRandomAccount(rng).Address().(*ethwallet.Address)}
 		cb := ethchannel.NewContractBackend(
 			s.SimBackend,
-			ethchannel.MakeAssetID(s.SimBackend.ChainID()),
+			ethchannel.MakeAssetID(ethchannel.MakeChainID(s.SimBackend.ChainID()).Int),
 			keystore.NewTransactor(*ksWallet, s.SimBackend.Signer),
 			txFinalityDepth,
 		)

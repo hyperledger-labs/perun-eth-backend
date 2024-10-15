@@ -128,15 +128,12 @@ func Test_Asset_GenericMarshaler(t *testing.T) {
 
 func TestMarshalling(t *testing.T) {
 	rng := pkgtest.Prng(t)
-	assetIn := ethchannel.Asset{
-		ChainID:     ethchannel.MakeAssetID(big.NewInt(rng.Int63())),
-		AssetHolder: ethwallettest.NewRandomAddress(rng),
-	}
+	assetIn := ethchannel.NewAsset(big.NewInt(rng.Int63()), common.Address(ethwallettest.NewRandomAddress(rng)))
 	bytes, err := assetIn.MarshalBinary()
 	require.NoError(t, err)
 	var assetOut ethchannel.Asset
 	err = assetOut.UnmarshalBinary(bytes)
 	require.NoError(t, err)
 
-	require.Equal(t, assetIn, assetOut)
+	require.True(t, assetIn.Equal(&assetOut))
 }

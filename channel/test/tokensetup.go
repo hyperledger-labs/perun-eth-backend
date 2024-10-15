@@ -64,14 +64,14 @@ func NewTokenSetup(ctx context.Context, t *testing.T, rng *rand.Rand, txFinality
 	t.Helper()
 	// Simulated chain setup.
 	sb := NewSimulatedBackend()
-	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(1).(*keystore.Wallet)
 	acc1 := &ksWallet.NewRandomAccount(rng).(*keystore.Account).Account
 	sb.FundAddress(ctx, acc1.Address)
 	acc2 := &ksWallet.NewRandomAccount(rng).(*keystore.Account).Account
 	sb.FundAddress(ctx, acc2.Address)
 	cb := ethchannel.NewContractBackend(
 		sb,
-		ethchannel.MakeAssetID(sb.ChainID()),
+		ethchannel.MakeAssetID(ethchannel.MakeChainID(sb.ChainID()).Int),
 		keystore.NewTransactor(*ksWallet, sb.Signer),
 		txFinalityDepth,
 	)

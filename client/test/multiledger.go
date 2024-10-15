@@ -101,7 +101,7 @@ type testLedger struct {
 }
 
 func (l testLedger) AssetID() multi.AssetID {
-	return multi.AssetID{1, ethchannel.MakeChainID(l.simSetup.SimBackend.ChainID())}
+	return ethchannel.MakeAssetID(ethchannel.MakeChainID(l.simSetup.SimBackend.ChainID()).Int)
 }
 
 func setupLedger(ctx context.Context, t *testing.T, rng *rand.Rand, chainID *big.Int) testLedger {
@@ -132,21 +132,21 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 	require := require.New(t)
 
 	// Setup wallet and account.
-	w := map[wallet.BackendID]wtest.Wallet{1: wtest.RandomWallet().(*keystore.Wallet)}
+	w := map[wallet.BackendID]wtest.Wallet{1: wtest.RandomWallet(1).(*keystore.Wallet)}
 	acc := w[1].NewRandomAccount(rng).(*keystore.Account)
 
 	// Setup contract backends.
 	signer1 := l1.simSetup.SimBackend.Signer
 	cb1 := ethchannel.NewContractBackend(
 		l1.simSetup.CB,
-		ethchannel.MakeAssetID(l1.simSetup.SimBackend.ChainID()),
+		ethchannel.MakeAssetID(ethchannel.MakeChainID(l1.simSetup.SimBackend.ChainID()).Int),
 		keystore.NewTransactor(*w[1].(*keystore.Wallet), signer1),
 		l1.simSetup.CB.TxFinalityDepth(),
 	)
 	signer2 := l2.simSetup.SimBackend.Signer
 	cb2 := ethchannel.NewContractBackend(
 		l2.simSetup.CB,
-		ethchannel.MakeAssetID(l2.simSetup.SimBackend.ChainID()),
+		ethchannel.MakeAssetID(ethchannel.MakeChainID(l2.simSetup.SimBackend.ChainID()).Int),
 		keystore.NewTransactor(*w[1].(*keystore.Wallet), signer2),
 		l2.simSetup.CB.TxFinalityDepth(),
 	)

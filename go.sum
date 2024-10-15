@@ -645,8 +645,8 @@ honnef.co/go/tools v0.0.0-20190418001031-e561f6794a2a/go.mod h1:rf3lG4BRIbNafJWh
 honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.1-2019.2.3/go.mod h1:a3bituU0lyd329TUQxRnasdCoJDkEUEAqEt0JzvZhAg=
 honnef.co/go/tools v0.1.3/go.mod h1:NgwopIslSNH47DimFoV78dnkksY2EFtX0ajyb3K/las=
-perun.network/go-perun v0.11.1-0.20241001124918-3c1e2619e407 h1:byhT6T/XEOFjQpqGshEX867MyGbv+gX6d2+uWkOZwUY=
-perun.network/go-perun v0.11.1-0.20241001124918-3c1e2619e407/go.mod h1:mkmgZ/EQ7EPpDprFkg5+0Cz+QEIJb4SezkDdEPyKtVI=
+perun.network/go-perun v0.11.1-0.20241015075355-a695d14ac4c9 h1:852BwaqvOr2cxiB5ZdFQgnwZvYlH0iWXiic3sh/QhYM=
+perun.network/go-perun v0.11.1-0.20241015075355-a695d14ac4c9/go.mod h1:mkmgZ/EQ7EPpDprFkg5+0Cz+QEIJb4SezkDdEPyKtVI=
 polycry.pt/poly-go v0.0.0-20220301085937-fb9d71b45a37 h1:iA5GzEa/hHfVlQpimEjPV09NATwHXxSjWNB0VVodtew=
 polycry.pt/poly-go v0.0.0-20220301085937-fb9d71b45a37/go.mod h1:XUBrNtqgEhN3EEOP/5gh7IBd3xVHKidCjXDZfl9+kMU=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=

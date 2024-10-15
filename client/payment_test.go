@@ -68,7 +68,7 @@ func TestPaymentHappy(t *testing.T) {
 			s.Asset,
 			1,
 			[2]*big.Int{big.NewInt(100), big.NewInt(100)},
-			client.WithApp(chtest.NewRandomAppAndData(rng)),
+			client.WithApp(chtest.NewRandomAppAndData(rng, chtest.WithBackend(1))),
 		),
 		NumPayments: [2]int{2, 2},
 		TxAmounts:   [2]*big.Int{big.NewInt(5), big.NewInt(3)},

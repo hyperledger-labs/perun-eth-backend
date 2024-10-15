@@ -79,9 +79,9 @@ func TestTransactor(t *testing.T) {
 }
 
 func newTransactorSetup(t require.TestingT, prng *rand.Rand, signer types.Signer, chainID int64, txType test.TxType) test.TransactorSetup {
-	ksWallet, ok := wallettest.RandomWallet().(*keystore.Wallet)
+	ksWallet, ok := wallettest.RandomWallet(1).(*keystore.Wallet)
 	require.Truef(t, ok, "random wallet in wallettest should be a keystore wallet")
-	acc := wallettest.NewRandomAccount(prng)
+	acc := wallettest.NewRandomAccount(prng, 1)
 	return test.TransactorSetup{
 		Signer:     signer,
 		ChainID:    chainID,

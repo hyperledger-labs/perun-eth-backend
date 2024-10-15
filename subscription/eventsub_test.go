@@ -57,12 +57,12 @@ func TestEventSub(t *testing.T) {
 
 	// Simulated chain setup.
 	sb := test.NewSimulatedBackend()
-	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(1).(*keystore.Wallet)
 	account := &ksWallet.NewRandomAccount(rng).(*keystore.Account).Account
 	sb.FundAddress(ctx, account.Address)
 	cb := ethchannel.NewContractBackend(
 		sb,
-		ethchannel.MakeAssetID(sb.ChainID()),
+		ethchannel.MakeAssetID(ethchannel.MakeChainID(sb.ChainID()).Int),
 		keystore.NewTransactor(*ksWallet, sb.Signer),
 		txFinalityDepth,
 	)
@@ -154,12 +154,12 @@ func TestEventSub_Filter(t *testing.T) {
 
 	// Simulated chain setup.
 	sb := test.NewSimulatedBackend()
-	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(1).(*keystore.Wallet)
 	account := &ksWallet.NewRandomAccount(rng).(*keystore.Account).Account
 	sb.FundAddress(ctx, account.Address)
 	cb := ethchannel.NewContractBackend(
 		sb,
-		ethchannel.MakeAssetID(sb.ChainID()),
+		ethchannel.MakeAssetID(ethchannel.MakeChainID(sb.ChainID()).Int),
 		keystore.NewTransactor(*ksWallet, sb.Signer),
 		txFinalityDepth,
 	)

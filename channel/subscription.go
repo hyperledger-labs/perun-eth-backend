@@ -78,7 +78,6 @@ evloop:
 	for {
 		select {
 		case _next := <-events:
-			log.Println("Received event", _next.Data, _next.Log.TxHash)
 			err := r.processNext(ctx, a, _next)
 			if err != nil {
 				r.err <- err

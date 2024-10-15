@@ -74,7 +74,7 @@ func TestSubChannelHappy(t *testing.T) {
 		subChannelFunds,
 		subSubChannelFunds,
 		client.WithApp(
-			chtest.NewRandomAppAndData(rng, chtest.WithAppRandomizer(new(payment.Randomizer))),
+			chtest.NewRandomAppAndData(rng, chtest.WithAppRandomizer(new(payment.Randomizer)), chtest.WithBackend(1)),
 		),
 		txAmount,
 	)

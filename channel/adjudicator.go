@@ -17,6 +17,7 @@ package channel
 import (
 	"context"
 	"math/big"
+	"perun.network/go-perun/channel/multi"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -42,7 +43,7 @@ var _ channel.Adjudicator = (*Adjudicator)(nil)
 type Adjudicator struct {
 	ContractBackend
 	// chainID specifies the chain the funder is living on.
-	chainID  AssetID
+	chainID  multi.AssetID
 	contract *adjudicator.Adjudicator
 	bound    *bind.BoundContract
 	// The address to which we send all funds.
@@ -114,14 +115,12 @@ func toEthSignedStates(subChannels []channel.SignedState) (ethSubChannels []adju
 			State:  ToEthState(x.State),
 			Sigs:   x.Sigs,
 		}
-		log.Println("Subchannel", ethSubChannels[i].State.ChannelID, i)
 	}
 	return
 }
 
 func (a *Adjudicator) callConclude(ctx context.Context, req channel.AdjudicatorReq, subStates channel.StateMap) error {
 	ethSubStates := toEthSubStates(req.Tx.State, subStates)
-	log.Println("Concluding channel", req.Params.ID, ethSubStates)
 
 	conclude := func(
 		opts *bind.TransactOpts,
@@ -175,7 +174,6 @@ func (a *Adjudicator) call(ctx context.Context, req channel.AdjudicatorReq, fn a
 	}
 
 	_, err = a.ConfirmTransaction(ctx, tx, a.txSender)
-	log.Println("Transaction confirmed", err)
 	if errors.Is(err, errTxTimedOut) {
 		err = client.NewTxTimedoutError(txType.String(), tx.Hash().Hex(), err.Error())
 	}
