@@ -176,8 +176,6 @@ func (a *Adjudicator) newWithdrawalAuth(request channel.AdjudicatorReq, asset as
 		Receiver:    a.Receiver,
 		Amount:      bal,
 	}
-	fmt.Println("auth", auth.Participant.EthAddress, auth.Receiver, auth.Amount, auth.ChannelID)
-	fmt.Println("Request: ", request)
 	enc, err := encodeAssetHolderWithdrawalAuth(auth)
 	if err != nil {
 		return assetholder.AssetHolderWithdrawalAuth{}, nil, errors.WithMessage(err, "encoding withdrawal auth")
