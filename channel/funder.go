@@ -156,18 +156,22 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 		cancel() // Cancel the context if we return before the block timeout.
 	}()
 
+	// Extract only ethereum Assets to fund
+	var ethAssets []*Asset
+	for _, asset := range request.State.Assets {
+		ethAsset, ok := asset.(*Asset)
+		if ok {
+			ethAssets = append(ethAssets, ethAsset)
+		}
+	}
+
 	// Fund each asset, saving the TX in `txs` and the errors in `errg`.
-	assets := request.State.Assets
-	txs, errg := f.fundAssets(ctx, assets, channelID[1], request)
+	txs, errg := f.fundAssets(ctx, ethAssets, channelID[1], request)
 
 	// Wait for the TXs to be mined.
-	for a, asset := range assets {
+	for a, asset := range ethAssets {
 		for i, tx := range txs[a] {
-			assetTyped, ok := asset.(*Asset)
-			if !ok {
-				return fmt.Errorf("wrong type: expected %T, got %T", &Asset{}, asset)
-			}
-			acc := f.accounts[assetTyped.MapKey()]
+			acc := f.accounts[asset.MapKey()]
 			if _, err := f.ConfirmTransaction(ctx, tx, acc); err != nil {
 				if errors.Is(err, errTxTimedOut) {
 					err = client.NewTxTimedoutError(Fund.String(), tx.Hash().Hex(), err.Error())
@@ -217,7 +221,7 @@ func (f *Funder) fundingTimeoutContext(ctx context.Context, req channel.FundingR
 // fundAssets funds each asset of the funding agreement in the `req`.
 // Sends the transactions and returns them. Wait on the returned gatherer
 // to ensure that all `funding` events were received.
-func (f *Funder) fundAssets(ctx context.Context, assets []channel.Asset, channelID channel.ID, req channel.FundingReq) ([]types.Transactions, *perror.Gatherer) {
+func (f *Funder) fundAssets(ctx context.Context, assets []*Asset, channelID channel.ID, req channel.FundingReq) ([]types.Transactions, *perror.Gatherer) {
 	txs := make([]types.Transactions, len(assets))
 	errg := perror.NewGatherer()
 	fundingIDs := FundingIDs(channelID, req.Params.Parts...)

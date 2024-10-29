@@ -156,15 +156,16 @@ func (a Asset) Equal(b channel.Asset) bool {
 }
 
 // Address returns the address of the asset.
-func (a Asset) Address() string {
-	return a.AssetHolder.String()
+func (a Asset) Address() []byte {
+	data, _ := a.AssetHolder.MarshalBinary()
+	return data
 }
 
 // filterAssets filters the assets for the given chainID.
 func filterAssets(assets []channel.Asset, chainID multi.AssetID) []channel.Asset {
 	var filtered []channel.Asset
 	for _, asset := range assets {
-		if a := asset.(*Asset); a.assetID.LedgerID.MapKey() == chainID.LedgerId().MapKey() { //nolint:forcetypeassert // We would have to panic anyways.
+		if a, ok := asset.(*Asset); ok && a.assetID.LedgerID.MapKey() == chainID.LedgerId().MapKey() { //nolint:forcetypeassert // We would have to panic anyways.
 			filtered = append(filtered, a)
 		}
 	}

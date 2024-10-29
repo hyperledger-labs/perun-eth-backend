@@ -46,7 +46,7 @@ func testSignState(t *testing.T, accounts []*keystore.Account, state *channel.St
 func signState(accounts []*keystore.Account, state *channel.State) (channel.Transaction, error) {
 	sigs := make([][]byte, len(accounts))
 	for i := range accounts {
-		sig, err := channel.Sign(accounts[i], state)
+		sig, err := channel.Sign(accounts[i], state, 1)
 		if err != nil {
 			return channel.Transaction{}, errors.WithMessagef(err, "signing with account %d", i)
 		}

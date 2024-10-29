@@ -37,6 +37,25 @@ const (
 	adjHeaderBuffSize   = 10
 )
 
+// StateMap represents a channel state tree.
+type StateMap map[channel.ID]*channel.State
+
+// MakeStateMap creates a new StateMap object.
+func MakeStateMap() StateMap {
+	return make(map[channel.ID]*channel.State)
+}
+
+// Add adds the given states to the state map.
+func (m StateMap) Add(states ...*channel.State) {
+	for _, s := range states {
+		for key, id := range s.ID {
+			if key == 1 {
+				m[id] = s
+			}
+		}
+	}
+}
+
 // ensureConcluded ensures that conclude or concludeFinal (for non-final and
 // final states, resp.) is called on the adjudicator.
 // - a subscription on Concluded events is established
@@ -107,7 +126,7 @@ func (a *Adjudicator) checkConcludedState(
 	req channel.AdjudicatorReq,
 	subStates channel.StateMap,
 ) error {
-	states := channel.MakeStateMap()
+	states := MakeStateMap()
 	states.Add(req.Tx.State)
 	for _, v := range subStates {
 		states.Add(v)
@@ -117,12 +136,11 @@ func (a *Adjudicator) checkConcludedState(
 	events := make(chan *subscription.Event, adjEventBuffSize)
 	subErr := make(chan error, 1)
 	for id := range states {
-		cId := channel.FromIDKey(id)
 		sub, err := subscription.Subscribe(
 			ctx,
 			a.ContractBackend,
 			a.bound,
-			updateEventType(cId[1]),
+			updateEventType(id),
 			startBlockOffset,
 			a.txFinalityDepth,
 		)
@@ -143,7 +161,7 @@ func (a *Adjudicator) checkConcludedState(
 			fmt.Println("Event: ", e)
 			if adjEvent, ok := e.Data.(*adjudicator.AdjudicatorChannelUpdate); ok && adjEvent.Phase == phaseConcluded {
 				id := adjEvent.ChannelID
-				v := states[channel.IDKey(channel.IDMap{1: id})].Version
+				v := states[id].Version
 				if adjEvent.Version != v {
 					return errors.Errorf("wrong version: expected %v, got %v", v, adjEvent.Version)
 				}
