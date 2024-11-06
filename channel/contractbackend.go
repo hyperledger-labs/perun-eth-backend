@@ -46,7 +46,7 @@ var errTxTimedOut = errors.New("")
 
 var (
 	// SharedExpectedNonces is a map of each expected next nonce of all clients.
-	SharedExpectedNonces map[multi.AssetID]map[common.Address]uint64
+	SharedExpectedNonces map[multi.LedgerIDMapKey]map[common.Address]uint64
 	// SharedExpectedNoncesMutex is a mutex to protect the shared expected nonces map.
 	SharedExpectedNoncesMutex = &sync.Mutex{}
 )
@@ -71,33 +71,35 @@ type ContractBackend struct {
 	tr                Transactor
 	expectedNextNonce map[common.Address]uint64
 	txFinalityDepth   uint64
-	chainID           multi.AssetID
+	chainID           ChainID
 }
 
 // NewContractBackend creates a new ContractBackend with the given parameters.
 // txFinalityDepth defines in how many consecutive blocks a TX has to be
 // included to be considered final. Must be at least 1.
-func NewContractBackend(cf ContractInterface, chainID multi.AssetID, tr Transactor, txFinalityDepth uint64) ContractBackend {
+func NewContractBackend(cf ContractInterface, chainID ChainID, tr Transactor, txFinalityDepth uint64) ContractBackend {
+	SharedExpectedNoncesMutex.Lock()
+	defer SharedExpectedNoncesMutex.Unlock()
 	// Check if the shared maps are initialized, if not, initialize them.
 	if SharedExpectedNonces == nil {
-		SharedExpectedNonces = make(map[multi.AssetID]map[common.Address]uint64)
+		SharedExpectedNonces = make(map[multi.LedgerIDMapKey]map[common.Address]uint64)
 	}
 
 	// Check if the specific chainID entry exists in the shared maps, if not, create it.
-	if _, exists := SharedExpectedNonces[chainID]; !exists {
-		SharedExpectedNonces[chainID] = make(map[common.Address]uint64)
+	if _, exists := SharedExpectedNonces[chainID.MapKey()]; !exists {
+		SharedExpectedNonces[chainID.MapKey()] = make(map[common.Address]uint64)
 	}
 	return ContractBackend{
 		ContractInterface: cf,
 		tr:                tr,
-		expectedNextNonce: SharedExpectedNonces[chainID],
+		expectedNextNonce: SharedExpectedNonces[chainID.MapKey()],
 		txFinalityDepth:   txFinalityDepth,
 		chainID:           chainID,
 	}
 }
 
 // AssetID returns the chain identifier of the contract backend.
-func (c *ContractBackend) ChainID() multi.AssetID {
+func (c *ContractBackend) ChainID() ChainID {
 	return c.chainID
 }
 

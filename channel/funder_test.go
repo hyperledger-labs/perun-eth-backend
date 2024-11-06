@@ -83,7 +83,7 @@ func newFunderSetup(rng *rand.Rand) (
 	ksWallet := wallettest.RandomWallet(1).(*keystore.Wallet)
 	cb := ethchannel.NewContractBackend(
 		simBackend,
-		ethchannel.MakeAssetID(ethchannel.MakeChainID(simBackend.ChainID()).Int),
+		ethchannel.MakeChainID(simBackend.ChainID()),
 		keystore.NewTransactor(*ksWallet, simBackend.Signer),
 		TxFinalityDepth,
 	)
@@ -452,7 +452,7 @@ func newNFunders(
 	simBackend.FundAddress(ctx, tokenAcc.Address)
 	cb := ethchannel.NewContractBackend(
 		simBackend,
-		ethchannel.MakeAssetID(chainID),
+		ethchannel.MakeChainID(chainID),
 		keystore.NewTransactor(*ksWallet, simBackend.Signer),
 		TxFinalityDepth,
 	)

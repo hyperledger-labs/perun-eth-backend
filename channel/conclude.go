@@ -158,7 +158,6 @@ func (a *Adjudicator) checkConcludedState(
 	for {
 		select {
 		case e := <-events:
-			fmt.Println("Event: ", e)
 			if adjEvent, ok := e.Data.(*adjudicator.AdjudicatorChannelUpdate); ok && adjEvent.Phase == phaseConcluded {
 				id := adjEvent.ChannelID
 				v := states[id].Version

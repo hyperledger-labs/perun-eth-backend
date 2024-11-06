@@ -270,7 +270,7 @@ func (f *Funder) fundAssets(ctx context.Context, assets []*Asset, channelID chan
 		// Send the funding TX.
 		tx, err := f.sendFundingTx(ctx, asset, req, contract, fundingIDs[req.Idx])
 		if err != nil {
-			f.log.WithField("asset", asset).WithError(err).Error("Could not fund asset")
+			f.log.WithField("asset", asset).WithError(err).Errorf("Could not fund asset %v", req.Params.Parts[req.Idx])
 			errg.Add(errors.WithMessage(err, "funding asset"))
 			continue
 		}
@@ -320,7 +320,6 @@ func (f *Funder) deposit(ctx context.Context, bal *big.Int, asset Asset, funding
 	if !ok {
 		return nil, errors.Errorf("could not find account for asset #%d", asset)
 	}
-
 	return depositor.Deposit(ctx, *NewDepositReq(bal, f.ContractBackend, asset, acc, fundingID))
 }
 
@@ -392,7 +391,7 @@ func (f *Funder) waitForFundingConfirmation(ctx context.Context, request channel
 	if !ok {
 		return fmt.Errorf("wrong type: expected *Asset, got %T", a)
 	}
-	if ethAsset.LedgerID().MapKey() != f.chainID.LedgerId().MapKey() {
+	if ethAsset.LedgerID().MapKey() != f.chainID.MapKey() {
 		return nil
 	}
 
@@ -457,7 +456,7 @@ func (f *Funder) WaitForOthersFundingConfirmation(ctx context.Context, request c
 		if !ok {
 			return fmt.Errorf("wrong type: expected *Asset, got %T", a)
 		}
-		if ethAsset.LedgerID().MapKey() != f.chainID.LedgerId().MapKey() {
+		if ethAsset.LedgerID().MapKey() != f.chainID.MapKey() {
 			return nil
 		}
 

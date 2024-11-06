@@ -17,7 +17,6 @@ package channel
 import (
 	"context"
 	"math/big"
-	"perun.network/go-perun/channel/multi"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -43,7 +42,7 @@ var _ channel.Adjudicator = (*Adjudicator)(nil)
 type Adjudicator struct {
 	ContractBackend
 	// chainID specifies the chain the funder is living on.
-	chainID  multi.AssetID
+	chainID  ChainID
 	contract *adjudicator.Adjudicator
 	bound    *bind.BoundContract
 	// The address to which we send all funds.
