@@ -47,7 +47,7 @@ generate() {
     mkdir $PKG
 
     # Compile and generate binary runtime.
-    $SOLC --abi --bin --bin-runtime --optimize --allow-paths contracts/vendor, contracts/contracts/$FILE.sol -o $PKG/
+    $SOLC --abi --bin --bin-runtime --optimize --optimize-runs 200 --allow-paths contracts/vendor, contracts/contracts/$FILE.sol -o $PKG/
     BIN_RUNTIME=$(cat ${PKG}/${CONTRACT}.bin-runtime)
     OUT_FILE="$PKG/${CONTRACT}BinRuntime.go"
     echo "package $PKG // import \"github.com/perun-network/perun-eth-backend/bindings/$PKG\"" > $OUT_FILE
