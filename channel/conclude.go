@@ -17,6 +17,7 @@ package channel
 import (
 	"context"
 	"fmt"
+
 	"perun.network/go-perun/wallet"
 
 	"github.com/ethereum/go-ethereum"

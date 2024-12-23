@@ -17,8 +17,10 @@ package test
 import (
 	"context"
 	"fmt"
-	"perun.network/go-perun/wallet"
+	"log"
 	"time"
+
+	"perun.network/go-perun/wallet"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
@@ -26,7 +28,6 @@ import (
 	"github.com/pkg/errors"
 
 	"perun.network/go-perun/channel"
-	"perun.network/go-perun/log"
 )
 
 // A SimAdjudicator is an Adjudicator for simulated backends. Its Register

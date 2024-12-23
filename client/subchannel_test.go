@@ -17,8 +17,9 @@ package client_test
 import (
 	"context"
 	"math/big"
-	"perun.network/go-perun/wallet"
 	"testing"
+
+	"perun.network/go-perun/wallet"
 
 	ethchanneltest "github.com/perun-network/perun-eth-backend/channel/test"
 	ethclienttest "github.com/perun-network/perun-eth-backend/client/test"

@@ -18,6 +18,7 @@ import (
 	"context"
 	"log"
 	"math/big"
+
 	perunwallet "perun.network/go-perun/wallet"
 
 	"github.com/ethereum/go-ethereum"

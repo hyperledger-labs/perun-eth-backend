@@ -17,13 +17,14 @@ package channel
 import (
 	"context"
 	"fmt"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
-	"math/big"
 
 	"github.com/perun-network/perun-eth-backend/bindings"
 	"github.com/perun-network/perun-eth-backend/bindings/assetholder"
@@ -186,7 +187,6 @@ func (a *Adjudicator) newWithdrawalAuth(request channel.AdjudicatorReq, asset as
 }
 
 func encodeAssetHolderWithdrawalAuth(a assetholder.AssetHolderWithdrawalAuth) ([]byte, error) {
-
 	// Define the top-level ABI type for the Authorization struct.
 	authorizationType, err := abi.NewType("tuple", "tuple(bytes32 channelID, tuple(address ethAddress, bytes ccAddress) participant, address receiver, uint256 amount)", []abi.ArgumentMarshaling{
 		{Name: "channelID", Type: "bytes32"},

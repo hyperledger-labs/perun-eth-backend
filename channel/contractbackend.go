@@ -17,8 +17,9 @@ package channel
 import (
 	"context"
 	"math/big"
-	"perun.network/go-perun/channel/multi"
 	"sync"
+
+	"perun.network/go-perun/channel/multi"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"

@@ -17,10 +17,11 @@ package client_test
 import (
 	"context"
 	"math/big"
-	perunwallet "perun.network/go-perun/wallet"
 	"sync"
 	"testing"
 	"time"
+
+	perunwallet "perun.network/go-perun/wallet"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"

@@ -35,7 +35,7 @@ func (randomizer) NewRandomAsset(rng *rand.Rand) channel.Asset {
 func NewRandomAsset(rng *rand.Rand) *ethchannel.Asset {
 	chainID := NewRandomChainID(rng)
 	asset := ethwtest.NewRandomAddress(rng)
-	return ethchannel.NewAsset(chainID.LedgerID.Int, common.Address(asset))
+	return ethchannel.NewAsset(chainID.ChainID(), common.Address(asset))
 }
 
 // NewRandomChainID returns a new random AssetID.

@@ -324,7 +324,7 @@ func assetsToEthAssets(assets []channel.Asset, bIDs []wallet.BackendID) []adjudi
 				log.Panicf("wrong address type: %T", a)
 			}
 			cAddrs[i] = adjudicator.ChannelAsset{
-				ChainID:   asset.assetID.LedgerID.Int,
+				ChainID:   asset.assetID.ChainID(),
 				EthHolder: asset.EthAddress(),
 				CcHolder:  make([]byte, 32),
 			}

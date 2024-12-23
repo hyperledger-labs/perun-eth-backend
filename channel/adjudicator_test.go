@@ -16,9 +16,10 @@ package channel_test
 
 import (
 	"context"
-	"perun.network/go-perun/wallet"
 	"testing"
 	"time"
+
+	"perun.network/go-perun/wallet"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"

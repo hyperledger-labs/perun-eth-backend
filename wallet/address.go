@@ -17,6 +17,7 @@ package wallet
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/perun-network/perun-eth-backend/bindings/assetholder"
 
 	"github.com/ethereum/go-ethereum/common"

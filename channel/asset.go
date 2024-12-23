@@ -54,7 +54,7 @@ func MakeAssetID(id *big.Int) multi.AssetID {
 	if id.Sign() < 0 {
 		panic("must not be smaller than zero")
 	}
-	return AssetID{backendID: 1, LedgerID: MakeChainID(id)}
+	return AssetID{backendID: 1, ledgerID: MakeChainID(id)}
 }
 
 // UnmarshalBinary unmarshals the chainID from its binary representation.
@@ -85,7 +85,7 @@ type (
 
 	AssetID struct {
 		backendID uint32
-		LedgerID  ChainID
+		ledgerID  ChainID
 	}
 
 	// AssetMapKey is the map key representation of an asset.
@@ -96,8 +96,12 @@ func (id AssetID) BackendID() uint32 {
 	return id.backendID
 }
 
-func (id AssetID) LedgerId() multi.LedgerID {
-	return &id.LedgerID
+func (id AssetID) ChainID() *big.Int {
+	return id.ledgerID.Int
+}
+
+func (id AssetID) LedgerID() multi.LedgerID {
+	return &id.ledgerID
 }
 
 func (a Asset) AssetID() multi.AssetID {
@@ -117,7 +121,7 @@ func (a Asset) MapKey() AssetMapKey {
 // MarshalBinary marshals the asset into its binary representation.
 func (a Asset) MarshalBinary() ([]byte, error) {
 	var buf bytes.Buffer
-	err := perunio.Encode(&buf, a.assetID.LedgerID, a.assetID.backendID, &a.AssetHolder)
+	err := perunio.Encode(&buf, a.assetID.ledgerID, a.assetID.backendID, &a.AssetHolder)
 	if err != nil {
 		return nil, err
 	}
@@ -127,12 +131,12 @@ func (a Asset) MarshalBinary() ([]byte, error) {
 // UnmarshalBinary unmarshals the asset from its binary representation.
 func (a *Asset) UnmarshalBinary(data []byte) error {
 	buf := bytes.NewBuffer(data)
-	return perunio.Decode(buf, &a.assetID.LedgerID, &a.assetID.backendID, &a.AssetHolder)
+	return perunio.Decode(buf, &a.assetID.ledgerID, &a.assetID.backendID, &a.AssetHolder)
 }
 
 // LedgerID returns the ledger ID the asset lives on.
 func (a Asset) LedgerID() multi.LedgerID {
-	return a.AssetID().LedgerId()
+	return a.AssetID().LedgerID()
 }
 
 // NewAsset creates a new asset from an chainID and the AssetHolder address.
@@ -152,7 +156,7 @@ func (a Asset) Equal(b channel.Asset) bool {
 	if !ok {
 		return false
 	}
-	return a.assetID.LedgerID.MapKey() == ethAsset.assetID.LedgerID.MapKey() && a.EthAddress() == ethAsset.EthAddress()
+	return a.assetID.LedgerID().MapKey() == ethAsset.assetID.LedgerID().MapKey() && a.EthAddress() == ethAsset.EthAddress()
 }
 
 // Address returns the address of the asset.
@@ -165,7 +169,7 @@ func (a Asset) Address() []byte {
 func filterAssets(assets []channel.Asset, chainID ChainID) []channel.Asset {
 	var filtered []channel.Asset
 	for _, asset := range assets {
-		if a, ok := asset.(*Asset); ok && a.assetID.LedgerID.MapKey() == chainID.MapKey() { //nolint:forcetypeassert // We would have to panic anyways.
+		if a, ok := asset.(*Asset); ok && a.assetID.LedgerID().MapKey() == chainID.MapKey() { //nolint:forcetypeassert // We would have to panic anyways.
 			filtered = append(filtered, a)
 		}
 	}

@@ -16,9 +16,10 @@ package test
 
 import (
 	"math/rand"
+	"time"
+
 	"perun.network/go-perun/wallet"
 	wtest "perun.network/go-perun/wallet/test"
-	"time"
 
 	ethctest "github.com/perun-network/perun-eth-backend/channel/test"
 	ethwtest "github.com/perun-network/perun-eth-backend/wallet/test"

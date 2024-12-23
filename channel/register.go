@@ -16,6 +16,7 @@ package channel
 
 import (
 	"context"
+
 	"perun.network/go-perun/log"
 
 	"github.com/pkg/errors"
