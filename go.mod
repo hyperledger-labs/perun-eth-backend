@@ -2,8 +2,6 @@ module github.com/perun-network/perun-eth-backend
 
 go 1.22
 
-toolchain go1.22.0
-
 require (
 	github.com/ethereum/go-ethereum v1.10.12
 	github.com/miguelmota/go-ethereum-hdwallet v0.1.1
