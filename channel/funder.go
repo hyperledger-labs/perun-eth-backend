@@ -139,6 +139,8 @@ func (f *Funder) IsAssetRegistered(asset Asset) (Depositor, accounts.Account, bo
 // If funding on a real blockchain, make sure that the passed context doesn't
 // cancel before the funding period of length ChallengeDuration elapses, or
 // funding will be canceled prematurely.
+//
+//nolint:funlen
 func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 	f.mtx.RLock()
 	defer f.mtx.RUnlock()

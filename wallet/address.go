@@ -103,7 +103,7 @@ func AsEthAddr(a wallet.Address) common.Address {
 	return common.Address(*addrTyped)
 }
 
-// AsChannelParticipant is a helper function to convert a map of address interfaces back into a channelParticipant
+// AsChannelParticipant is a helper function to convert a map of address interfaces back into a channelParticipant.
 func AsChannelParticipant(a map[wallet.BackendID]wallet.Address) assetholder.ChannelParticipant {
 	_a := assetholder.ChannelParticipant{}
 	for i, address := range a {
@@ -130,6 +130,7 @@ func AsWalletAddr(addr common.Address) *Address {
 	return (*Address)(&addr)
 }
 
+// AddressMapfromAccountMap converts a map of accounts to a map of addresses.
 func AddressMapfromAccountMap(accs map[wallet.BackendID]wallet.Account) map[wallet.BackendID]wallet.Address {
 	addresses := make(map[wallet.BackendID]wallet.Address)
 	for id, a := range accs {

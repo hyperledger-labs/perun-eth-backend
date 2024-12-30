@@ -17,6 +17,7 @@ package channel_test
 import (
 	"context"
 	"fmt"
+	"log"
 	"math"
 	"math/big"
 	"math/rand"
@@ -509,12 +510,12 @@ func newNFunders(
 
 // fundERC20 funds `to` with ERC20 tokens from account `from`.
 func fundERC20(ctx context.Context, cb ethchannel.ContractBackend, from accounts.Account, to common.Address, token common.Address, asset ethchannel.Asset) error {
-	fmt.Println("Funding ERC20")
+	log.Println("Funding ERC20")
 	contract, err := peruntoken.NewPeruntoken(token, cb)
 	if err != nil {
 		return errors.WithMessagef(err, "binding AssetHolderERC20 contract at: %v", asset)
 	}
-	fmt.Println("Contract created")
+	log.Println("Contract created")
 	// Transfer.
 	opts, err := cb.NewTransactor(ctx, txERC20GasLimit, from)
 	if err != nil {

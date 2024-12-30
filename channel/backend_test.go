@@ -100,7 +100,8 @@ func testCalcID(t *testing.T, rng *rand.Rand, contr *adjudicator.Adjudicator, op
 	}
 
 	assert.Panics(t, func() {
-		channel.CalcID(nil)
+		_, err := channel.CalcID(nil)
+		require.NoError(t, err)
 	})
 }
 

@@ -92,18 +92,22 @@ type (
 	AssetMapKey string
 )
 
+// BackendID returns the backend ID of the asset.
 func (id AssetID) BackendID() uint32 {
 	return id.backendID
 }
 
+// ChainID returns the chain ID of the asset.
 func (id AssetID) ChainID() *big.Int {
 	return id.ledgerID.Int
 }
 
+// LedgerID returns the ledger ID of the asset.
 func (id AssetID) LedgerID() multi.LedgerID {
 	return &id.ledgerID
 }
 
+// AssetID returns the asset ID of the asset.
 func (a Asset) AssetID() multi.AssetID {
 	return a.assetID
 }
@@ -169,7 +173,7 @@ func (a Asset) Address() []byte {
 func filterAssets(assets []channel.Asset, chainID ChainID) []channel.Asset {
 	var filtered []channel.Asset
 	for _, asset := range assets {
-		if a, ok := asset.(*Asset); ok && a.assetID.LedgerID().MapKey() == chainID.MapKey() { //nolint:forcetypeassert // We would have to panic anyways.
+		if a, ok := asset.(*Asset); ok && a.assetID.LedgerID().MapKey() == chainID.MapKey() {
 			filtered = append(filtered, a)
 		}
 	}

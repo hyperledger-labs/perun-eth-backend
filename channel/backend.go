@@ -256,7 +256,7 @@ func pwToCommonAddresses(addr []map[wallet.BackendID]wallet.Address) []adjudicat
 			}
 			cAddrs[i].CcAddress = addBytes
 		} else {
-			cAddrs[i].CcAddress = make([]byte, 32)
+			cAddrs[i].CcAddress = make([]byte, 32) //nolint:gomnd
 		}
 	}
 	return cAddrs
@@ -326,7 +326,7 @@ func assetsToEthAssets(assets []channel.Asset, bIDs []wallet.BackendID) []adjudi
 			cAddrs[i] = adjudicator.ChannelAsset{
 				ChainID:   asset.assetID.ChainID(),
 				EthHolder: asset.EthAddress(),
-				CcHolder:  make([]byte, 32),
+				CcHolder:  make([]byte, 32), //nolint:gomnd
 			}
 		} else {
 			asset, err := a.MarshalBinary()
@@ -334,7 +334,7 @@ func assetsToEthAssets(assets []channel.Asset, bIDs []wallet.BackendID) []adjudi
 				log.Panicf("error encoding asset: %v", err)
 			}
 			cAddrs[i] = adjudicator.ChannelAsset{
-				ChainID:   big.NewInt(2),
+				ChainID:   big.NewInt(2), //nolint:gomnd
 				EthHolder: common.HexToAddress("0x0000000000000000000000000000000000000000"),
 				CcHolder:  asset,
 			}
