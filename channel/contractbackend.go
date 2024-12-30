@@ -99,7 +99,7 @@ func NewContractBackend(cf ContractInterface, chainID ChainID, tr Transactor, tx
 	}
 }
 
-// AssetID returns the chain identifier of the contract backend.
+// ChainID returns the chain identifier of the contract backend.
 func (c *ContractBackend) ChainID() ChainID {
 	return c.chainID
 }

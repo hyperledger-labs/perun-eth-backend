@@ -100,6 +100,7 @@ type testLedger struct {
 	asset       *ethchannel.Asset
 }
 
+// AssetID returns the asset ID of the ledger.
 func (l testLedger) AssetID() multi.AssetID {
 	return ethchannel.MakeAssetID(ethchannel.MakeChainID(l.simSetup.SimBackend.ChainID()).Int)
 }

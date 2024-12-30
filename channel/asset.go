@@ -83,6 +83,7 @@ type (
 		AssetHolder wallet.Address
 	}
 
+	// AssetID is the unique identifier of an asset.
 	AssetID struct {
 		backendID uint32
 		ledgerID  ChainID
@@ -145,7 +146,7 @@ func (a Asset) LedgerID() multi.LedgerID {
 
 // NewAsset creates a new asset from an chainID and the AssetHolder address.
 func NewAsset(chainID *big.Int, assetHolder common.Address) *Asset {
-	id := MakeAssetID(chainID).(AssetID)
+	id := MakeAssetID(chainID).(AssetID) //nolint: forcetypeassert // AssetID implements multi.AssetID
 	return &Asset{assetID: id, AssetHolder: *wallet.AsWalletAddr(assetHolder)}
 }
 
