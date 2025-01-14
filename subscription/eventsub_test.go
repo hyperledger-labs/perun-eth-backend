@@ -178,14 +178,14 @@ func TestEventSub_Filter(t *testing.T) {
 	opts, err := cb.NewTransactor(ctx, txGasLimit, *account)
 	require.NoError(t, err)
 	opts.Value = big.NewInt(1)
-	tx, err := ah.Deposit(opts, fundingID[1], big.NewInt(1))
+	tx, err := ah.Deposit(opts, fundingID, big.NewInt(1))
 	require.NoError(t, err)
 	// Wait for the TX to be mined.
 	_, err = cb.ConfirmTransaction(ctx, tx, *account)
 	require.NoError(t, err)
 
 	// Create the filter.
-	Filter := []interface{}{fundingID[1]}
+	Filter := []interface{}{fundingID}
 	// Setup the event sub.
 	sink := make(chan *subscription.Event, 1)
 	eFact := func() *subscription.Event {
@@ -207,7 +207,7 @@ func TestEventSub_Filter(t *testing.T) {
 	e := <-sink
 	require.NotNil(t, e)
 	want := &assetholder.AssetholderDeposited{
-		FundingID: fundingID[1],
+		FundingID: fundingID,
 		Amount:    big.NewInt(int64(1)),
 	}
 	log.Debug("TX0 Hash: ", e.Log.TxHash)

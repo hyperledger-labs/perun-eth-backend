@@ -544,7 +544,7 @@ func compareOnChainAlloc(ctx context.Context, params *channel.Params, balances c
 }
 
 func onChainAllocation(ctx context.Context, cb *ethchannel.ContractBackend, params *channel.Params, _assets []channel.Asset) (channel.Balances, error) {
-	partIDs := ethchannel.FundingIDs(params.ID()[1], params.Parts...)
+	partIDs := ethchannel.FundingIDs(params.ID(), params.Parts...)
 	alloc := make(channel.Balances, len(_assets))
 
 	for k, asset := range _assets {

@@ -175,7 +175,7 @@ func TestAdjudicator_ConcludeWithSubChannels(t *testing.T) {
 
 func toSubChannelsRecursive(ch paramsAndState, m channelMap) (states []paramsAndState) {
 	for _, x := range ch.state.Locked {
-		ch, ok := m[x.ID[1]]
+		ch, ok := m[x.ID]
 		if !ok {
 			panic("sub-state not found")
 		}
@@ -190,7 +190,7 @@ type channelMap map[channel.ID]paramsAndState
 
 func (m channelMap) Add(states ...paramsAndState) {
 	for _, s := range states {
-		m[s.state.ID[1]] = s
+		m[s.state.ID] = s
 	}
 }
 

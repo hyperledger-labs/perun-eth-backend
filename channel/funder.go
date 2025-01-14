@@ -168,7 +168,7 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 	}
 
 	// Fund each asset, saving the TX in `txs` and the errors in `errg`.
-	txs, errg := f.fundAssets(ctx, ethAssets, channelID[1], request)
+	txs, errg := f.fundAssets(ctx, ethAssets, channelID, request)
 
 	// Wait for the TXs to be mined.
 	for a, asset := range ethAssets {
