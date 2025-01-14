@@ -19,6 +19,8 @@ import (
 	"log"
 	"math/big"
 
+	perunwallet "perun.network/go-perun/wallet"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -33,14 +35,14 @@ import (
 )
 
 // Subscribe returns a new AdjudicatorSubscription to adjudicator events.
-func (a *Adjudicator) Subscribe(ctx context.Context, chID channel.ID) (channel.AdjudicatorSubscription, error) {
+func (a *Adjudicator) Subscribe(ctx context.Context, chID map[perunwallet.BackendID]channel.ID) (channel.AdjudicatorSubscription, error) {
 	subErr := make(chan error, 1)
 	events := make(chan *subscription.Event, adjEventBuffSize)
 	eFact := func() *subscription.Event {
 		return &subscription.Event{
 			Name:   bindings.Events.AdjChannelUpdate,
 			Data:   new(adjudicator.AdjudicatorChannelUpdate),
-			Filter: [][]interface{}{{chID}},
+			Filter: [][]interface{}{{chID[1]}},
 		}
 	}
 	sub, err := subscription.Subscribe(ctx, a.ContractBackend, a.bound, eFact, startBlockOffset, a.txFinalityDepth)
@@ -251,11 +253,18 @@ type registerCallData struct {
 
 func (args *registerCallData) signedState(id channel.ID) (*adjudicator.AdjudicatorSignedState, bool) {
 	ch := &args.Channel
-	if ch.State.ChannelID == id {
+	var idx int
+	// check which channelID we want to compare
+	for i, b := range ch.State.Outcome.Backends {
+		if b.Cmp(big.NewInt(1)) == 0 {
+			idx = i
+		}
+	}
+	if ch.State.ChannelID[idx] == id {
 		return ch, true
 	}
 	for _, ch := range args.SubChannels {
-		if ch.State.ChannelID == id {
+		if ch.State.ChannelID[idx] == id {
 			return &ch, true
 		}
 	}

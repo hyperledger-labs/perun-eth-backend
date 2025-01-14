@@ -49,7 +49,7 @@ func TestWallet_Contains(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	w := ethwallettest.NewTmpWallet()
 
-	assert.False(t, w.Contains(ethwallet.AsEthAddr(test.NewRandomAddress(rng))),
+	assert.False(t, w.Contains(ethwallet.AsEthAddr(test.NewRandomAddress(rng, 1))),
 		"Expected wallet not to contain an empty account")
 
 	acc := w.NewAccount()

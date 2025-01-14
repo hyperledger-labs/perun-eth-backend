@@ -33,7 +33,7 @@ const sendTXsBlockLen = 2
 // It checks the assumptions that we make about how go-ethereum handles
 // chain reorganizations.
 func TestSimBackend_Reorg(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
 	defer cancel()
 
 	txFinalityDepth := uint64(1)

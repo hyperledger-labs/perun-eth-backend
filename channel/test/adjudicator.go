@@ -17,7 +17,10 @@ package test
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
+
+	"perun.network/go-perun/wallet"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
@@ -25,7 +28,6 @@ import (
 	"github.com/pkg/errors"
 
 	"perun.network/go-perun/channel"
-	"perun.network/go-perun/log"
 )
 
 // A SimAdjudicator is an Adjudicator for simulated backends. Its Register
@@ -55,7 +57,7 @@ func NewSimAdjudicator(backend ethchannel.ContractBackend, contract common.Addre
 
 // Subscribe returns a RegisteredEvent subscription on the simulated
 // blockchain backend.
-func (a *SimAdjudicator) Subscribe(ctx context.Context, chID channel.ID) (channel.AdjudicatorSubscription, error) {
+func (a *SimAdjudicator) Subscribe(ctx context.Context, chID map[wallet.BackendID]channel.ID) (channel.AdjudicatorSubscription, error) {
 	sub, err := a.Adjudicator.Subscribe(ctx, chID)
 	if err != nil {
 		return nil, err

@@ -26,19 +26,26 @@ var (
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
+	_ = abi.ConvertType
 )
 
 // AssetHolderWithdrawalAuth is an auto generated low-level Go binding around an user-defined struct.
 type AssetHolderWithdrawalAuth struct {
 	ChannelID   [32]byte
-	Participant common.Address
+	Participant ChannelParticipant
 	Receiver    common.Address
 	Amount      *big.Int
 }
 
+// ChannelParticipant is an auto generated low-level Go binding around an user-defined struct.
+type ChannelParticipant struct {
+	EthAddress common.Address
+	CcAddress  []byte
+}
+
 // AssetholderMetaData contains all meta data concerning the Assetholder contract.
 var AssetholderMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"fundingID\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"Deposited\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"channelID\",\"type\":\"bytes32\"}],\"name\":\"OutcomeSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"fundingID\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"receiver\",\"type\":\"address\"}],\"name\":\"Withdrawn\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"adjudicator\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fundingID\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"deposit\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"holdings\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"channelID\",\"type\":\"bytes32\"},{\"internalType\":\"address[]\",\"name\":\"parts\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"newBals\",\"type\":\"uint256[]\"}],\"name\":\"setOutcome\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"settled\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"channelID\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"participant\",\"type\":\"address\"},{\"internalType\":\"addresspayable\",\"name\":\"receiver\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structAssetHolder.WithdrawalAuth\",\"name\":\"authorization\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"name\":\"withdraw\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"fundingID\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"Deposited\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"channelID\",\"type\":\"bytes32\"}],\"name\":\"OutcomeSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"fundingID\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"receiver\",\"type\":\"address\"}],\"name\":\"Withdrawn\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"adjudicator\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"fundingID\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"deposit\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"holdings\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"channelID\",\"type\":\"bytes32\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"ethAddress\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"ccAddress\",\"type\":\"bytes\"}],\"internalType\":\"structChannel.Participant[]\",\"name\":\"parts\",\"type\":\"tuple[]\"},{\"internalType\":\"uint256[]\",\"name\":\"newBals\",\"type\":\"uint256[]\"}],\"name\":\"setOutcome\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"settled\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"channelID\",\"type\":\"bytes32\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"ethAddress\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"ccAddress\",\"type\":\"bytes\"}],\"internalType\":\"structChannel.Participant\",\"name\":\"participant\",\"type\":\"tuple\"},{\"internalType\":\"addresspayable\",\"name\":\"receiver\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"structAssetHolder.WithdrawalAuth\",\"name\":\"authorization\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"name\":\"withdraw\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // AssetholderABI is the input ABI used to generate the binding from.
@@ -142,11 +149,11 @@ func NewAssetholderFilterer(address common.Address, filterer bind.ContractFilter
 
 // bindAssetholder binds a generic wrapper to an already deployed contract.
 func bindAssetholder(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(AssetholderABI))
+	parsed, err := AssetholderMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and
@@ -301,44 +308,44 @@ func (_Assetholder *AssetholderTransactorSession) Deposit(fundingID [32]byte, am
 	return _Assetholder.Contract.Deposit(&_Assetholder.TransactOpts, fundingID, amount)
 }
 
-// SetOutcome is a paid mutator transaction binding the contract method 0xfc79a66d.
+// SetOutcome is a paid mutator transaction binding the contract method 0x295482ce.
 //
-// Solidity: function setOutcome(bytes32 channelID, address[] parts, uint256[] newBals) returns()
-func (_Assetholder *AssetholderTransactor) SetOutcome(opts *bind.TransactOpts, channelID [32]byte, parts []common.Address, newBals []*big.Int) (*types.Transaction, error) {
+// Solidity: function setOutcome(bytes32 channelID, (address,bytes)[] parts, uint256[] newBals) returns()
+func (_Assetholder *AssetholderTransactor) SetOutcome(opts *bind.TransactOpts, channelID [32]byte, parts []ChannelParticipant, newBals []*big.Int) (*types.Transaction, error) {
 	return _Assetholder.contract.Transact(opts, "setOutcome", channelID, parts, newBals)
 }
 
-// SetOutcome is a paid mutator transaction binding the contract method 0xfc79a66d.
+// SetOutcome is a paid mutator transaction binding the contract method 0x295482ce.
 //
-// Solidity: function setOutcome(bytes32 channelID, address[] parts, uint256[] newBals) returns()
-func (_Assetholder *AssetholderSession) SetOutcome(channelID [32]byte, parts []common.Address, newBals []*big.Int) (*types.Transaction, error) {
+// Solidity: function setOutcome(bytes32 channelID, (address,bytes)[] parts, uint256[] newBals) returns()
+func (_Assetholder *AssetholderSession) SetOutcome(channelID [32]byte, parts []ChannelParticipant, newBals []*big.Int) (*types.Transaction, error) {
 	return _Assetholder.Contract.SetOutcome(&_Assetholder.TransactOpts, channelID, parts, newBals)
 }
 
-// SetOutcome is a paid mutator transaction binding the contract method 0xfc79a66d.
+// SetOutcome is a paid mutator transaction binding the contract method 0x295482ce.
 //
-// Solidity: function setOutcome(bytes32 channelID, address[] parts, uint256[] newBals) returns()
-func (_Assetholder *AssetholderTransactorSession) SetOutcome(channelID [32]byte, parts []common.Address, newBals []*big.Int) (*types.Transaction, error) {
+// Solidity: function setOutcome(bytes32 channelID, (address,bytes)[] parts, uint256[] newBals) returns()
+func (_Assetholder *AssetholderTransactorSession) SetOutcome(channelID [32]byte, parts []ChannelParticipant, newBals []*big.Int) (*types.Transaction, error) {
 	return _Assetholder.Contract.SetOutcome(&_Assetholder.TransactOpts, channelID, parts, newBals)
 }
 
-// Withdraw is a paid mutator transaction binding the contract method 0x4ed4283c.
+// Withdraw is a paid mutator transaction binding the contract method 0xfca0f778.
 //
-// Solidity: function withdraw((bytes32,address,address,uint256) authorization, bytes signature) returns()
+// Solidity: function withdraw((bytes32,(address,bytes),address,uint256) authorization, bytes signature) returns()
 func (_Assetholder *AssetholderTransactor) Withdraw(opts *bind.TransactOpts, authorization AssetHolderWithdrawalAuth, signature []byte) (*types.Transaction, error) {
 	return _Assetholder.contract.Transact(opts, "withdraw", authorization, signature)
 }
 
-// Withdraw is a paid mutator transaction binding the contract method 0x4ed4283c.
+// Withdraw is a paid mutator transaction binding the contract method 0xfca0f778.
 //
-// Solidity: function withdraw((bytes32,address,address,uint256) authorization, bytes signature) returns()
+// Solidity: function withdraw((bytes32,(address,bytes),address,uint256) authorization, bytes signature) returns()
 func (_Assetholder *AssetholderSession) Withdraw(authorization AssetHolderWithdrawalAuth, signature []byte) (*types.Transaction, error) {
 	return _Assetholder.Contract.Withdraw(&_Assetholder.TransactOpts, authorization, signature)
 }
 
-// Withdraw is a paid mutator transaction binding the contract method 0x4ed4283c.
+// Withdraw is a paid mutator transaction binding the contract method 0xfca0f778.
 //
-// Solidity: function withdraw((bytes32,address,address,uint256) authorization, bytes signature) returns()
+// Solidity: function withdraw((bytes32,(address,bytes),address,uint256) authorization, bytes signature) returns()
 func (_Assetholder *AssetholderTransactorSession) Withdraw(authorization AssetHolderWithdrawalAuth, signature []byte) (*types.Transaction, error) {
 	return _Assetholder.Contract.Withdraw(&_Assetholder.TransactOpts, authorization, signature)
 }

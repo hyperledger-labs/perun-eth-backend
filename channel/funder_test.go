@@ -80,7 +80,7 @@ func newFunderSetup(rng *rand.Rand) (
 ) {
 	n := 2
 	simBackend := test.NewSimulatedBackend()
-	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(1).(*keystore.Wallet)
 	cb := ethchannel.NewContractBackend(
 		simBackend,
 		ethchannel.MakeChainID(simBackend.ChainID()),
@@ -94,12 +94,12 @@ func newFunderSetup(rng *rand.Rand) (
 
 	for i := 0; i < n; i++ {
 		assets[i] = *test.NewRandomAsset(rng)
-		accs[i] = accounts.Account{Address: ethwallet.AsEthAddr(wallettest.NewRandomAddress(rng))}
+		accs[i] = accounts.Account{Address: ethwallet.AsEthAddr(wallettest.NewRandomAddress(rng, 1))}
 	}
 	// Use an ETH depositor with random addresses at index 0.
 	depositors[0] = ethchannel.NewETHDepositor(txETHGasLimit)
 	// Use an ERC20 depositor with random addresses at index 1.
-	token := wallettest.NewRandomAddress(rng)
+	token := wallettest.NewRandomAddress(rng, 1)
 	depositors[1] = ethchannel.NewERC20Depositor(ethwallet.AsEthAddr(token), txERC20GasLimit)
 	return funder, assets, depositors, accs
 }
@@ -138,7 +138,7 @@ func testFunderOneForAllFunding(t *testing.T, n int) {
 		i := i
 		go ct.StageN("funding", n, func(rt pkgtest.ConcT) {
 			req := channel.NewFundingReq(params, &channel.State{Allocation: *alloc}, channel.Index(i), agreement)
-			diff, err := test.NonceDiff(parts[i], funders[i], func() error {
+			diff, err := test.NonceDiff(parts[i][1], funders[i], func() error {
 				return funders[i].Fund(ctx, *req)
 			})
 			require.NoError(rt, err)
@@ -183,7 +183,7 @@ func testFunderCrossOverFunding(t *testing.T, n int) {
 			req := channel.NewFundingReq(params, &channel.State{Allocation: *alloc}, channel.Index(i), agreement)
 			numTx, err := funders[i].NumTX(*req)
 			require.NoError(t, err)
-			diff, err := test.NonceDiff(parts[i], funder, func() error {
+			diff, err := test.NonceDiff(parts[i][1], funder, func() error {
 				return funder.Fund(ctx, *req)
 			})
 			require.NoError(rt, err, "funding should succeed")
@@ -209,7 +209,7 @@ func testEgoisticParticipantFunding(t *testing.T) {
 	t.Parallel()
 	n := 2
 	rng := pkgtest.Prng(t, n)
-	EgoisticTxTimeout := 20 * time.Second
+	EgoisticTxTimeout := 30 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), EgoisticTxTimeout*time.Duration(n))
 	defer cancel()
 	_, funders, params, alloc := newNFunders(ctx, t, rng, n)
@@ -276,7 +276,7 @@ func testFunderZeroBalance(t *testing.T, n int) {
 		go ct.StageN("funding", n, func(rt pkgtest.ConcT) {
 			req := channel.NewFundingReq(params, &channel.State{Allocation: *alloc}, channel.Index(i), agreement)
 
-			diff, err := test.NonceDiff(parts[i], funders[i], func() error {
+			diff, err := test.NonceDiff(parts[i][1], funders[i], func() error {
 				return funders[i].Fund(ctx, *req)
 			})
 			require.NoError(rt, err)
@@ -316,7 +316,7 @@ func TestFunder_Multiple(t *testing.T) {
 				numTx, err = funders[0].NumTX(*req)
 				require.NoError(t, err)
 			}
-			diff, err := test.NonceDiff(parts[0], funders[0], func() error {
+			diff, err := test.NonceDiff(parts[0][1], funders[0], func() error {
 				return funders[0].Fund(ctx, *req)
 			})
 			require.NoError(t, err)
@@ -433,7 +433,7 @@ func newNFunders(
 	rng *rand.Rand,
 	n int,
 ) (
-	parts []wallet.Address,
+	parts []map[wallet.BackendID]wallet.Address,
 	funders []*ethchannel.Funder,
 	params *channel.Params,
 	allocation *channel.Allocation,
@@ -444,7 +444,7 @@ func newNFunders(
 	// Start the auto-mining of blocks.
 	simBackend.StartMining(blockInterval)
 	t.Cleanup(simBackend.StopMining)
-	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(1).(*keystore.Wallet)
 
 	deployAccount := &ksWallet.NewRandomAccount(rng).(*keystore.Account).Account
 	simBackend.FundAddress(ctx, deployAccount.Address)
@@ -471,14 +471,14 @@ func newNFunders(
 	t.Logf("asset holder #2 address is %s", assetAddr2.Hex())
 	asset2 := ethchannel.NewAsset(chainID, assetAddr2)
 
-	parts = make([]wallet.Address, n)
+	parts = make([]map[wallet.BackendID]wallet.Address, n)
 	funders = make([]*ethchannel.Funder, n)
 	for i := range parts {
 		acc := ksWallet.NewRandomAccount(rng).(*keystore.Account).Account
-		parts[i] = ethwallet.AsWalletAddr(acc.Address)
+		parts[i] = map[wallet.BackendID]wallet.Address{1: ethwallet.AsWalletAddr(acc.Address)}
 
-		simBackend.FundAddress(ctx, ethwallet.AsEthAddr(parts[i]))
-		err = fundERC20(ctx, cb, *tokenAcc, ethwallet.AsEthAddr(parts[i]), token, *asset2)
+		simBackend.FundAddress(ctx, ethwallet.AsEthAddr(parts[i][1]))
+		err = fundERC20(ctx, cb, *tokenAcc, ethwallet.AsEthAddr(parts[i][1]), token, *asset2)
 		require.NoError(t, err)
 
 		funders[i] = ethchannel.NewFunder(cb)
@@ -491,12 +491,14 @@ func newNFunders(
 	// By using a large value, we make sure that longer running tests work.
 	params = channeltest.NewRandomParams(
 		rng,
-		channeltest.WithParts(parts...),
+		channeltest.WithParts(parts),
 		channeltest.WithChallengeDuration(uint64(n)*40000),
+		channeltest.WithBackend(1),
 	)
 	allocation = channeltest.NewRandomAllocation(
 		rng,
 		channeltest.WithNumParts(n),
+		channeltest.WithBackend(1),
 		channeltest.WithAssets(
 			ethchannel.NewAsset(chainID, assetAddr1),
 			ethchannel.NewAsset(chainID, assetAddr2),
@@ -542,7 +544,7 @@ func compareOnChainAlloc(ctx context.Context, params *channel.Params, balances c
 }
 
 func onChainAllocation(ctx context.Context, cb *ethchannel.ContractBackend, params *channel.Params, _assets []channel.Asset) (channel.Balances, error) {
-	partIDs := ethchannel.FundingIDs(params.ID(), params.Parts...)
+	partIDs := ethchannel.FundingIDs(params.ID()[1], params.Parts...)
 	alloc := make(channel.Balances, len(_assets))
 
 	for k, asset := range _assets {

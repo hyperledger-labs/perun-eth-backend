@@ -21,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	perunwallet "perun.network/go-perun/wallet"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -63,10 +65,11 @@ func TestPaymentHappy(t *testing.T) {
 
 	execConfig := &clienttest.AliceBobExecConfig{
 		BaseExecConfig: clienttest.MakeBaseExecConfig(
-			[2]wire.Address{setup[A].Identity.Address(), setup[B].Identity.Address()},
+			[2]map[perunwallet.BackendID]wire.Address{wire.AddressMapfromAccountMap(setup[A].Identity), wire.AddressMapfromAccountMap(setup[B].Identity)},
 			s.Asset,
+			1,
 			[2]*big.Int{big.NewInt(100), big.NewInt(100)},
-			client.WithApp(chtest.NewRandomAppAndData(rng)),
+			client.WithApp(chtest.NewRandomAppAndData(rng, chtest.WithBackend(1))),
 		),
 		NumPayments: [2]int{2, 2},
 		TxAmounts:   [2]*big.Int{big.NewInt(5), big.NewInt(3)},
@@ -98,8 +101,8 @@ func TestPaymentHappy(t *testing.T) {
 		assert.Zero(t, bal.Cmp(b), "ETH balance mismatch")
 	}
 
-	assertBal(s.Recvs[A], finalBalAlice)
-	assertBal(s.Recvs[B], finalBalBob)
+	assertBal(s.Recvs[A][1], finalBalAlice)
+	assertBal(s.Recvs[B][1], finalBalBob)
 
 	log.Info("Happy test done")
 }
@@ -122,8 +125,9 @@ func TestPaymentDispute(t *testing.T) {
 
 	execConfig := &clienttest.MalloryCarolExecConfig{
 		BaseExecConfig: clienttest.MakeBaseExecConfig(
-			[2]wire.Address{setup[A].Identity.Address(), setup[B].Identity.Address()},
+			[2]map[perunwallet.BackendID]wire.Address{wire.AddressMapfromAccountMap(setup[A].Identity), wire.AddressMapfromAccountMap(setup[B].Identity)},
 			s.Asset,
+			1,
 			[2]*big.Int{big.NewInt(100), big.NewInt(1)},
 			client.WithoutApp(),
 		),
@@ -146,7 +150,7 @@ func TestPaymentDispute(t *testing.T) {
 	ctx, cancel = context.WithTimeout(context.Background(), ctest.DefaultTimeout)
 	defer cancel()
 	for i, bal := range finalBal {
-		b, err := s.SimBackend.BalanceAt(ctx, common.Address(*s.Recvs[i]), nil)
+		b, err := s.SimBackend.BalanceAt(ctx, common.Address(*s.Recvs[i][1]), nil)
 		require.NoError(t, err)
 		assert.Zero(t, b.Cmp(bal), "ETH balance mismatch")
 	}
