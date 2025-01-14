@@ -24,7 +24,7 @@ var ks *keystore.KeyStore
 func init() {
 	rnd := newRandomizer()
 	ks = rnd.wallet.Ks
-	test.SetRandomizer(rnd)
+	test.SetRandomizer(rnd, 1)
 }
 
 // Keystore returns the currently set keystore for tests.

@@ -36,6 +36,21 @@ const (
 	adjHeaderBuffSize   = 10
 )
 
+// StateMap represents a channel state tree.
+type StateMap map[channel.ID]*channel.State
+
+// MakeStateMap creates a new StateMap object.
+func MakeStateMap() StateMap {
+	return make(map[channel.ID]*channel.State)
+}
+
+// Add adds the given states to the state map.
+func (m StateMap) Add(states ...*channel.State) {
+	for _, s := range states {
+		m[s.ID] = s
+	}
+}
+
 // ensureConcluded ensures that conclude or concludeFinal (for non-final and
 // final states, resp.) is called on the adjudicator.
 // - a subscription on Concluded events is established
@@ -106,7 +121,7 @@ func (a *Adjudicator) checkConcludedState(
 	req channel.AdjudicatorReq,
 	subStates channel.StateMap,
 ) error {
-	states := channel.MakeStateMap()
+	states := MakeStateMap()
 	states.Add(req.Tx.State)
 	for _, v := range subStates {
 		states.Add(v)

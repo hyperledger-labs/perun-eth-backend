@@ -18,6 +18,9 @@ import (
 	"math/rand"
 	"time"
 
+	"perun.network/go-perun/wallet"
+	wtest "perun.network/go-perun/wallet/test"
+
 	ethctest "github.com/perun-network/perun-eth-backend/channel/test"
 	ethwtest "github.com/perun-network/perun-eth-backend/wallet/test"
 
@@ -29,7 +32,7 @@ import (
 
 const (
 	// DefaultTimeout is the default timeout for client tests.
-	DefaultTimeout = 20 * time.Second
+	DefaultTimeout = 30 * time.Second
 	// BlockInterval is the default block interval for the simulated chain.
 	BlockInterval = 200 * time.Millisecond
 	// challenge duration in blocks that is used by MakeRoleSetups.
@@ -47,12 +50,12 @@ func MakeRoleSetups(rng *rand.Rand, s *ethctest.Setup, names []string) []clientt
 		}
 		setups[i] = clienttest.RoleSetup{
 			Name:        names[i],
-			Identity:    wiretest.NewRandomAccount(rng),
+			Identity:    wiretest.NewRandomAccountMap(rng, 1),
 			Bus:         bus,
 			Funder:      s.Funders[i],
 			Adjudicator: s.Adjs[i],
 			Watcher:     watcher,
-			Wallet:      ethwtest.NewTmpWallet(),
+			Wallet:      map[wallet.BackendID]wtest.Wallet{1: ethwtest.NewTmpWallet()},
 			Timeout:     DefaultTimeout,
 			// Scaled due to simbackend automining progressing faster than real time.
 			ChallengeDuration: challengeDurationBlocks * uint64(time.Second/BlockInterval),

@@ -23,8 +23,8 @@ import (
 )
 
 func init() {
-	test.SetRandomizer(new(randomizer))
+	test.SetRandomizer(new(randomizer), 1)
 	test.SetNewRandomAppID(func(r *rand.Rand) pchannel.AppID {
 		return channel.NewRandomAppID(r)
-	})
+	}, 1)
 }

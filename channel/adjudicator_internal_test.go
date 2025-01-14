@@ -38,13 +38,13 @@ func Test_toEthSubStates(t *testing.T) {
 		{
 			title: "nil map gives nil slice",
 			setup: func() (state *channel.State, subStates channel.StateMap, expected []adjudicator.ChannelState) {
-				return channeltest.NewRandomState(rng), nil, nil
+				return channeltest.NewRandomState(rng, channeltest.WithBackend(1)), nil, nil
 			},
 		},
 		{
 			title: "fresh map gives nil slice",
 			setup: func() (state *channel.State, subStates channel.StateMap, expected []adjudicator.ChannelState) {
-				return channeltest.NewRandomState(rng), nil, nil
+				return channeltest.NewRandomState(rng, channeltest.WithBackend(1)), nil, nil
 			},
 		},
 		{
@@ -84,7 +84,7 @@ func Test_toEthSubStates(t *testing.T) {
 func genStates(rng *rand.Rand, n int) (states []*channel.State) {
 	states = make([]*channel.State, n)
 	for i := range states {
-		states[i] = channeltest.NewRandomState(rng)
+		states[i] = channeltest.NewRandomState(rng, channeltest.WithBackend(1))
 	}
 	return
 }

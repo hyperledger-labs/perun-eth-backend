@@ -19,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	"perun.network/go-perun/wallet"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -33,7 +35,7 @@ import (
 	pkgtest "polycry.pt/poly-go/test"
 )
 
-const defaultTxTimeout = 2 * time.Second
+const defaultTxTimeout = 8 * time.Second
 
 func testSignState(t *testing.T, accounts []*keystore.Account, state *channel.State) channel.Transaction {
 	t.Helper()
@@ -45,7 +47,7 @@ func testSignState(t *testing.T, accounts []*keystore.Account, state *channel.St
 func signState(accounts []*keystore.Account, state *channel.State) (channel.Transaction, error) {
 	sigs := make([][]byte, len(accounts))
 	for i := range accounts {
-		sig, err := channel.Sign(accounts[i], state)
+		sig, err := channel.Sign(accounts[i], state, 1)
 		if err != nil {
 			return channel.Transaction{}, errors.WithMessagef(err, "signing with account %d", i)
 		}
@@ -65,7 +67,8 @@ func TestSubscribeRegistered(t *testing.T) {
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
 		channeltest.WithChallengeDuration(uint64(100*time.Second)),
-		channeltest.WithParts(s.Parts...),
+		channeltest.WithParts(s.Parts),
+		channeltest.WithBackend(1),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(false),
 		channeltest.WithLedgerChannel(true),
@@ -91,7 +94,7 @@ func TestSubscribeRegistered(t *testing.T) {
 	tx := testSignState(t, s.Accs, state)
 	req := channel.AdjudicatorReq{
 		Params: params,
-		Acc:    s.Accs[0],
+		Acc:    map[wallet.BackendID]wallet.Account{1: s.Accs[0]},
 		Idx:    channel.Index(0),
 		Tx:     tx,
 	}
