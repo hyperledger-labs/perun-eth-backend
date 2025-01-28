@@ -1,4 +1,4 @@
-// Copyright 2020 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ func testSignState(t *testing.T, accounts []*keystore.Account, state *channel.St
 func signState(accounts []*keystore.Account, state *channel.State) (channel.Transaction, error) {
 	sigs := make([][]byte, len(accounts))
 	for i := range accounts {
-		sig, err := channel.Sign(accounts[i], state, 1)
+		sig, err := channel.Sign(accounts[i], state, ethwallettest.BackendID)
 		if err != nil {
 			return channel.Transaction{}, errors.WithMessagef(err, "signing with account %d", i)
 		}
@@ -68,7 +68,7 @@ func TestSubscribeRegistered(t *testing.T) {
 		rng,
 		channeltest.WithChallengeDuration(uint64(100*time.Second)),
 		channeltest.WithParts(s.Parts),
-		channeltest.WithBackend(1),
+		channeltest.WithBackend(ethwallettest.BackendID),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(false),
 		channeltest.WithLedgerChannel(true),
@@ -94,7 +94,7 @@ func TestSubscribeRegistered(t *testing.T) {
 	tx := testSignState(t, s.Accs, state)
 	req := channel.AdjudicatorReq{
 		Params: params,
-		Acc:    map[wallet.BackendID]wallet.Account{1: s.Accs[0]},
+		Acc:    map[wallet.BackendID]wallet.Account{ethwallettest.BackendID: s.Accs[0]},
 		Idx:    channel.Index(0),
 		Tx:     tx,
 	}

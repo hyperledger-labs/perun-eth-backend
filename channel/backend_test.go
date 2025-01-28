@@ -1,4 +1,4 @@
-// Copyright 2019 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ package channel_test
 
 import (
 	"context"
+	"github.com/perun-network/perun-eth-backend/wallet"
 	"math/rand"
 	"testing"
 	"time"
@@ -42,7 +43,7 @@ func TestState_ToAndFromEth(t *testing.T) {
 		rng := pkgtest.Prng(t)
 
 		for i := 0; i < 100; i++ {
-			state := test.NewRandomState(rng, test.WithBackend(1))
+			state := test.NewRandomState(rng, test.WithBackend(wallet.BackendID))
 			testToAndFromEthState(t, state)
 		}
 	})
@@ -51,7 +52,7 @@ func TestState_ToAndFromEth(t *testing.T) {
 		rng := pkgtest.Prng(t)
 
 		for i := 0; i < 100; i++ {
-			state := test.NewRandomState(rng, test.WithBackend(1), test.WithNumLocked(int(rng.Int31n(10))))
+			state := test.NewRandomState(rng, test.WithBackend(wallet.BackendID), test.WithNumLocked(int(rng.Int31n(10))))
 			testToAndFromEthState(t, state)
 		}
 	})
@@ -88,7 +89,7 @@ func TestAdjudicator_PureFunctions(t *testing.T) {
 func testCalcID(t *testing.T, rng *rand.Rand, contr *adjudicator.Adjudicator, opts *bind.CallOpts) {
 	t.Helper()
 	for i := 0; i < 100; i++ {
-		opt := test.WithBackend(1)
+		opt := test.WithBackend(wallet.BackendID)
 		params := test.NewRandomParams(rng, opt)
 		ethParams := channel.ToEthParams(params)
 		ethID, err := contr.ChannelID(opts, ethParams)
@@ -108,7 +109,7 @@ func testCalcID(t *testing.T, rng *rand.Rand, contr *adjudicator.Adjudicator, op
 func testHashState(t *testing.T, rng *rand.Rand, contr *adjudicator.Adjudicator, opts *bind.CallOpts) {
 	t.Helper()
 	for i := 0; i < 100; i++ {
-		state := test.NewRandomState(rng, test.WithBackend(1))
+		state := test.NewRandomState(rng, test.WithBackend(wallet.BackendID))
 		ethState := channel.ToEthState(state)
 		ethHash, err := contr.HashState(opts, ethState)
 		require.NoError(t, err)
@@ -130,11 +131,11 @@ func TestGenericTests(t *testing.T) {
 }
 
 func newChannelSetup(rng *rand.Rand) *test.Setup {
-	params, state := test.NewRandomParamsAndState(rng, test.WithNumLocked(int(rng.Int31n(4)+1)), test.WithBackend(1))
-	params2, state2 := test.NewRandomParamsAndState(rng, test.WithIsFinal(!state.IsFinal), test.WithNumLocked(int(rng.Int31n(4)+1)), test.WithBackend(1))
+	params, state := test.NewRandomParamsAndState(rng, test.WithNumLocked(int(rng.Int31n(4)+1)), test.WithBackend(wallet.BackendID))
+	params2, state2 := test.NewRandomParamsAndState(rng, test.WithIsFinal(!state.IsFinal), test.WithNumLocked(int(rng.Int31n(4)+1)), test.WithBackend(wallet.BackendID))
 
 	createAddr := func() map[perunwallet.BackendID]perunwallet.Address {
-		return map[perunwallet.BackendID]perunwallet.Address{1: wallettest.NewRandomAddress(rng, 1)}
+		return map[perunwallet.BackendID]perunwallet.Address{wallet.BackendID: wallettest.NewRandomAddress(rng, wallet.BackendID)}
 	}
 
 	return &test.Setup{
@@ -142,7 +143,7 @@ func newChannelSetup(rng *rand.Rand) *test.Setup {
 		Params2:       params2,
 		State:         state,
 		State2:        state2,
-		Account:       wallettest.NewRandomAccount(rng, 1),
+		Account:       wallettest.NewRandomAccount(rng, wallet.BackendID),
 		RandomAddress: createAddr,
 	}
 }

@@ -1,4 +1,4 @@
-// Copyright 2021 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -50,12 +50,12 @@ func MakeRoleSetups(rng *rand.Rand, s *ethctest.Setup, names []string) []clientt
 		}
 		setups[i] = clienttest.RoleSetup{
 			Name:        names[i],
-			Identity:    wiretest.NewRandomAccountMap(rng, 1),
+			Identity:    wiretest.NewRandomAccountMap(rng, ethwtest.BackendID),
 			Bus:         bus,
 			Funder:      s.Funders[i],
 			Adjudicator: s.Adjs[i],
 			Watcher:     watcher,
-			Wallet:      map[wallet.BackendID]wtest.Wallet{1: ethwtest.NewTmpWallet()},
+			Wallet:      map[wallet.BackendID]wtest.Wallet{ethwtest.BackendID: ethwtest.NewTmpWallet()},
 			Timeout:     DefaultTimeout,
 			// Scaled due to simbackend automining progressing faster than real time.
 			ChallengeDuration: challengeDurationBlocks * uint64(time.Second/BlockInterval),

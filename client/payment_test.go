@@ -1,4 +1,4 @@
-// Copyright 2019 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -67,9 +67,9 @@ func TestPaymentHappy(t *testing.T) {
 		BaseExecConfig: clienttest.MakeBaseExecConfig(
 			[2]map[perunwallet.BackendID]wire.Address{wire.AddressMapfromAccountMap(setup[A].Identity), wire.AddressMapfromAccountMap(setup[B].Identity)},
 			s.Asset,
-			1,
+			wallet.BackendID,
 			[2]*big.Int{big.NewInt(100), big.NewInt(100)},
-			client.WithApp(chtest.NewRandomAppAndData(rng, chtest.WithBackend(1))),
+			client.WithApp(chtest.NewRandomAppAndData(rng, chtest.WithBackend(wallet.BackendID))),
 		),
 		NumPayments: [2]int{2, 2},
 		TxAmounts:   [2]*big.Int{big.NewInt(5), big.NewInt(3)},
@@ -127,7 +127,7 @@ func TestPaymentDispute(t *testing.T) {
 		BaseExecConfig: clienttest.MakeBaseExecConfig(
 			[2]map[perunwallet.BackendID]wire.Address{wire.AddressMapfromAccountMap(setup[A].Identity), wire.AddressMapfromAccountMap(setup[B].Identity)},
 			s.Asset,
-			1,
+			wallet.BackendID,
 			[2]*big.Int{big.NewInt(100), big.NewInt(1)},
 			client.WithoutApp(),
 		),

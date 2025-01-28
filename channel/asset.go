@@ -1,4 +1,4 @@
-// Copyright 2019 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ func MakeAssetID(id *big.Int) multi.AssetID {
 	if id.Sign() < 0 {
 		panic("must not be smaller than zero")
 	}
-	return AssetID{backendID: 1, ledgerID: MakeChainID(id)}
+	return AssetID{backendID: wallet.BackendID, ledgerID: MakeChainID(id)}
 }
 
 // UnmarshalBinary unmarshals the chainID from its binary representation.

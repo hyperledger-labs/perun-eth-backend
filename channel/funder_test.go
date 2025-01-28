@@ -80,7 +80,7 @@ func newFunderSetup(rng *rand.Rand) (
 ) {
 	n := 2
 	simBackend := test.NewSimulatedBackend()
-	ksWallet := wallettest.RandomWallet(1).(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(ethwallet.BackendID).(*keystore.Wallet)
 	cb := ethchannel.NewContractBackend(
 		simBackend,
 		ethchannel.MakeChainID(simBackend.ChainID()),
@@ -94,12 +94,12 @@ func newFunderSetup(rng *rand.Rand) (
 
 	for i := 0; i < n; i++ {
 		assets[i] = *test.NewRandomAsset(rng)
-		accs[i] = accounts.Account{Address: ethwallet.AsEthAddr(wallettest.NewRandomAddress(rng, 1))}
+		accs[i] = accounts.Account{Address: ethwallet.AsEthAddr(wallettest.NewRandomAddress(rng, ethwallet.BackendID))}
 	}
 	// Use an ETH depositor with random addresses at index 0.
 	depositors[0] = ethchannel.NewETHDepositor(txETHGasLimit)
 	// Use an ERC20 depositor with random addresses at index 1.
-	token := wallettest.NewRandomAddress(rng, 1)
+	token := wallettest.NewRandomAddress(rng, ethwallet.BackendID)
 	depositors[1] = ethchannel.NewERC20Depositor(ethwallet.AsEthAddr(token), txERC20GasLimit)
 	return funder, assets, depositors, accs
 }
@@ -444,7 +444,7 @@ func newNFunders(
 	// Start the auto-mining of blocks.
 	simBackend.StartMining(blockInterval)
 	t.Cleanup(simBackend.StopMining)
-	ksWallet := wallettest.RandomWallet(1).(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(ethwallet.BackendID).(*keystore.Wallet)
 
 	deployAccount := &ksWallet.NewRandomAccount(rng).(*keystore.Account).Account
 	simBackend.FundAddress(ctx, deployAccount.Address)
@@ -475,7 +475,7 @@ func newNFunders(
 	funders = make([]*ethchannel.Funder, n)
 	for i := range parts {
 		acc := ksWallet.NewRandomAccount(rng).(*keystore.Account).Account
-		parts[i] = map[wallet.BackendID]wallet.Address{1: ethwallet.AsWalletAddr(acc.Address)}
+		parts[i] = map[wallet.BackendID]wallet.Address{ethwallet.BackendID: ethwallet.AsWalletAddr(acc.Address)}
 
 		simBackend.FundAddress(ctx, ethwallet.AsEthAddr(parts[i][1]))
 		err = fundERC20(ctx, cb, *tokenAcc, ethwallet.AsEthAddr(parts[i][1]), token, *asset2)
@@ -493,12 +493,12 @@ func newNFunders(
 		rng,
 		channeltest.WithParts(parts),
 		channeltest.WithChallengeDuration(uint64(n)*40000),
-		channeltest.WithBackend(1),
+		channeltest.WithBackend(ethwallet.BackendID),
 	)
 	allocation = channeltest.NewRandomAllocation(
 		rng,
 		channeltest.WithNumParts(n),
-		channeltest.WithBackend(1),
+		channeltest.WithBackend(ethwallet.BackendID),
 		channeltest.WithAssets(
 			ethchannel.NewAsset(chainID, assetAddr1),
 			ethchannel.NewAsset(chainID, assetAddr2),

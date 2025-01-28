@@ -1,4 +1,4 @@
-// Copyright 2019 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,12 +19,14 @@ import (
 	"perun.network/go-perun/wallet/test"
 )
 
+const BackendID = 1
+
 var ks *keystore.KeyStore
 
 func init() {
 	rnd := newRandomizer()
 	ks = rnd.wallet.Ks
-	test.SetRandomizer(rnd, 1)
+	test.SetRandomizer(rnd, BackendID)
 }
 
 // Keystore returns the currently set keystore for tests.

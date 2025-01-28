@@ -1,4 +1,4 @@
-// Copyright 2019 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ package channel_test
 
 import (
 	"context"
+	test2 "github.com/perun-network/perun-eth-backend/wallet/test"
 	"math/big"
 	"testing"
 	"time"
@@ -42,35 +43,35 @@ func Test_calcFundingIDs(t *testing.T) {
 	tests := []struct {
 		name         string
 		participants []map[wallet.BackendID]wallet.Address
-		channelID    map[wallet.BackendID][32]byte
+		channelID    [32]byte
 		want         [][32]byte
 	}{
-		{"Test nil array, empty channelID", nil, map[wallet.BackendID][32]byte{}, make([][32]byte, 0)},
-		{"Test nil array, non-empty channelID", nil, map[wallet.BackendID][32]byte{1: {1}}, make([][32]byte, 0)},
-		{"Test empty array, non-empty channelID", []map[wallet.BackendID]wallet.Address{}, map[wallet.BackendID][32]byte{1: {1}}, make([][32]byte, 0)},
+		{"Test nil array, empty channelID", nil, [32]byte{}, make([][32]byte, 0)},
+		{"Test nil array, non-empty channelID", nil, [32]byte{1}, make([][32]byte, 0)},
+		{"Test empty array, non-empty channelID", []map[wallet.BackendID]wallet.Address{}, [32]byte{1}, make([][32]byte, 0)},
 		// Tests based on actual data from contracts.
 		{
 			name:         "Test non-empty array, empty channelID",
-			participants: []map[wallet.BackendID]wallet.Address{{1: &ethwallet.Address{}}},
+			participants: []map[wallet.BackendID]wallet.Address{{test2.BackendID: &ethwallet.Address{}}},
 			want:         [][32]byte{{173, 50, 40, 182, 118, 247, 211, 205, 66, 132, 165, 68, 63, 23, 241, 150, 43, 54, 228, 145, 179, 10, 64, 178, 64, 88, 73, 229, 151, 186, 95, 181}},
 		},
 		{
 			"Test non-empty array, non-empty channelID",
-			[]map[wallet.BackendID]wallet.Address{{1: &ethwallet.Address{}}},
-			map[wallet.BackendID][32]byte{1: {1}},
+			[]map[wallet.BackendID]wallet.Address{{test2.BackendID: &ethwallet.Address{}}},
+			[32]byte{1},
 			[][32]byte{{130, 172, 39, 157, 178, 106, 32, 109, 155, 165, 169, 76, 7, 255, 148, 10, 234, 75, 59, 253, 232, 130, 14, 201, 95, 78, 250, 10, 207, 208, 213, 188}},
 		},
 		{
 			"Test non-empty array, non-empty channelID",
-			[]map[wallet.BackendID]wallet.Address{{1: fromEthAddr(common.BytesToAddress([]byte{}))}},
-			map[wallet.BackendID][32]byte{1: {1}},
+			[]map[wallet.BackendID]wallet.Address{{test2.BackendID: fromEthAddr(common.BytesToAddress([]byte{}))}},
+			[32]byte{1},
 			[][32]byte{{130, 172, 39, 157, 178, 106, 32, 109, 155, 165, 169, 76, 7, 255, 148, 10, 234, 75, 59, 253, 232, 130, 14, 201, 95, 78, 250, 10, 207, 208, 213, 188}},
 		},
 	}
 	for _, _tt := range tests {
 		tt := _tt
 		t.Run(tt.name, func(t *testing.T) {
-			got := ethchannel.FundingIDs(tt.channelID[1], tt.participants...)
+			got := ethchannel.FundingIDs(tt.channelID, tt.participants...)
 			assert.Equal(t, got, tt.want, "FundingIDs not as expected")
 		})
 	}

@@ -1,4 +1,4 @@
-// Copyright 2019 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ func withdrawMultipleConcurrentFinal(t *testing.T, numParts int, parallel bool) 
 		rng,
 		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
-		channeltest.WithBackend(1),
+		channeltest.WithBackend(ethwallet.BackendID),
 		channeltest.WithIsFinal(false),
 		channeltest.WithLedgerChannel(true),
 	)
@@ -96,7 +96,7 @@ func withdrawMultipleConcurrentFinal(t *testing.T, numParts int, parallel bool) 
 				time.Sleep(sleepDuration)
 				req := channel.AdjudicatorReq{
 					Params: params,
-					Acc:    map[wallet.BackendID]wallet.Account{1: s.Accs[i]},
+					Acc:    map[wallet.BackendID]wallet.Account{ethwallet.BackendID: s.Accs[i]},
 					Idx:    channel.Index(i),
 					Tx:     tx,
 				}
@@ -110,7 +110,7 @@ func withdrawMultipleConcurrentFinal(t *testing.T, numParts int, parallel bool) 
 		for i := 0; i < numParts; i++ {
 			req := channel.AdjudicatorReq{
 				Params: params,
-				Acc:    map[wallet.BackendID]wallet.Account{1: s.Accs[i]},
+				Acc:    map[wallet.BackendID]wallet.Account{ethwallet.BackendID: s.Accs[i]},
 				Idx:    channel.Index(i),
 				Tx:     tx,
 			}
@@ -136,7 +136,7 @@ func testWithdrawZeroBalance(t *testing.T, n int) {
 	// create valid state and params
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
-		channeltest.WithBackend(1),
+		channeltest.WithBackend(ethwallet.BackendID),
 		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(true),
@@ -166,7 +166,7 @@ func testWithdrawZeroBalance(t *testing.T, n int) {
 	// register
 	req := channel.AdjudicatorReq{
 		Params: params,
-		Acc:    map[wallet.BackendID]wallet.Account{1: s.Accs[0]},
+		Acc:    map[wallet.BackendID]wallet.Account{ethwallet.BackendID: s.Accs[0]},
 		Tx:     testSignState(t, s.Accs, state),
 		Idx:    0,
 	}
@@ -176,7 +176,7 @@ func testWithdrawZeroBalance(t *testing.T, n int) {
 	// withdraw
 	for i, _adj := range s.Adjs {
 		adj := _adj
-		req.Acc = map[wallet.BackendID]wallet.Account{1: s.Accs[i]}
+		req.Acc = map[wallet.BackendID]wallet.Account{ethwallet.BackendID: s.Accs[i]}
 		req.Idx = channel.Index(i)
 		// check that the nonce stays the same for zero balance withdrawals
 		diff, err := test.NonceDiff(s.Accs[i].Address(), adj, func() error {
@@ -199,7 +199,7 @@ func TestWithdraw(t *testing.T) {
 	// create valid state and params
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
-		channeltest.WithBackend(1),
+		channeltest.WithBackend(ethwallet.BackendID),
 		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(false),
@@ -213,7 +213,7 @@ func TestWithdraw(t *testing.T) {
 	require.NoError(t, s.Funders[0].Fund(fundingCtx, *fundingReq), "funding should succeed")
 	req := channel.AdjudicatorReq{
 		Params: params,
-		Acc:    map[wallet.BackendID]wallet.Account{1: s.Accs[0]},
+		Acc:    map[wallet.BackendID]wallet.Account{ethwallet.BackendID: s.Accs[0]},
 		Idx:    channel.Index(0),
 	}
 
@@ -264,7 +264,7 @@ func TestWithdrawNonFinal(t *testing.T) {
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
 		channeltest.WithChallengeDuration(60),
-		channeltest.WithBackend(1),
+		channeltest.WithBackend(ethwallet.BackendID),
 		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(false),
@@ -286,7 +286,7 @@ func TestWithdrawNonFinal(t *testing.T) {
 	// register
 	req := channel.AdjudicatorReq{
 		Params: params,
-		Acc:    map[wallet.BackendID]wallet.Account{1: s.Accs[0]},
+		Acc:    map[wallet.BackendID]wallet.Account{ethwallet.BackendID: s.Accs[0]},
 		Idx:    0,
 		Tx:     testSignState(t, s.Accs, state),
 	}
