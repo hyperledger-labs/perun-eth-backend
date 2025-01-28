@@ -18,6 +18,7 @@ import (
 	"perun.network/go-perun/wallet"
 )
 
+// BackendID is the ID of the Ethereum backend.
 const BackendID = 1
 
 func init() {

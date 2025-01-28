@@ -19,6 +19,7 @@ import (
 	"perun.network/go-perun/wallet/test"
 )
 
+// BackendID is the ID of the Ethereum backend.
 const BackendID = 1
 
 var ks *keystore.KeyStore
