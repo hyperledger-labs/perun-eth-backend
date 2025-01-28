@@ -16,10 +16,11 @@ package channel_test
 
 import (
 	"context"
-	"github.com/perun-network/perun-eth-backend/wallet"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/perun-network/perun-eth-backend/wallet"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/stretchr/testify/assert"

@@ -15,9 +15,10 @@
 package channel
 
 import (
-	"github.com/perun-network/perun-eth-backend/wallet"
 	"math/rand"
 	"testing"
+
+	"github.com/perun-network/perun-eth-backend/wallet"
 
 	"github.com/perun-network/perun-eth-backend/bindings/adjudicator"
 	"github.com/stretchr/testify/assert"

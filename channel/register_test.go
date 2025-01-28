@@ -17,10 +17,11 @@ package channel_test
 import (
 	"context"
 	"fmt"
-	test2 "github.com/perun-network/perun-eth-backend/wallet/test"
 	"sync"
 	"testing"
 	"time"
+
+	test2 "github.com/perun-network/perun-eth-backend/wallet/test"
 
 	"perun.network/go-perun/wallet"
 
