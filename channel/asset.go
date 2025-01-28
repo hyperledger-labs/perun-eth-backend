@@ -49,8 +49,8 @@ func MakeChainID(id *big.Int) ChainID {
 	return ChainID{id}
 }
 
-// MakeAssetID makes a AssetID for the given id.
-func MakeAssetID(id *big.Int) multi.AssetID {
+// MakeLedgerBackendID makes a AssetID for the given id.
+func MakeLedgerBackendID(id *big.Int) multi.LedgerBackendID {
 	if id.Sign() < 0 {
 		panic("must not be smaller than zero")
 	}
@@ -66,7 +66,7 @@ func (id *ChainID) UnmarshalBinary(data []byte) error {
 // MarshalBinary marshals the chainID into its binary representation.
 func (id ChainID) MarshalBinary() (data []byte, err error) {
 	if id.Sign() == -1 {
-		return nil, errors.New("cannot marshal negative AssetID")
+		return nil, errors.New("cannot marshal negative LedgerBackendID")
 	}
 	return id.Bytes(), nil
 }
@@ -108,8 +108,8 @@ func (id AssetID) LedgerID() multi.LedgerID {
 	return &id.ledgerID
 }
 
-// AssetID returns the asset ID of the asset.
-func (a Asset) AssetID() multi.AssetID {
+// LedgerBackendID returns the asset ID of the asset.
+func (a Asset) LedgerBackendID() multi.LedgerBackendID {
 	return a.assetID
 }
 
@@ -141,12 +141,12 @@ func (a *Asset) UnmarshalBinary(data []byte) error {
 
 // LedgerID returns the ledger ID the asset lives on.
 func (a Asset) LedgerID() multi.LedgerID {
-	return a.AssetID().LedgerID()
+	return a.LedgerBackendID().LedgerID()
 }
 
 // NewAsset creates a new asset from an chainID and the AssetHolder address.
 func NewAsset(chainID *big.Int, assetHolder common.Address) *Asset {
-	id := MakeAssetID(chainID).(AssetID) //nolint: forcetypeassert // AssetID implements multi.AssetID
+	id := MakeLedgerBackendID(chainID).(AssetID) //nolint: forcetypeassert // LedgerBackendID implements multi.LedgerBackendID
 	return &Asset{assetID: id, AssetHolder: *wallet.AsWalletAddr(assetHolder)}
 }
 

@@ -38,9 +38,9 @@ func NewRandomAsset(rng *rand.Rand) *ethchannel.Asset {
 	return ethchannel.NewAsset(chainID.ChainID(), common.Address(asset))
 }
 
-// NewRandomChainID returns a new random AssetID.
+// NewRandomChainID returns a new random LedgerBackendID.
 func NewRandomChainID(rng *rand.Rand) ethchannel.AssetID {
 	r := rng.Uint64()
 	id := new(big.Int).SetUint64(r)
-	return ethchannel.MakeAssetID(id).(ethchannel.AssetID)
+	return ethchannel.MakeLedgerBackendID(id).(ethchannel.AssetID)
 }

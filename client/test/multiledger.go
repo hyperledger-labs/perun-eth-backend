@@ -101,8 +101,8 @@ type testLedger struct {
 }
 
 // AssetID returns the asset ID of the ledger.
-func (l testLedger) AssetID() multi.AssetID {
-	return ethchannel.MakeAssetID(ethchannel.MakeChainID(l.simSetup.SimBackend.ChainID()).Int)
+func (l testLedger) AssetID() multi.LedgerBackendID {
+	return ethchannel.MakeLedgerBackendID(ethchannel.MakeChainID(l.simSetup.SimBackend.ChainID()).Int)
 }
 
 func setupLedger(ctx context.Context, t *testing.T, rng *rand.Rand, chainID *big.Int) testLedger {
