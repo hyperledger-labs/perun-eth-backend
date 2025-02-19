@@ -1,4 +1,4 @@
-// Copyright 2020 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	test2 "github.com/perun-network/perun-eth-backend/wallet/test"
 
 	"perun.network/go-perun/wallet"
 
@@ -56,7 +58,7 @@ func registerMultiple(t *testing.T, numParts int, parallel bool) {
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
 		channeltest.WithChallengeDuration(uint64(100*time.Second)),
-		channeltest.WithBackend(1),
+		channeltest.WithBackend(test2.BackendID),
 		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(false),
@@ -153,7 +155,7 @@ func TestRegister_FinalState(t *testing.T) {
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
 		channeltest.WithChallengeDuration(uint64(100*time.Second)),
-		channeltest.WithBackend(1),
+		channeltest.WithBackend(test2.BackendID),
 		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(true),
@@ -177,7 +179,7 @@ func TestRegister_FinalState(t *testing.T) {
 	tx := testSignState(t, s.Accs, state)
 	req := channel.AdjudicatorReq{
 		Params: params,
-		Acc:    map[wallet.BackendID]wallet.Account{1: s.Accs[0]},
+		Acc:    map[wallet.BackendID]wallet.Account{test2.BackendID: s.Accs[0]},
 		Idx:    channel.Index(0),
 		Tx:     tx,
 	}
@@ -196,7 +198,7 @@ func TestRegister_CancelledContext(t *testing.T) {
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
 		channeltest.WithChallengeDuration(uint64(100*time.Second)),
-		channeltest.WithBackend(1),
+		channeltest.WithBackend(test2.BackendID),
 		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(false),
@@ -221,7 +223,7 @@ func TestRegister_CancelledContext(t *testing.T) {
 	tx := testSignState(t, s.Accs, state)
 	req := channel.AdjudicatorReq{
 		Params: params,
-		Acc:    map[wallet.BackendID]wallet.Account{1: s.Accs[0]},
+		Acc:    map[wallet.BackendID]wallet.Account{test2.BackendID: s.Accs[0]},
 		Idx:    channel.Index(0),
 		Tx:     tx,
 	}

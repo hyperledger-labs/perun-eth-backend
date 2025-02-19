@@ -1,4 +1,4 @@
-// Copyright 2020 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ import (
 	"context"
 	"math/rand"
 	"testing"
+
+	test2 "github.com/perun-network/perun-eth-backend/wallet/test"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -50,7 +52,7 @@ func testConcludeFinal(t *testing.T, numParts int) {
 		rng,
 		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
-		channeltest.WithBackend(1),
+		channeltest.WithBackend(test2.BackendID),
 		channeltest.WithIsFinal(true),
 		channeltest.WithLedgerChannel(true),
 	)
@@ -78,7 +80,7 @@ func testConcludeFinal(t *testing.T, numParts int) {
 		go ct.StageN("register", numParts, func(t pkgtest.ConcT) {
 			req := channel.AdjudicatorReq{
 				Params:    params,
-				Acc:       map[wallet.BackendID]wallet.Account{1: s.Accs[i]},
+				Acc:       map[wallet.BackendID]wallet.Account{test2.BackendID: s.Accs[i]},
 				Idx:       channel.Index(i),
 				Tx:        tx,
 				Secondary: (i != initiator),
@@ -175,7 +177,7 @@ func TestAdjudicator_ConcludeWithSubChannels(t *testing.T) {
 
 func toSubChannelsRecursive(ch paramsAndState, m channelMap) (states []paramsAndState) {
 	for _, x := range ch.state.Locked {
-		ch, ok := m[x.ID[1]]
+		ch, ok := m[x.ID]
 		if !ok {
 			panic("sub-state not found")
 		}
@@ -190,7 +192,7 @@ type channelMap map[channel.ID]paramsAndState
 
 func (m channelMap) Add(states ...paramsAndState) {
 	for _, s := range states {
-		m[s.state.ID[1]] = s
+		m[s.state.ID] = s
 	}
 }
 
@@ -204,7 +206,7 @@ func makeRandomChannel(rng *rand.Rand, participants []map[wallet.BackendID]walle
 		rng,
 		channeltest.WithParts(participants),
 		channeltest.WithAssets(asset),
-		channeltest.WithBackend(1),
+		channeltest.WithBackend(test2.BackendID),
 		channeltest.WithIsFinal(false),
 		channeltest.WithNumLocked(0),
 		channeltest.WithoutApp(),
@@ -257,7 +259,7 @@ func register(ctx context.Context, adj *test.SimAdjudicator, accounts []*keystor
 
 	req := channel.AdjudicatorReq{
 		Params:    ch.params,
-		Acc:       map[wallet.BackendID]wallet.Account{1: accounts[0]},
+		Acc:       map[wallet.BackendID]wallet.Account{test2.BackendID: accounts[0]},
 		Idx:       0,
 		Tx:        tx,
 		Secondary: false,
@@ -280,7 +282,7 @@ func withdraw(ctx context.Context, adj *test.SimAdjudicator, accounts []*keystor
 	for i, a := range accounts {
 		req := channel.AdjudicatorReq{
 			Params:    c.params,
-			Acc:       map[wallet.BackendID]wallet.Account{1: a},
+			Acc:       map[wallet.BackendID]wallet.Account{test2.BackendID: a},
 			Idx:       channel.Index(i),
 			Tx:        tx,
 			Secondary: i != 0,

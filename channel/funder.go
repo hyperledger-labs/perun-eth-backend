@@ -1,4 +1,4 @@
-// Copyright 2019 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -168,7 +168,7 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 	}
 
 	// Fund each asset, saving the TX in `txs` and the errors in `errg`.
-	txs, errg := f.fundAssets(ctx, ethAssets, channelID[1], request)
+	txs, errg := f.fundAssets(ctx, ethAssets, channelID, request)
 
 	// Wait for the TXs to be mined.
 	for a, asset := range ethAssets {

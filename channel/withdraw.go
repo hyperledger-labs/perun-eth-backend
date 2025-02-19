@@ -1,4 +1,4 @@
-// Copyright 2020 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ func (a *Adjudicator) ensureWithdrawn(ctx context.Context, req channel.Adjudicat
 		g.Go(func() error {
 			// Create subscription
 			contract := bindAssetHolder(a.ContractBackend, asset, index)
-			fundingID := FundingIDs(req.Params.ID()[1], req.Params.Parts[req.Idx])[0]
+			fundingID := FundingIDs(req.Params.ID(), req.Params.Parts[req.Idx])[0]
 			events := make(chan *subscription.Event, adjEventBuffSize)
 			subErr := make(chan error, 1)
 			sub, err := subscription.Subscribe(ctx, a.ContractBackend, contract.contract, withdrawnEventType(fundingID), startBlockOffset, a.txFinalityDepth)
@@ -165,14 +165,14 @@ func (a *Adjudicator) callAssetWithdraw(ctx context.Context, request channel.Adj
 }
 
 func (a *Adjudicator) newWithdrawalAuth(request channel.AdjudicatorReq, asset assetHolder) (assetholder.AssetHolderWithdrawalAuth, []byte, error) {
-	fid := FundingID(request.Tx.ID[1], request.Params.Parts[request.Idx][1])
+	fid := FundingID(request.Tx.ID, request.Params.Parts[request.Idx][1])
 	bal, err := asset.Assetholder.Holdings(nil, fid)
 	if err != nil {
 		return assetholder.AssetHolderWithdrawalAuth{}, nil, fmt.Errorf("getting balance: %w", err)
 	}
 
 	auth := assetholder.AssetHolderWithdrawalAuth{
-		ChannelID:   request.Params.ID()[1],
+		ChannelID:   request.Params.ID(),
 		Participant: wallet.AsChannelParticipant(wallet.AddressMapfromAccountMap(request.Acc)),
 		Receiver:    a.Receiver,
 		Amount:      bal,

@@ -1,4 +1,4 @@
-// Copyright 2022 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -101,8 +101,8 @@ type testLedger struct {
 }
 
 // AssetID returns the asset ID of the ledger.
-func (l testLedger) AssetID() multi.AssetID {
-	return ethchannel.MakeAssetID(ethchannel.MakeChainID(l.simSetup.SimBackend.ChainID()).Int)
+func (l testLedger) AssetID() multi.LedgerBackendID {
+	return ethchannel.MakeLedgerBackendID(ethchannel.MakeChainID(l.simSetup.SimBackend.ChainID()).Int)
 }
 
 func setupLedger(ctx context.Context, t *testing.T, rng *rand.Rand, chainID *big.Int) testLedger {
@@ -133,7 +133,7 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 	require := require.New(t)
 
 	// Setup wallet and account.
-	w := map[wallet.BackendID]wtest.Wallet{1: wtest.RandomWallet(1).(*keystore.Wallet)}
+	w := map[wallet.BackendID]wtest.Wallet{ethwallet.BackendID: wtest.RandomWallet(ethwallet.BackendID).(*keystore.Wallet)}
 	acc := w[1].NewRandomAccount(rng).(*keystore.Account)
 
 	// Setup contract backends.
@@ -180,9 +180,9 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 
 	walletAddr := acc.Address().(*ethwallet.Address)
 	wireAddr := &ethwire.Address{Address: walletAddr}
-	perunWallet := map[wallet.BackendID]wallet.Wallet{1: w[1]}
+	perunWallet := map[wallet.BackendID]wallet.Wallet{ethwallet.BackendID: w[ethwallet.BackendID]}
 	c, err := client.New(
-		map[wallet.BackendID]wire.Address{1: wireAddr},
+		map[wallet.BackendID]wire.Address{ethwallet.BackendID: wireAddr},
 		bus,
 		multiFunder,
 		multiAdj,
@@ -195,8 +195,8 @@ func setupClient(t *testing.T, rng *rand.Rand, l1, l2 testLedger, bus wire.Bus) 
 		Client:         c,
 		Adjudicator1:   adjL1,
 		Adjudicator2:   adjL2,
-		WireAddress:    map[wallet.BackendID]wire.Address{1: wireAddr},
-		WalletAddress:  map[wallet.BackendID]wallet.Address{1: walletAddr},
+		WireAddress:    map[wallet.BackendID]wire.Address{ethwallet.BackendID: wireAddr},
+		WalletAddress:  map[wallet.BackendID]wallet.Address{ethwallet.BackendID: walletAddr},
 		Events:         make(chan channel.AdjudicatorEvent),
 		BalanceReader1: l1.simSetup.SimBackend.NewBalanceReader(acc.Address()),
 		BalanceReader2: l2.simSetup.SimBackend.NewBalanceReader(acc.Address()),

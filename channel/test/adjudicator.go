@@ -1,4 +1,4 @@
-// Copyright 2020 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"log"
 	"time"
-
-	"perun.network/go-perun/wallet"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
@@ -57,7 +55,7 @@ func NewSimAdjudicator(backend ethchannel.ContractBackend, contract common.Addre
 
 // Subscribe returns a RegisteredEvent subscription on the simulated
 // blockchain backend.
-func (a *SimAdjudicator) Subscribe(ctx context.Context, chID map[wallet.BackendID]channel.ID) (channel.AdjudicatorSubscription, error) {
+func (a *SimAdjudicator) Subscribe(ctx context.Context, chID channel.ID) (channel.AdjudicatorSubscription, error) {
 	sub, err := a.Adjudicator.Subscribe(ctx, chID)
 	if err != nil {
 		return nil, err

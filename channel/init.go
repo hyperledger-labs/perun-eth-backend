@@ -1,4 +1,4 @@
-// Copyright 2019 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,9 +15,10 @@
 package channel
 
 import (
+	"github.com/perun-network/perun-eth-backend/wallet"
 	"perun.network/go-perun/channel"
 )
 
 func init() {
-	channel.SetBackend(new(Backend), 1)
+	channel.SetBackend(new(Backend), wallet.BackendID)
 }

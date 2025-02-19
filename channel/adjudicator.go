@@ -189,7 +189,7 @@ func ValidateAdjudicator(ctx context.Context, backend bind.ContractCaller, adjud
 // toEthSubStates generates a channel tree in depth-first order.
 func toEthSubStates(state *channel.State, subStates channel.StateMap) (ethSubStates []adjudicator.ChannelState) {
 	for _, subAlloc := range state.Locked {
-		subState, ok := subStates[channel.IDKey(subAlloc.ID)]
+		subState, ok := subStates[subAlloc.ID]
 		if !ok {
 			log.Panic("sub-state not found")
 		}

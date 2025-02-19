@@ -1,4 +1,4 @@
-// Copyright 2020 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,9 +38,9 @@ func NewRandomAsset(rng *rand.Rand) *ethchannel.Asset {
 	return ethchannel.NewAsset(chainID.ChainID(), common.Address(asset))
 }
 
-// NewRandomChainID returns a new random AssetID.
+// NewRandomChainID returns a new random LedgerBackendID.
 func NewRandomChainID(rng *rand.Rand) ethchannel.AssetID {
 	r := rng.Uint64()
 	id := new(big.Int).SetUint64(r)
-	return ethchannel.MakeAssetID(id).(ethchannel.AssetID)
+	return ethchannel.MakeLedgerBackendID(id).(ethchannel.AssetID)
 }

@@ -1,4 +1,4 @@
-// Copyright 2019 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,9 @@ import (
 	"perun.network/go-perun/wallet"
 )
 
+// BackendID is the ID of the Ethereum backend.
+const BackendID = 1
+
 func init() {
-	wallet.SetBackend(new(Backend), 1)
+	wallet.SetBackend(new(Backend), BackendID)
 }

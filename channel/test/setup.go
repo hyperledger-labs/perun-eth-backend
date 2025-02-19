@@ -1,4 +1,4 @@
-// Copyright 2020 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ type (
 func NewSimSetup(t *testing.T, rng *rand.Rand, txFinalityDepth uint64, blockInterval time.Duration, opts ...SimBackendOpt) *SimSetup {
 	t.Helper()
 	simBackend := NewSimulatedBackend(opts...)
-	ksWallet := wallettest.RandomWallet(1).(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(ethwallet.BackendID).(*keystore.Wallet)
 	txAccount := ksWallet.NewRandomAccount(rng).(*keystore.Account)
 	ctx, cancel := context.WithTimeout(context.Background(), defaultSetupTimeout)
 	defer cancel()
@@ -115,12 +115,12 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 	require.NoError(t, err)
 	s.Asset = ethchannel.NewAsset(s.SimBackend.ChainID(), assetHolder)
 
-	ksWallet := wallettest.RandomWallet(1).(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(ethwallet.BackendID).(*keystore.Wallet)
 	for i := 0; i < n; i++ {
 		s.Accs[i] = ksWallet.NewRandomAccount(rng).(*keystore.Account)
-		s.Parts[i] = map[wallet.BackendID]wallet.Address{1: s.Accs[i].Address()}
+		s.Parts[i] = map[wallet.BackendID]wallet.Address{ethwallet.BackendID: s.Accs[i].Address()}
 		s.SimBackend.FundAddress(ctx, s.Accs[i].Account.Address)
-		s.Recvs[i] = map[wallet.BackendID]*ethwallet.Address{1: ksWallet.NewRandomAccount(rng).Address().(*ethwallet.Address)}
+		s.Recvs[i] = map[wallet.BackendID]*ethwallet.Address{ethwallet.BackendID: ksWallet.NewRandomAccount(rng).Address().(*ethwallet.Address)}
 		cb := ethchannel.NewContractBackend(
 			s.SimBackend,
 			ethchannel.MakeChainID(s.SimBackend.ChainID()),

@@ -1,4 +1,4 @@
-// Copyright 2019 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -177,17 +177,11 @@ func ToEthParams(p *channel.Params) adjudicator.ChannelParams {
 // ToEthState converts a channel.State to a ChannelState struct.
 func ToEthState(s *channel.State) adjudicator.ChannelState {
 	backends := make([]*big.Int, len(s.Allocation.Assets))
-	channelIDs := make([]channel.ID, len(s.Allocation.Assets))
 	for i := range s.Allocation.Assets { // we assume that for each asset there is an element in backends corresponding to the backendID the asset belongs to.
 		backends[i] = big.NewInt(int64(s.Allocation.Backends[i]))
-		channelIDs[i] = s.ID[s.Allocation.Backends[i]]
 	}
 	locked := make([]adjudicator.ChannelSubAlloc, len(s.Locked))
 	for i, sub := range s.Locked {
-		subIDs := make([]channel.ID, len(backends))
-		for j := range subIDs {
-			subIDs[j] = sub.ID[s.Allocation.Backends[j]]
-		}
 		// Create index map.
 		indexMap := make([]uint16, s.NumParts())
 		if len(sub.IndexMap) == 0 {
@@ -200,7 +194,7 @@ func ToEthState(s *channel.State) adjudicator.ChannelState {
 			}
 		}
 
-		locked[i] = adjudicator.ChannelSubAlloc{ID: subIDs, Balances: sub.Bals, IndexMap: indexMap}
+		locked[i] = adjudicator.ChannelSubAlloc{ID: sub.ID, Balances: sub.Bals, IndexMap: indexMap}
 	}
 	outcome := adjudicator.ChannelAllocation{
 		Assets:   assetsToEthAssets(s.Allocation.Assets, s.Allocation.Backends),
@@ -217,7 +211,7 @@ func ToEthState(s *channel.State) adjudicator.ChannelState {
 		log.Panicf("error encoding app data: %v", err)
 	}
 	return adjudicator.ChannelState{
-		ChannelID: channelIDs,
+		ChannelID: s.ID,
 		Version:   s.Version,
 		Outcome:   outcome,
 		AppData:   appData,
@@ -264,20 +258,14 @@ func pwToCommonAddresses(addr []map[wallet.BackendID]wallet.Address) []adjudicat
 
 // FromEthState converts a ChannelState to a channel.State struct.
 func FromEthState(app channel.App, s *adjudicator.ChannelState) channel.State {
-	channelIDs := make(map[wallet.BackendID]channel.ID)
 	backends := make([]wallet.BackendID, len(s.Outcome.Backends))
 	for i, b := range s.Outcome.Backends {
 		backends[i] = wallet.BackendID(b.Int64())
-		channelIDs[backends[i]] = s.ChannelID[i]
 	}
 	locked := make([]channel.SubAlloc, len(s.Outcome.Locked))
 	for i, sub := range s.Outcome.Locked {
-		subIDs := make(map[wallet.BackendID]channel.ID)
-		for j := range s.Outcome.Backends {
-			subIDs[backends[j]] = sub.ID[j]
-		}
 		indexMap := makeIndexMap(sub.IndexMap)
-		locked[i] = *channel.NewSubAlloc(subIDs, sub.Balances, indexMap)
+		locked[i] = *channel.NewSubAlloc(sub.ID, sub.Balances, indexMap)
 	}
 	alloc := channel.Allocation{
 		Assets:   fromEthAssets(s.Outcome.Assets, backends),
@@ -296,7 +284,7 @@ func FromEthState(app channel.App, s *adjudicator.ChannelState) channel.State {
 	}
 
 	return channel.State{
-		ID:         channelIDs,
+		ID:         s.ChannelID,
 		Version:    s.Version,
 		Allocation: alloc,
 		App:        app,

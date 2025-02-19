@@ -1,4 +1,4 @@
-// Copyright 2020 - See NOTICE file for copyright holders.
+// Copyright 2024 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@ package channel
 import (
 	"context"
 	"fmt"
-
-	"perun.network/go-perun/wallet"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -49,11 +47,7 @@ func MakeStateMap() StateMap {
 // Add adds the given states to the state map.
 func (m StateMap) Add(states ...*channel.State) {
 	for _, s := range states {
-		for key, id := range s.ID {
-			if key == 1 {
-				m[id] = s
-			}
-		}
+		m[s.ID] = s
 	}
 }
 
@@ -94,7 +88,7 @@ func (a *Adjudicator) ensureConcluded(ctx context.Context, req channel.Adjudicat
 	}
 
 	// Wait for concluded event.
-	sub, events, subErr, err := a.createEventSub(ctx, req.Tx.ID[1], false)
+	sub, events, subErr, err := a.createEventSub(ctx, req.Tx.ID, false)
 	if err != nil {
 		return errors.WithMessage(err, "subscribing")
 	}
@@ -188,7 +182,7 @@ func (a *Adjudicator) waitConcludedSecondary(ctx context.Context, req channel.Ad
 	// `secondaryWaitBlocks + TxFinalityDepth` many blocks.
 	if req.Tx.IsFinal && req.Secondary {
 		// Create subscription.
-		sub, events, subErr, err := a.createEventSub(ctx, req.Tx.ID[1], false)
+		sub, events, subErr, err := a.createEventSub(ctx, req.Tx.ID, false)
 		if err != nil {
 			return false, errors.WithMessage(err, "subscribing")
 		}
@@ -203,7 +197,7 @@ func (a *Adjudicator) waitConcludedSecondary(ctx context.Context, req channel.Ad
 
 func (a *Adjudicator) conclude(ctx context.Context, req channel.AdjudicatorReq, subStates channel.StateMap) error {
 	// If the on-chain state resulted from forced execution, we do not have a fully-signed state and cannot call concludeFinal.
-	forceExecuted, err := a.isForceExecuted(ctx, req.Params.ID()[1])
+	forceExecuted, err := a.isForceExecuted(ctx, req.Params.ID())
 	if err != nil {
 		return errors.WithMessage(err, "checking force execution")
 	}
@@ -221,8 +215,8 @@ func (a *Adjudicator) conclude(ctx context.Context, req channel.AdjudicatorReq, 
 }
 
 // isConcluded returns whether a channel is already concluded.
-func (a *Adjudicator) isConcluded(ctx context.Context, ch map[wallet.BackendID]channel.ID) (bool, error) {
-	sub, events, subErr, err := a.createEventSub(ctx, ch[1], true)
+func (a *Adjudicator) isConcluded(ctx context.Context, ch channel.ID) (bool, error) {
+	sub, events, subErr, err := a.createEventSub(ctx, ch, true)
 	if err != nil {
 		return false, errors.WithMessage(err, "subscribing")
 	}
@@ -283,7 +277,7 @@ func (a *Adjudicator) waitConcludable(ctx context.Context, req channel.Adjudicat
 		return nil
 	}
 
-	sub, events, subErr, err := a.createEventSub(ctx, req.Tx.ID[1], true)
+	sub, events, subErr, err := a.createEventSub(ctx, req.Tx.ID, true)
 	if err != nil {
 		return errors.WithMessage(err, "subscribing")
 	}
