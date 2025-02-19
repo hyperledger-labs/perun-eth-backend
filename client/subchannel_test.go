@@ -48,7 +48,7 @@ func TestSubChannelHappy(t *testing.T) {
 	baseCfg := clienttest.MakeBaseExecConfig(
 		[2]map[wallet.BackendID]wire.Address{wire.AddressMapfromAccountMap(setups[A].Identity), wire.AddressMapfromAccountMap(setups[B].Identity)},
 		s.Asset,
-		1,
+		ethchanneltest.BackendID,
 		[2]*big.Int{big.NewInt(100), big.NewInt(100)},
 		client.WithoutApp(),
 	)
@@ -75,7 +75,7 @@ func TestSubChannelHappy(t *testing.T) {
 		subChannelFunds,
 		subSubChannelFunds,
 		client.WithApp(
-			chtest.NewRandomAppAndData(rng, chtest.WithAppRandomizer(new(payment.Randomizer)), chtest.WithBackend(1)),
+			chtest.NewRandomAppAndData(rng, chtest.WithAppRandomizer(new(payment.Randomizer)), chtest.WithBackend(ethchanneltest.BackendID)),
 		),
 		txAmount,
 	)
@@ -102,7 +102,7 @@ func TestSubChannelDispute(t *testing.T) {
 	baseCfg := clienttest.MakeBaseExecConfig(
 		[2]map[wallet.BackendID]wire.Address{wire.AddressMapfromAccountMap(setups[A].Identity), wire.AddressMapfromAccountMap(setups[B].Identity)},
 		s.Asset,
-		1,
+		ethchanneltest.BackendID,
 		[2]*big.Int{big.NewInt(100), big.NewInt(100)},
 		client.WithoutApp(),
 	)

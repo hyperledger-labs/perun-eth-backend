@@ -32,7 +32,7 @@ import (
 
 const (
 	// DefaultTimeout is the default timeout for client tests.
-	DefaultTimeout = 30 * time.Second
+	DefaultTimeout = 20 * time.Second
 	// BlockInterval is the default block interval for the simulated chain.
 	BlockInterval = 200 * time.Millisecond
 	// challenge duration in blocks that is used by MakeRoleSetups.

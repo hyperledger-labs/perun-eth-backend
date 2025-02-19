@@ -64,7 +64,7 @@ func NewTokenSetup(ctx context.Context, t *testing.T, rng *rand.Rand, txFinality
 	t.Helper()
 	// Simulated chain setup.
 	sb := NewSimulatedBackend()
-	ksWallet := wallettest.RandomWallet(1).(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(BackendID).(*keystore.Wallet)
 	acc1 := &ksWallet.NewRandomAccount(rng).(*keystore.Account).Account
 	sb.FundAddress(ctx, acc1.Address)
 	acc2 := &ksWallet.NewRandomAccount(rng).(*keystore.Account).Account

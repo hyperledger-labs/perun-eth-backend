@@ -67,9 +67,9 @@ func TestPaymentHappy(t *testing.T) {
 		BaseExecConfig: clienttest.MakeBaseExecConfig(
 			[2]map[perunwallet.BackendID]wire.Address{wire.AddressMapfromAccountMap(setup[A].Identity), wire.AddressMapfromAccountMap(setup[B].Identity)},
 			s.Asset,
-			wallet.BackendID,
+			test.BackendID,
 			[2]*big.Int{big.NewInt(100), big.NewInt(100)},
-			client.WithApp(chtest.NewRandomAppAndData(rng, chtest.WithBackend(wallet.BackendID))),
+			client.WithApp(chtest.NewRandomAppAndData(rng, chtest.WithBackend(test.BackendID))),
 		),
 		NumPayments: [2]int{2, 2},
 		TxAmounts:   [2]*big.Int{big.NewInt(5), big.NewInt(3)},
@@ -101,8 +101,8 @@ func TestPaymentHappy(t *testing.T) {
 		assert.Zero(t, bal.Cmp(b), "ETH balance mismatch")
 	}
 
-	assertBal(s.Recvs[A][1], finalBalAlice)
-	assertBal(s.Recvs[B][1], finalBalBob)
+	assertBal(s.Recvs[A][wallet.BackendID], finalBalAlice)
+	assertBal(s.Recvs[B][wallet.BackendID], finalBalBob)
 
 	log.Info("Happy test done")
 }
@@ -127,7 +127,7 @@ func TestPaymentDispute(t *testing.T) {
 		BaseExecConfig: clienttest.MakeBaseExecConfig(
 			[2]map[perunwallet.BackendID]wire.Address{wire.AddressMapfromAccountMap(setup[A].Identity), wire.AddressMapfromAccountMap(setup[B].Identity)},
 			s.Asset,
-			wallet.BackendID,
+			test.BackendID,
 			[2]*big.Int{big.NewInt(100), big.NewInt(1)},
 			client.WithoutApp(),
 		),
@@ -150,7 +150,7 @@ func TestPaymentDispute(t *testing.T) {
 	ctx, cancel = context.WithTimeout(context.Background(), ctest.DefaultTimeout)
 	defer cancel()
 	for i, bal := range finalBal {
-		b, err := s.SimBackend.BalanceAt(ctx, common.Address(*s.Recvs[i][1]), nil)
+		b, err := s.SimBackend.BalanceAt(ctx, common.Address(*s.Recvs[i][wallet.BackendID]), nil)
 		require.NoError(t, err)
 		assert.Zero(t, b.Cmp(bal), "ETH balance mismatch")
 	}

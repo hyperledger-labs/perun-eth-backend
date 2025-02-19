@@ -20,8 +20,6 @@ import (
 	"testing"
 	"time"
 
-	test2 "github.com/perun-network/perun-eth-backend/wallet/test"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
@@ -53,18 +51,18 @@ func Test_calcFundingIDs(t *testing.T) {
 		// Tests based on actual data from contracts.
 		{
 			name:         "Test non-empty array, empty channelID",
-			participants: []map[wallet.BackendID]wallet.Address{{test2.BackendID: &ethwallet.Address{}}},
+			participants: []map[wallet.BackendID]wallet.Address{{ethwallet.BackendID: &ethwallet.Address{}}},
 			want:         [][32]byte{{173, 50, 40, 182, 118, 247, 211, 205, 66, 132, 165, 68, 63, 23, 241, 150, 43, 54, 228, 145, 179, 10, 64, 178, 64, 88, 73, 229, 151, 186, 95, 181}},
 		},
 		{
 			"Test non-empty array, non-empty channelID",
-			[]map[wallet.BackendID]wallet.Address{{test2.BackendID: &ethwallet.Address{}}},
+			[]map[wallet.BackendID]wallet.Address{{ethwallet.BackendID: &ethwallet.Address{}}},
 			[32]byte{1},
 			[][32]byte{{130, 172, 39, 157, 178, 106, 32, 109, 155, 165, 169, 76, 7, 255, 148, 10, 234, 75, 59, 253, 232, 130, 14, 201, 95, 78, 250, 10, 207, 208, 213, 188}},
 		},
 		{
 			"Test non-empty array, non-empty channelID",
-			[]map[wallet.BackendID]wallet.Address{{test2.BackendID: fromEthAddr(common.BytesToAddress([]byte{}))}},
+			[]map[wallet.BackendID]wallet.Address{{ethwallet.BackendID: fromEthAddr(common.BytesToAddress([]byte{}))}},
 			[32]byte{1},
 			[][32]byte{{130, 172, 39, 157, 178, 106, 32, 109, 155, 165, 169, 76, 7, 255, 148, 10, 234, 75, 59, 253, 232, 130, 14, 201, 95, 78, 250, 10, 207, 208, 213, 188}},
 		},

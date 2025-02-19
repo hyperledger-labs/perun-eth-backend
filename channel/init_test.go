@@ -27,7 +27,7 @@ const (
 	TxFinalityDepthMin = 1
 	TxFinalityDepthMax = 10
 
-	defaultTestTimeout = 30 * time.Second
+	defaultTestTimeout = 10 * time.Second
 	blockInterval      = 50 * time.Millisecond
 )
 

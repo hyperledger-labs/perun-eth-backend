@@ -22,9 +22,12 @@ import (
 	"perun.network/go-perun/channel/test"
 )
 
+// BackendID is the ID of the Ethereum backend.
+const BackendID = 1
+
 func init() {
-	test.SetRandomizer(new(randomizer), 1)
+	test.SetRandomizer(new(randomizer), BackendID)
 	test.SetNewRandomAppID(func(r *rand.Rand) pchannel.AppID {
 		return channel.NewRandomAppID(r)
-	}, 1)
+	}, BackendID)
 }

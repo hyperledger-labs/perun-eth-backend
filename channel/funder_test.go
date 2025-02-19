@@ -138,7 +138,7 @@ func testFunderOneForAllFunding(t *testing.T, n int) {
 		i := i
 		go ct.StageN("funding", n, func(rt pkgtest.ConcT) {
 			req := channel.NewFundingReq(params, &channel.State{Allocation: *alloc}, channel.Index(i), agreement)
-			diff, err := test.NonceDiff(parts[i][1], funders[i], func() error {
+			diff, err := test.NonceDiff(parts[i][ethwallet.BackendID], funders[i], func() error {
 				return funders[i].Fund(ctx, *req)
 			})
 			require.NoError(rt, err)
@@ -183,7 +183,7 @@ func testFunderCrossOverFunding(t *testing.T, n int) {
 			req := channel.NewFundingReq(params, &channel.State{Allocation: *alloc}, channel.Index(i), agreement)
 			numTx, err := funders[i].NumTX(*req)
 			require.NoError(t, err)
-			diff, err := test.NonceDiff(parts[i][1], funder, func() error {
+			diff, err := test.NonceDiff(parts[i][ethwallet.BackendID], funder, func() error {
 				return funder.Fund(ctx, *req)
 			})
 			require.NoError(rt, err, "funding should succeed")
@@ -209,7 +209,7 @@ func testEgoisticParticipantFunding(t *testing.T) {
 	t.Parallel()
 	n := 2
 	rng := pkgtest.Prng(t, n)
-	EgoisticTxTimeout := 30 * time.Second
+	EgoisticTxTimeout := 20 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), EgoisticTxTimeout*time.Duration(n))
 	defer cancel()
 	_, funders, params, alloc := newNFunders(ctx, t, rng, n)
@@ -276,7 +276,7 @@ func testFunderZeroBalance(t *testing.T, n int) {
 		go ct.StageN("funding", n, func(rt pkgtest.ConcT) {
 			req := channel.NewFundingReq(params, &channel.State{Allocation: *alloc}, channel.Index(i), agreement)
 
-			diff, err := test.NonceDiff(parts[i][1], funders[i], func() error {
+			diff, err := test.NonceDiff(parts[i][ethwallet.BackendID], funders[i], func() error {
 				return funders[i].Fund(ctx, *req)
 			})
 			require.NoError(rt, err)
@@ -316,7 +316,7 @@ func TestFunder_Multiple(t *testing.T) {
 				numTx, err = funders[0].NumTX(*req)
 				require.NoError(t, err)
 			}
-			diff, err := test.NonceDiff(parts[0][1], funders[0], func() error {
+			diff, err := test.NonceDiff(parts[0][ethwallet.BackendID], funders[0], func() error {
 				return funders[0].Fund(ctx, *req)
 			})
 			require.NoError(t, err)
@@ -477,8 +477,8 @@ func newNFunders(
 		acc := ksWallet.NewRandomAccount(rng).(*keystore.Account).Account
 		parts[i] = map[wallet.BackendID]wallet.Address{ethwallet.BackendID: ethwallet.AsWalletAddr(acc.Address)}
 
-		simBackend.FundAddress(ctx, ethwallet.AsEthAddr(parts[i][1]))
-		err = fundERC20(ctx, cb, *tokenAcc, ethwallet.AsEthAddr(parts[i][1]), token, *asset2)
+		simBackend.FundAddress(ctx, ethwallet.AsEthAddr(parts[i][ethwallet.BackendID]))
+		err = fundERC20(ctx, cb, *tokenAcc, ethwallet.AsEthAddr(parts[i][ethwallet.BackendID]), token, *asset2)
 		require.NoError(t, err)
 
 		funders[i] = ethchannel.NewFunder(cb)

@@ -85,7 +85,6 @@ func (a *Adjudicator) ensureWithdrawn(ctx context.Context, req channel.Adjudicat
 				return nil
 			default:
 			}
-			log.Println("No withdrawn event found in the past, send transaction.", req.Tx.Sigs)
 			// No withdrawn event found in the past, send transaction.
 			if err := a.callAssetWithdraw(ctx, req, contract); err != nil {
 				return errors.WithMessage(err, "withdrawing assets failed")
@@ -165,7 +164,7 @@ func (a *Adjudicator) callAssetWithdraw(ctx context.Context, request channel.Adj
 }
 
 func (a *Adjudicator) newWithdrawalAuth(request channel.AdjudicatorReq, asset assetHolder) (assetholder.AssetHolderWithdrawalAuth, []byte, error) {
-	fid := FundingID(request.Tx.ID, request.Params.Parts[request.Idx][1])
+	fid := FundingID(request.Tx.ID, request.Params.Parts[request.Idx][wallet.BackendID])
 	bal, err := asset.Assetholder.Holdings(nil, fid)
 	if err != nil {
 		return assetholder.AssetHolderWithdrawalAuth{}, nil, fmt.Errorf("getting balance: %w", err)
@@ -182,7 +181,7 @@ func (a *Adjudicator) newWithdrawalAuth(request channel.AdjudicatorReq, asset as
 		return assetholder.AssetHolderWithdrawalAuth{}, nil, errors.WithMessage(err, "encoding withdrawal auth")
 	}
 
-	sig, err := request.Acc[1].SignData(enc)
+	sig, err := request.Acc[wallet.BackendID].SignData(enc)
 	return auth, sig, errors.WithMessage(err, "sign data")
 }
 

@@ -64,7 +64,7 @@ type (
 func NewSimSetup(t *testing.T, rng *rand.Rand, txFinalityDepth uint64, blockInterval time.Duration, opts ...SimBackendOpt) *SimSetup {
 	t.Helper()
 	simBackend := NewSimulatedBackend(opts...)
-	ksWallet := wallettest.RandomWallet(ethwallet.BackendID).(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(BackendID).(*keystore.Wallet)
 	txAccount := ksWallet.NewRandomAccount(rng).(*keystore.Account)
 	ctx, cancel := context.WithTimeout(context.Background(), defaultSetupTimeout)
 	defer cancel()
@@ -115,12 +115,12 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 	require.NoError(t, err)
 	s.Asset = ethchannel.NewAsset(s.SimBackend.ChainID(), assetHolder)
 
-	ksWallet := wallettest.RandomWallet(ethwallet.BackendID).(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(BackendID).(*keystore.Wallet)
 	for i := 0; i < n; i++ {
 		s.Accs[i] = ksWallet.NewRandomAccount(rng).(*keystore.Account)
-		s.Parts[i] = map[wallet.BackendID]wallet.Address{ethwallet.BackendID: s.Accs[i].Address()}
+		s.Parts[i] = map[wallet.BackendID]wallet.Address{BackendID: s.Accs[i].Address()}
 		s.SimBackend.FundAddress(ctx, s.Accs[i].Account.Address)
-		s.Recvs[i] = map[wallet.BackendID]*ethwallet.Address{ethwallet.BackendID: ksWallet.NewRandomAccount(rng).Address().(*ethwallet.Address)}
+		s.Recvs[i] = map[wallet.BackendID]*ethwallet.Address{BackendID: ksWallet.NewRandomAccount(rng).Address().(*ethwallet.Address)}
 		cb := ethchannel.NewContractBackend(
 			s.SimBackend,
 			ethchannel.MakeChainID(s.SimBackend.ChainID()),
@@ -129,7 +129,7 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 		)
 		s.Funders[i] = ethchannel.NewFunder(cb)
 		require.True(t, s.Funders[i].RegisterAsset(*s.Asset, ethchannel.NewETHDepositor(defaultETHGasLimit), s.Accs[i].Account))
-		s.Adjs[i] = NewSimAdjudicator(cb, adjudicator, common.Address(*s.Recvs[i][1]), s.Accs[i].Account)
+		s.Adjs[i] = NewSimAdjudicator(cb, adjudicator, common.Address(*s.Recvs[i][BackendID]), s.Accs[i].Account)
 	}
 
 	return s

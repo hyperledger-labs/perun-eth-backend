@@ -547,7 +547,7 @@ func partIdx(partID [32]byte, fundingIDs [][32]byte) int {
 func FundingIDs(channelID channel.ID, participants ...map[perunwallet.BackendID]perunwallet.Address) [][32]byte {
 	ids := make([][32]byte, len(participants))
 	for idx, pID := range participants {
-		address, ok := pID[1].(*wallet.Address)
+		address, ok := pID[wallet.BackendID].(*wallet.Address)
 		if !ok {
 			log.Panic("wrong address type")
 		}

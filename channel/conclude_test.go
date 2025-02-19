@@ -19,8 +19,6 @@ import (
 	"math/rand"
 	"testing"
 
-	test2 "github.com/perun-network/perun-eth-backend/wallet/test"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -52,7 +50,7 @@ func testConcludeFinal(t *testing.T, numParts int) {
 		rng,
 		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
-		channeltest.WithBackend(test2.BackendID),
+		channeltest.WithBackend(test.BackendID),
 		channeltest.WithIsFinal(true),
 		channeltest.WithLedgerChannel(true),
 	)
@@ -80,7 +78,7 @@ func testConcludeFinal(t *testing.T, numParts int) {
 		go ct.StageN("register", numParts, func(t pkgtest.ConcT) {
 			req := channel.AdjudicatorReq{
 				Params:    params,
-				Acc:       map[wallet.BackendID]wallet.Account{test2.BackendID: s.Accs[i]},
+				Acc:       map[wallet.BackendID]wallet.Account{test.BackendID: s.Accs[i]},
 				Idx:       channel.Index(i),
 				Tx:        tx,
 				Secondary: (i != initiator),
@@ -108,7 +106,7 @@ func TestAdjudicator_ConcludeWithSubChannels(t *testing.T) {
 		numParts                  = 2
 		maxCountSubChannels       = 3
 		maxCountSubSubChannels    = 3
-		minFundingTXBlocksTimeout = 600
+		minFundingTXBlocksTimeout = 200
 		minChallengeDuration      = minFundingTXBlocksTimeout
 		maxChallengeDuration      = 3600
 		challengeDurationSpread   = maxChallengeDuration - minChallengeDuration
@@ -206,7 +204,7 @@ func makeRandomChannel(rng *rand.Rand, participants []map[wallet.BackendID]walle
 		rng,
 		channeltest.WithParts(participants),
 		channeltest.WithAssets(asset),
-		channeltest.WithBackend(test2.BackendID),
+		channeltest.WithBackend(test.BackendID),
 		channeltest.WithIsFinal(false),
 		channeltest.WithNumLocked(0),
 		channeltest.WithoutApp(),
@@ -259,7 +257,7 @@ func register(ctx context.Context, adj *test.SimAdjudicator, accounts []*keystor
 
 	req := channel.AdjudicatorReq{
 		Params:    ch.params,
-		Acc:       map[wallet.BackendID]wallet.Account{test2.BackendID: accounts[0]},
+		Acc:       map[wallet.BackendID]wallet.Account{test.BackendID: accounts[0]},
 		Idx:       0,
 		Tx:        tx,
 		Secondary: false,
@@ -282,7 +280,7 @@ func withdraw(ctx context.Context, adj *test.SimAdjudicator, accounts []*keystor
 	for i, a := range accounts {
 		req := channel.AdjudicatorReq{
 			Params:    c.params,
-			Acc:       map[wallet.BackendID]wallet.Account{test2.BackendID: a},
+			Acc:       map[wallet.BackendID]wallet.Account{test.BackendID: a},
 			Idx:       channel.Index(i),
 			Tx:        tx,
 			Secondary: i != 0,

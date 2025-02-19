@@ -35,7 +35,7 @@ import (
 	pkgtest "polycry.pt/poly-go/test"
 )
 
-const defaultTxTimeout = 8 * time.Second
+const defaultTxTimeout = 2 * time.Second
 
 func testSignState(t *testing.T, accounts []*keystore.Account, state *channel.State) channel.Transaction {
 	t.Helper()

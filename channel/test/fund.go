@@ -26,7 +26,7 @@ import (
 )
 
 // waitTime is the time to wait before funding a channel when the funder is not egoistic.
-const waitTime = 4 * time.Second
+const waitTime = 2 * time.Second
 
 // FunderFinishTime is the returned type of FundAll which includes the process time of each funder.
 type FunderFinishTime struct {

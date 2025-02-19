@@ -17,8 +17,6 @@ package channel
 import (
 	"context"
 
-	"perun.network/go-perun/log"
-
 	"github.com/pkg/errors"
 
 	"perun.network/go-perun/channel"
@@ -38,7 +36,6 @@ func (a *Adjudicator) Register(ctx context.Context, req channel.AdjudicatorReq, 
 func (a *Adjudicator) registerFinal(ctx context.Context, req channel.AdjudicatorReq) error {
 	// In the case of final states, we already call concludeFinal on the
 	// adjudicator. Method ensureConcluded calls concludeFinal for final states.
-	log.Println("Registering final state", req)
 	if err := a.ensureConcluded(ctx, req, nil); err != nil {
 		return errors.WithMessage(err, "ensuring Concluded")
 	}

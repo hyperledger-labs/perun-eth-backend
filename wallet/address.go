@@ -37,7 +37,7 @@ type Address common.Address
 
 // BackendID returns the official identifier for the eth-backend.
 func (a *Address) BackendID() wallet.BackendID {
-	return 1
+	return BackendID
 }
 
 // bytes returns the address as a byte slice.

@@ -237,19 +237,26 @@ func EncodeState(state *adjudicator.ChannelState) ([]byte, error) {
 func pwToCommonAddresses(addr []map[wallet.BackendID]wallet.Address) []adjudicator.ChannelParticipant {
 	cAddrs := make([]adjudicator.ChannelParticipant, len(addr))
 	for i, part := range addr {
-		ethAddr, ok := part[1]
+		ethAddr, ok := part[ethwallet.BackendID]
 		if !ok {
 			log.Panic("eth address not found")
 		}
 		cAddrs[i].EthAddress = ethwallet.AsEthAddr(ethAddr)
-		ccAddr, ok := part[2]
-		if ok {
-			addBytes, err := ccAddr.MarshalBinary()
+		for backendID, walletAddr := range part {
+			if backendID == ethwallet.BackendID {
+				continue // Skip Ethereum address
+			}
+
+			addBytes, err := walletAddr.MarshalBinary()
 			if err != nil {
-				log.Panicf("error encoding unknown address: %v", err)
+				log.Panicf("error encoding address for backend %d: %v", backendID, err)
 			}
 			cAddrs[i].CcAddress = addBytes
-		} else {
+			break // Take only the first non-eth address
+		}
+
+		// If no other addresses exist, initialize CcAddress with 32 zero bytes
+		if cAddrs[i].CcAddress == nil {
 			cAddrs[i].CcAddress = make([]byte, 32) //nolint:gomnd
 		}
 	}
@@ -306,7 +313,7 @@ func assetsToEthAssets(assets []channel.Asset, bIDs []wallet.BackendID) []adjudi
 	cAddrs := make([]adjudicator.ChannelAsset, len(assets))
 	for i, a := range assets {
 		// This means the Asset was defined in this backend.
-		if bIDs[i] == 1 {
+		if bIDs[i] == ethwallet.BackendID {
 			asset, ok := a.(*Asset)
 			if !ok {
 				log.Panicf("wrong address type: %T", a)
@@ -334,7 +341,7 @@ func assetsToEthAssets(assets []channel.Asset, bIDs []wallet.BackendID) []adjudi
 func fromEthAssets(assets []adjudicator.ChannelAsset, bIDs []wallet.BackendID) []channel.Asset {
 	_assets := make([]channel.Asset, len(assets))
 	for i, a := range assets {
-		if bIDs[i] == 1 {
+		if bIDs[i] == ethwallet.BackendID {
 			_assets[i] = NewAsset(a.ChainID, a.EthHolder)
 		} else {
 			_assets[i] = &Asset{}

@@ -66,10 +66,10 @@ func SetupMultiLedgerTest(t *testing.T, testDuration time.Duration) ctest.MultiL
 	c2 := setupClient(t, rng, l1, l2, bus)
 
 	// Fund accounts.
-	l1.simSetup.SimBackend.FundAddress(ctx, ethwallet.AsEthAddr(c1.WalletAddress[1]))
-	l1.simSetup.SimBackend.FundAddress(ctx, ethwallet.AsEthAddr(c2.WalletAddress[1]))
-	l2.simSetup.SimBackend.FundAddress(ctx, ethwallet.AsEthAddr(c1.WalletAddress[1]))
-	l2.simSetup.SimBackend.FundAddress(ctx, ethwallet.AsEthAddr(c2.WalletAddress[1]))
+	l1.simSetup.SimBackend.FundAddress(ctx, ethwallet.AsEthAddr(c1.WalletAddress[ethwallet.BackendID]))
+	l1.simSetup.SimBackend.FundAddress(ctx, ethwallet.AsEthAddr(c2.WalletAddress[ethwallet.BackendID]))
+	l2.simSetup.SimBackend.FundAddress(ctx, ethwallet.AsEthAddr(c1.WalletAddress[ethwallet.BackendID]))
+	l2.simSetup.SimBackend.FundAddress(ctx, ethwallet.AsEthAddr(c2.WalletAddress[ethwallet.BackendID]))
 
 	//nolint:gomnd
 	return ctest.MultiLedgerSetup{

@@ -57,7 +57,7 @@ func TestEventSub(t *testing.T) {
 
 	// Simulated chain setup.
 	sb := test.NewSimulatedBackend()
-	ksWallet := wallettest.RandomWallet(1).(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(test.BackendID).(*keystore.Wallet)
 	account := &ksWallet.NewRandomAccount(rng).(*keystore.Account).Account
 	sb.FundAddress(ctx, account.Address)
 	cb := ethchannel.NewContractBackend(
@@ -71,7 +71,6 @@ func TestEventSub(t *testing.T) {
 	tokenAddr, err := ethchannel.DeployPerunToken(ctx, cb, *account, []common.Address{account.Address}, channeltest.MaxBalance)
 	require.NoError(t, err)
 	token, err := peruntoken.NewPeruntoken(tokenAddr, cb)
-	log.Println("Token Address: ", tokenAddr, err)
 	require.NoError(t, err)
 	ct := pkgtest.NewConcurrent(t)
 
@@ -82,17 +81,14 @@ func TestEventSub(t *testing.T) {
 			if i == n/4 {
 				close(waitSent)
 			}
-			log.Println("Sending ", i)
+			log.Debug("Sending ", i)
 			// Send the transaction.
 			opts, err := cb.NewTransactor(ctx, txGasLimit, *account)
-			log.Println("Transactor: ", opts, err)
 			require.NoError(t, err)
 			tx, err := token.IncreaseAllowance(opts, account.Address, big.NewInt(1))
-			log.Println("TX: ", tx, err)
 			require.NoError(t, err)
 			// Wait for the TX to be mined.
 			_, err = cb.ConfirmTransaction(ctx, tx, *account)
-			log.Println("Confirm TX: ", err)
 			require.NoError(t, err)
 		}
 	})
@@ -106,9 +102,7 @@ func TestEventSub(t *testing.T) {
 	// Setup the event sub after some events have been sent.
 	<-waitSent
 	contract := bind.NewBoundContract(tokenAddr, bindings.ABI.PerunToken, cb, cb, cb)
-	log.Println("Contract: ", contract)
 	sub, err := subscription.NewEventSub(ctx, cb, contract, eFact, 10000)
-	log.Println("Sub")
 	require.NoError(t, err)
 	go ct.Stage("sub", func(t pkgtest.ConcT) {
 		defer close(sink)
@@ -120,21 +114,18 @@ func TestEventSub(t *testing.T) {
 		// Receive `n` unique events.
 		for i := 0; i < n; i++ {
 			e := <-sink
-			log.Println("Read ", i)
+			log.Debug("Read ", i)
 			require.NotNil(t, e)
 			// It is possible to receive the same event twice.
 			if e.Log.TxHash == lastTx {
 				i--
-				log.Println("Duplicate ", i)
 			}
 			lastTx = e.Log.TxHash
-			log.Println("TX Hash: ", lastTx)
 			want := &peruntoken.PeruntokenApproval{
 				Owner:   account.Address,
 				Spender: account.Address,
 				Value:   big.NewInt(int64(i + 1)),
 			}
-			log.Println("Want: ", want)
 			require.Equal(t, want, e.Data)
 			require.False(t, e.Log.Removed)
 		}
@@ -154,7 +145,7 @@ func TestEventSub_Filter(t *testing.T) {
 
 	// Simulated chain setup.
 	sb := test.NewSimulatedBackend()
-	ksWallet := wallettest.RandomWallet(1).(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(test.BackendID).(*keystore.Wallet)
 	account := &ksWallet.NewRandomAccount(rng).(*keystore.Account).Account
 	sb.FundAddress(ctx, account.Address)
 	cb := ethchannel.NewContractBackend(
@@ -174,7 +165,7 @@ func TestEventSub_Filter(t *testing.T) {
 	ct := pkgtest.NewConcurrent(t)
 
 	// Send the transaction.
-	fundingID := channeltest.NewRandomChannelID(rng, channeltest.WithBackend(1))
+	fundingID := channeltest.NewRandomChannelID(rng, channeltest.WithBackend(test.BackendID))
 	opts, err := cb.NewTransactor(ctx, txGasLimit, *account)
 	require.NoError(t, err)
 	opts.Value = big.NewInt(1)
