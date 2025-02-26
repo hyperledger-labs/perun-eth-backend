@@ -1,4 +1,4 @@
-// Copyright 2021 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ func NewTokenSetup(ctx context.Context, t *testing.T, rng *rand.Rand, txFinality
 	t.Helper()
 	// Simulated chain setup.
 	sb := NewSimulatedBackend()
-	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(BackendID).(*keystore.Wallet)
 	acc1 := &ksWallet.NewRandomAccount(rng).(*keystore.Account).Account
 	sb.FundAddress(ctx, acc1.Address)
 	acc2 := &ksWallet.NewRandomAccount(rng).(*keystore.Account).Account

@@ -1,4 +1,4 @@
-// Copyright 2019 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/perun-network/perun-eth-backend/bindings/assetholder"
+
 	"github.com/ethereum/go-ethereum/common"
 
 	"perun.network/go-perun/wallet"
@@ -32,6 +34,11 @@ var _ wallet.Address = (*Address)(nil)
 
 // Address represents an ethereum address as a perun address.
 type Address common.Address
+
+// BackendID returns the official identifier for the eth-backend.
+func (a *Address) BackendID() wallet.BackendID {
+	return BackendID
+}
 
 // bytes returns the address as a byte slice.
 func (a *Address) bytes() []byte {
@@ -70,7 +77,9 @@ func (a *Address) Equal(addr wallet.Address) bool {
 }
 
 // Cmp checks ordering of two addresses.
-//  0 if a==b,
+//
+//	0 if a==b,
+//
 // -1 if a < b,
 // +1 if a > b.
 // https://godoc.org/bytes#Compare
@@ -94,8 +103,38 @@ func AsEthAddr(a wallet.Address) common.Address {
 	return common.Address(*addrTyped)
 }
 
+// AsChannelParticipant is a helper function to convert a map of address interfaces back into a channelParticipant.
+func AsChannelParticipant(a map[wallet.BackendID]wallet.Address) assetholder.ChannelParticipant {
+	_a := assetholder.ChannelParticipant{}
+	for i, address := range a {
+		if i == BackendID {
+			addrTyped, ok := address.(*Address)
+			if !ok {
+				panic(fmt.Sprintf("wrong type: expected %T, got %T", &Address{}, a))
+			}
+			_a.EthAddress = common.Address(*addrTyped)
+		} else {
+			addBytes, err := address.MarshalBinary()
+			if err != nil {
+				panic(fmt.Sprintf("error marshalling ethereum address: %v", err))
+			}
+			_a.CcAddress = addBytes
+		}
+	}
+	return _a
+}
+
 // AsWalletAddr is a helper function to convert an ethereum address to an
 // address interface.
 func AsWalletAddr(addr common.Address) *Address {
 	return (*Address)(&addr)
+}
+
+// AddressMapfromAccountMap converts a map of accounts to a map of addresses.
+func AddressMapfromAccountMap(accs map[wallet.BackendID]wallet.Account) map[wallet.BackendID]wallet.Address {
+	addresses := make(map[wallet.BackendID]wallet.Address)
+	for id, a := range accs {
+		addresses[id] = a.Address()
+	}
+	return addresses
 }

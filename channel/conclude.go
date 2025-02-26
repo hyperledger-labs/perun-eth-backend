@@ -1,4 +1,4 @@
-// Copyright 2020 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,6 +35,21 @@ const (
 	adjEventBuffSize    = 10
 	adjHeaderBuffSize   = 10
 )
+
+// StateMap represents a channel state tree.
+type StateMap map[channel.ID]*channel.State
+
+// MakeStateMap creates a new StateMap object.
+func MakeStateMap() StateMap {
+	return make(map[channel.ID]*channel.State)
+}
+
+// Add adds the given states to the state map.
+func (m StateMap) Add(states ...*channel.State) {
+	for _, s := range states {
+		m[s.ID] = s
+	}
+}
 
 // ensureConcluded ensures that conclude or concludeFinal (for non-final and
 // final states, resp.) is called on the adjudicator.
@@ -106,7 +121,7 @@ func (a *Adjudicator) checkConcludedState(
 	req channel.AdjudicatorReq,
 	subStates channel.StateMap,
 ) error {
-	states := channel.MakeStateMap()
+	states := MakeStateMap()
 	states.Add(req.Tx.State)
 	for _, v := range subStates {
 		states.Add(v)

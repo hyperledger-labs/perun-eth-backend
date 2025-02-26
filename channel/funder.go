@@ -1,4 +1,4 @@
-// Copyright 2019 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -139,6 +139,8 @@ func (f *Funder) IsAssetRegistered(asset Asset) (Depositor, accounts.Account, bo
 // If funding on a real blockchain, make sure that the passed context doesn't
 // cancel before the funding period of length ChallengeDuration elapses, or
 // funding will be canceled prematurely.
+//
+//nolint:funlen
 func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 	f.mtx.RLock()
 	defer f.mtx.RUnlock()
@@ -156,18 +158,22 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 		cancel() // Cancel the context if we return before the block timeout.
 	}()
 
+	// Extract only ethereum Assets to fund
+	var ethAssets []*Asset
+	for _, asset := range request.State.Assets {
+		ethAsset, ok := asset.(*Asset)
+		if ok {
+			ethAssets = append(ethAssets, ethAsset)
+		}
+	}
+
 	// Fund each asset, saving the TX in `txs` and the errors in `errg`.
-	assets := request.State.Assets
-	txs, errg := f.fundAssets(ctx, assets, channelID, request)
+	txs, errg := f.fundAssets(ctx, ethAssets, channelID, request)
 
 	// Wait for the TXs to be mined.
-	for a, asset := range assets {
+	for a, asset := range ethAssets {
 		for i, tx := range txs[a] {
-			assetTyped, ok := asset.(*Asset)
-			if !ok {
-				return fmt.Errorf("wrong type: expected %T, got %T", &Asset{}, asset)
-			}
-			acc := f.accounts[assetTyped.MapKey()]
+			acc := f.accounts[asset.MapKey()]
 			if _, err := f.ConfirmTransaction(ctx, tx, acc); err != nil {
 				if errors.Is(err, errTxTimedOut) {
 					err = client.NewTxTimedoutError(Fund.String(), tx.Hash().Hex(), err.Error())
@@ -217,7 +223,7 @@ func (f *Funder) fundingTimeoutContext(ctx context.Context, req channel.FundingR
 // fundAssets funds each asset of the funding agreement in the `req`.
 // Sends the transactions and returns them. Wait on the returned gatherer
 // to ensure that all `funding` events were received.
-func (f *Funder) fundAssets(ctx context.Context, assets []channel.Asset, channelID channel.ID, req channel.FundingReq) ([]types.Transactions, *perror.Gatherer) {
+func (f *Funder) fundAssets(ctx context.Context, assets []*Asset, channelID channel.ID, req channel.FundingReq) ([]types.Transactions, *perror.Gatherer) {
 	txs := make([]types.Transactions, len(assets))
 	errg := perror.NewGatherer()
 	fundingIDs := FundingIDs(channelID, req.Params.Parts...)
@@ -266,7 +272,7 @@ func (f *Funder) fundAssets(ctx context.Context, assets []channel.Asset, channel
 		// Send the funding TX.
 		tx, err := f.sendFundingTx(ctx, asset, req, contract, fundingIDs[req.Idx])
 		if err != nil {
-			f.log.WithField("asset", asset).WithError(err).Error("Could not fund asset")
+			f.log.WithField("asset", asset).WithError(err).Errorf("Could not fund asset %v", req.Params.Parts[req.Idx])
 			errg.Add(errors.WithMessage(err, "funding asset"))
 			continue
 		}
@@ -316,7 +322,6 @@ func (f *Funder) deposit(ctx context.Context, bal *big.Int, asset Asset, funding
 	if !ok {
 		return nil, errors.Errorf("could not find account for asset #%d", asset)
 	}
-
 	return depositor.Deposit(ctx, *NewDepositReq(bal, f.ContractBackend, asset, acc, fundingID))
 }
 
@@ -388,7 +393,7 @@ func (f *Funder) waitForFundingConfirmation(ctx context.Context, request channel
 	if !ok {
 		return fmt.Errorf("wrong type: expected *Asset, got %T", a)
 	}
-	if ethAsset.ChainID.MapKey() != f.chainID.MapKey() {
+	if ethAsset.LedgerID().MapKey() != f.chainID.MapKey() {
 		return nil
 	}
 
@@ -453,7 +458,7 @@ func (f *Funder) WaitForOthersFundingConfirmation(ctx context.Context, request c
 		if !ok {
 			return fmt.Errorf("wrong type: expected *Asset, got %T", a)
 		}
-		if ethAsset.ChainID.MapKey() != f.chainID.MapKey() {
+		if ethAsset.LedgerID().MapKey() != f.chainID.MapKey() {
 			return nil
 		}
 
@@ -539,10 +544,10 @@ func partIdx(partID [32]byte, fundingIDs [][32]byte) int {
 
 // FundingIDs returns a slice the same size as the number of passed participants
 // where each entry contains the hash Keccak256(channel id || participant address).
-func FundingIDs(channelID channel.ID, participants ...perunwallet.Address) [][32]byte {
+func FundingIDs(channelID channel.ID, participants ...map[perunwallet.BackendID]perunwallet.Address) [][32]byte {
 	ids := make([][32]byte, len(participants))
 	for idx, pID := range participants {
-		address, ok := pID.(*wallet.Address)
+		address, ok := pID[wallet.BackendID].(*wallet.Address)
 		if !ok {
 			log.Panic("wrong address type")
 		}

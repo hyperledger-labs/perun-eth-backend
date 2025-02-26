@@ -1,4 +1,4 @@
-// Copyright 2020 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -54,6 +54,7 @@ func TestProgression(t *testing.T) {
 		BaseExecConfig: clienttest.MakeBaseExecConfig(
 			clientAddresses(roleSetups),
 			backendSetup.Asset,
+			test.BackendID,
 			[2]*big.Int{big.NewInt(99), big.NewInt(1)},
 			client.WithApp(app, channel.NewMockOp(channel.OpValid)),
 		),
@@ -73,9 +74,9 @@ func deployMockApp(t *testing.T, s *test.Setup) wallet.Address {
 	return ethwallet.AsWalletAddr(addr)
 }
 
-func clientAddresses(roleSetups []clienttest.RoleSetup) (addresses [2]wire.Address) {
+func clientAddresses(roleSetups []clienttest.RoleSetup) (addresses [2]map[wallet.BackendID]wire.Address) {
 	for i := 0; i < len(roleSetups); i++ {
-		addresses[i] = roleSetups[i].Identity.Address()
+		addresses[i] = wire.AddressMapfromAccountMap(roleSetups[i].Identity)
 	}
 	return
 }

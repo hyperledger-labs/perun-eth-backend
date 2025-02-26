@@ -1,4 +1,4 @@
-// Copyright 2020 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ package channel
 import (
 	"math/rand"
 	"testing"
+
+	"github.com/perun-network/perun-eth-backend/wallet"
 
 	"github.com/perun-network/perun-eth-backend/bindings/adjudicator"
 	"github.com/stretchr/testify/assert"
@@ -38,13 +40,13 @@ func Test_toEthSubStates(t *testing.T) {
 		{
 			title: "nil map gives nil slice",
 			setup: func() (state *channel.State, subStates channel.StateMap, expected []adjudicator.ChannelState) {
-				return channeltest.NewRandomState(rng), nil, nil
+				return channeltest.NewRandomState(rng, channeltest.WithBackend(wallet.BackendID)), nil, nil
 			},
 		},
 		{
 			title: "fresh map gives nil slice",
 			setup: func() (state *channel.State, subStates channel.StateMap, expected []adjudicator.ChannelState) {
-				return channeltest.NewRandomState(rng), nil, nil
+				return channeltest.NewRandomState(rng, channeltest.WithBackend(wallet.BackendID)), nil, nil
 			},
 		},
 		{
@@ -84,7 +86,7 @@ func Test_toEthSubStates(t *testing.T) {
 func genStates(rng *rand.Rand, n int) (states []*channel.State) {
 	states = make([]*channel.State, n)
 	for i := range states {
-		states[i] = channeltest.NewRandomState(rng)
+		states[i] = channeltest.NewRandomState(rng, channeltest.WithBackend(wallet.BackendID))
 	}
 	return
 }

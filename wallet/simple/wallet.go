@@ -1,4 +1,4 @@
-// Copyright 2021 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -89,13 +89,14 @@ func (w *Wallet) NewRandomAccount(prng *rand.Rand) wallet.Account {
 // Unlock returns the account corresponding to the given address if the wallet
 // contains this account.
 func (w *Wallet) Unlock(address wallet.Address) (wallet.Account, error) {
-	if _, ok := address.(*ethwallet.Address); !ok {
+	ethAddr := address
+	if _, ok := ethAddr.(*ethwallet.Address); !ok {
 		return nil, errors.New("address must be ethwallet.Address")
 	}
 
 	w.mutex.RLock()
 	defer w.mutex.RUnlock()
-	if acc, ok := w.accounts[ethwallet.AsEthAddr(address)]; ok {
+	if acc, ok := w.accounts[ethwallet.AsEthAddr(ethAddr)]; ok {
 		return acc, nil
 	}
 	return nil, errors.New("account not found in wallet")

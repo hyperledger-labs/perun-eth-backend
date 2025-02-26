@@ -26,29 +26,38 @@ var (
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
+	_ = abi.ConvertType
 )
 
 // ChannelAllocation is an auto generated low-level Go binding around an user-defined struct.
 type ChannelAllocation struct {
 	Assets   []ChannelAsset
+	Backends []*big.Int
 	Balances [][]*big.Int
 	Locked   []ChannelSubAlloc
 }
 
 // ChannelAsset is an auto generated low-level Go binding around an user-defined struct.
 type ChannelAsset struct {
-	ChainID *big.Int
-	Holder  common.Address
+	ChainID   *big.Int
+	EthHolder common.Address
+	CcHolder  []byte
 }
 
 // ChannelParams is an auto generated low-level Go binding around an user-defined struct.
 type ChannelParams struct {
 	ChallengeDuration *big.Int
 	Nonce             *big.Int
-	Participants      []common.Address
+	Participants      []ChannelParticipant
 	App               common.Address
 	LedgerChannel     bool
 	VirtualChannel    bool
+}
+
+// ChannelParticipant is an auto generated low-level Go binding around an user-defined struct.
+type ChannelParticipant struct {
+	EthAddress common.Address
+	CcAddress  []byte
 }
 
 // ChannelState is an auto generated low-level Go binding around an user-defined struct.
@@ -69,8 +78,8 @@ type ChannelSubAlloc struct {
 
 // TrivialappMetaData contains all meta data concerning the Trivialapp contract.
 var TrivialappMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"challengeDuration\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"address[]\",\"name\":\"participants\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"app\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"ledgerChannel\",\"type\":\"bool\"},{\"internalType\":\"bool\",\"name\":\"virtualChannel\",\"type\":\"bool\"}],\"internalType\":\"structChannel.Params\",\"name\":\"params\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"channelID\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"},{\"components\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"holder\",\"type\":\"address\"}],\"internalType\":\"structChannel.Asset[]\",\"name\":\"assets\",\"type\":\"tuple[]\"},{\"internalType\":\"uint256[][]\",\"name\":\"balances\",\"type\":\"uint256[][]\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"ID\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"balances\",\"type\":\"uint256[]\"},{\"internalType\":\"uint16[]\",\"name\":\"indexMap\",\"type\":\"uint16[]\"}],\"internalType\":\"structChannel.SubAlloc[]\",\"name\":\"locked\",\"type\":\"tuple[]\"}],\"internalType\":\"structChannel.Allocation\",\"name\":\"outcome\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"appData\",\"type\":\"bytes\"},{\"internalType\":\"bool\",\"name\":\"isFinal\",\"type\":\"bool\"}],\"internalType\":\"structChannel.State\",\"name\":\"from\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"channelID\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"},{\"components\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"holder\",\"type\":\"address\"}],\"internalType\":\"structChannel.Asset[]\",\"name\":\"assets\",\"type\":\"tuple[]\"},{\"internalType\":\"uint256[][]\",\"name\":\"balances\",\"type\":\"uint256[][]\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"ID\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"balances\",\"type\":\"uint256[]\"},{\"internalType\":\"uint16[]\",\"name\":\"indexMap\",\"type\":\"uint16[]\"}],\"internalType\":\"structChannel.SubAlloc[]\",\"name\":\"locked\",\"type\":\"tuple[]\"}],\"internalType\":\"structChannel.Allocation\",\"name\":\"outcome\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"appData\",\"type\":\"bytes\"},{\"internalType\":\"bool\",\"name\":\"isFinal\",\"type\":\"bool\"}],\"internalType\":\"structChannel.State\",\"name\":\"to\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"actorIdx\",\"type\":\"uint256\"}],\"name\":\"validTransition\",\"outputs\":[],\"stateMutability\":\"pure\",\"type\":\"function\"}]",
-	Bin: "0x608060405234801561001057600080fd5b5061011c806100206000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c80636d7eba0d14602d575b600080fd5b603e60383660046057565b50505050565b005b600060a08284031215605157600080fd5b50919050565b60008060008060808587031215606c57600080fd5b843567ffffffffffffffff80821115608357600080fd5b9086019060c08289031215609657600080fd5b9094506020860135908082111560ab57600080fd5b60b5888389016040565b9450604087013591508082111560ca57600080fd5b5060d5878288016040565b94979396509394606001359350505056fea2646970667358221220b17a6a2d2be5ce04b000b481d81bcfd781fadfaa0cd797d14f2caed99a9c17e664736f6c634300080f0033",
+	ABI: "[{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"challengeDuration\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"ethAddress\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"ccAddress\",\"type\":\"bytes\"}],\"internalType\":\"structChannel.Participant[]\",\"name\":\"participants\",\"type\":\"tuple[]\"},{\"internalType\":\"address\",\"name\":\"app\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"ledgerChannel\",\"type\":\"bool\"},{\"internalType\":\"bool\",\"name\":\"virtualChannel\",\"type\":\"bool\"}],\"internalType\":\"structChannel.Params\",\"name\":\"params\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"channelID\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"},{\"components\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"ethHolder\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"ccHolder\",\"type\":\"bytes\"}],\"internalType\":\"structChannel.Asset[]\",\"name\":\"assets\",\"type\":\"tuple[]\"},{\"internalType\":\"uint256[]\",\"name\":\"backends\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[][]\",\"name\":\"balances\",\"type\":\"uint256[][]\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"ID\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"balances\",\"type\":\"uint256[]\"},{\"internalType\":\"uint16[]\",\"name\":\"indexMap\",\"type\":\"uint16[]\"}],\"internalType\":\"structChannel.SubAlloc[]\",\"name\":\"locked\",\"type\":\"tuple[]\"}],\"internalType\":\"structChannel.Allocation\",\"name\":\"outcome\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"appData\",\"type\":\"bytes\"},{\"internalType\":\"bool\",\"name\":\"isFinal\",\"type\":\"bool\"}],\"internalType\":\"structChannel.State\",\"name\":\"from\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"channelID\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"},{\"components\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"ethHolder\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"ccHolder\",\"type\":\"bytes\"}],\"internalType\":\"structChannel.Asset[]\",\"name\":\"assets\",\"type\":\"tuple[]\"},{\"internalType\":\"uint256[]\",\"name\":\"backends\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[][]\",\"name\":\"balances\",\"type\":\"uint256[][]\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"ID\",\"type\":\"bytes32\"},{\"internalType\":\"uint256[]\",\"name\":\"balances\",\"type\":\"uint256[]\"},{\"internalType\":\"uint16[]\",\"name\":\"indexMap\",\"type\":\"uint16[]\"}],\"internalType\":\"structChannel.SubAlloc[]\",\"name\":\"locked\",\"type\":\"tuple[]\"}],\"internalType\":\"structChannel.Allocation\",\"name\":\"outcome\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"appData\",\"type\":\"bytes\"},{\"internalType\":\"bool\",\"name\":\"isFinal\",\"type\":\"bool\"}],\"internalType\":\"structChannel.State\",\"name\":\"to\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"actorIdx\",\"type\":\"uint256\"}],\"name\":\"validTransition\",\"outputs\":[],\"stateMutability\":\"pure\",\"type\":\"function\"}]",
+	Bin: "0x608060405234801561001057600080fd5b5061011c806100206000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063f7530b4114602d575b600080fd5b603e60383660046057565b50505050565b005b600060a08284031215605157600080fd5b50919050565b60008060008060808587031215606c57600080fd5b843567ffffffffffffffff80821115608357600080fd5b9086019060c08289031215609657600080fd5b9094506020860135908082111560ab57600080fd5b60b5888389016040565b9450604087013591508082111560ca57600080fd5b5060d5878288016040565b94979396509394606001359350505056fea26469706673582212202c476f6a190b843966fe8a555305f8b86806d95b0f98acb69ff55ebc59aa68cb64736f6c634300080f0033",
 }
 
 // TrivialappABI is the input ABI used to generate the binding from.
@@ -195,11 +204,11 @@ func NewTrivialappFilterer(address common.Address, filterer bind.ContractFiltere
 
 // bindTrivialapp binds a generic wrapper to an already deployed contract.
 func bindTrivialapp(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(TrivialappABI))
+	parsed, err := TrivialappMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and
@@ -240,9 +249,9 @@ func (_Trivialapp *TrivialappTransactorRaw) Transact(opts *bind.TransactOpts, me
 	return _Trivialapp.Contract.contract.Transact(opts, method, params...)
 }
 
-// ValidTransition is a free data retrieval call binding the contract method 0x6d7eba0d.
+// ValidTransition is a free data retrieval call binding the contract method 0xf7530b41.
 //
-// Solidity: function validTransition((uint256,uint256,address[],address,bool,bool) params, (bytes32,uint64,((uint256,address)[],uint256[][],(bytes32,uint256[],uint16[])[]),bytes,bool) from, (bytes32,uint64,((uint256,address)[],uint256[][],(bytes32,uint256[],uint16[])[]),bytes,bool) to, uint256 actorIdx) pure returns()
+// Solidity: function validTransition((uint256,uint256,(address,bytes)[],address,bool,bool) params, (bytes32,uint64,((uint256,address,bytes)[],uint256[],uint256[][],(bytes32,uint256[],uint16[])[]),bytes,bool) from, (bytes32,uint64,((uint256,address,bytes)[],uint256[],uint256[][],(bytes32,uint256[],uint16[])[]),bytes,bool) to, uint256 actorIdx) pure returns()
 func (_Trivialapp *TrivialappCaller) ValidTransition(opts *bind.CallOpts, params ChannelParams, from ChannelState, to ChannelState, actorIdx *big.Int) error {
 	var out []interface{}
 	err := _Trivialapp.contract.Call(opts, &out, "validTransition", params, from, to, actorIdx)
@@ -255,16 +264,16 @@ func (_Trivialapp *TrivialappCaller) ValidTransition(opts *bind.CallOpts, params
 
 }
 
-// ValidTransition is a free data retrieval call binding the contract method 0x6d7eba0d.
+// ValidTransition is a free data retrieval call binding the contract method 0xf7530b41.
 //
-// Solidity: function validTransition((uint256,uint256,address[],address,bool,bool) params, (bytes32,uint64,((uint256,address)[],uint256[][],(bytes32,uint256[],uint16[])[]),bytes,bool) from, (bytes32,uint64,((uint256,address)[],uint256[][],(bytes32,uint256[],uint16[])[]),bytes,bool) to, uint256 actorIdx) pure returns()
+// Solidity: function validTransition((uint256,uint256,(address,bytes)[],address,bool,bool) params, (bytes32,uint64,((uint256,address,bytes)[],uint256[],uint256[][],(bytes32,uint256[],uint16[])[]),bytes,bool) from, (bytes32,uint64,((uint256,address,bytes)[],uint256[],uint256[][],(bytes32,uint256[],uint16[])[]),bytes,bool) to, uint256 actorIdx) pure returns()
 func (_Trivialapp *TrivialappSession) ValidTransition(params ChannelParams, from ChannelState, to ChannelState, actorIdx *big.Int) error {
 	return _Trivialapp.Contract.ValidTransition(&_Trivialapp.CallOpts, params, from, to, actorIdx)
 }
 
-// ValidTransition is a free data retrieval call binding the contract method 0x6d7eba0d.
+// ValidTransition is a free data retrieval call binding the contract method 0xf7530b41.
 //
-// Solidity: function validTransition((uint256,uint256,address[],address,bool,bool) params, (bytes32,uint64,((uint256,address)[],uint256[][],(bytes32,uint256[],uint16[])[]),bytes,bool) from, (bytes32,uint64,((uint256,address)[],uint256[][],(bytes32,uint256[],uint16[])[]),bytes,bool) to, uint256 actorIdx) pure returns()
+// Solidity: function validTransition((uint256,uint256,(address,bytes)[],address,bool,bool) params, (bytes32,uint64,((uint256,address,bytes)[],uint256[],uint256[][],(bytes32,uint256[],uint16[])[]),bytes,bool) from, (bytes32,uint64,((uint256,address,bytes)[],uint256[],uint256[][],(bytes32,uint256[],uint16[])[]),bytes,bool) to, uint256 actorIdx) pure returns()
 func (_Trivialapp *TrivialappCallerSession) ValidTransition(params ChannelParams, from ChannelState, to ChannelState, actorIdx *big.Int) error {
 	return _Trivialapp.Contract.ValidTransition(&_Trivialapp.CallOpts, params, from, to, actorIdx)
 }

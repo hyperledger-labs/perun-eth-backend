@@ -1,4 +1,4 @@
-// Copyright 2020 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,9 +22,12 @@ import (
 	"perun.network/go-perun/channel/test"
 )
 
+// BackendID is the ID of the Ethereum backend.
+const BackendID = 1
+
 func init() {
-	test.SetRandomizer(new(randomizer))
+	test.SetRandomizer(new(randomizer), BackendID)
 	test.SetNewRandomAppID(func(r *rand.Rand) pchannel.AppID {
 		return channel.NewRandomAppID(r)
-	})
+	}, BackendID)
 }

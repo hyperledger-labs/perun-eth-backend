@@ -1,4 +1,4 @@
-// Copyright 2020 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"perun.network/go-perun/wallet"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -54,7 +56,8 @@ func registerMultiple(t *testing.T, numParts int, parallel bool) {
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
 		channeltest.WithChallengeDuration(uint64(100*time.Second)),
-		channeltest.WithParts(s.Parts...),
+		channeltest.WithBackend(test.BackendID),
+		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(false),
 		channeltest.WithLedgerChannel(true),
@@ -150,7 +153,8 @@ func TestRegister_FinalState(t *testing.T) {
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
 		channeltest.WithChallengeDuration(uint64(100*time.Second)),
-		channeltest.WithParts(s.Parts...),
+		channeltest.WithBackend(test.BackendID),
+		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(true),
 		channeltest.WithLedgerChannel(true),
@@ -173,7 +177,7 @@ func TestRegister_FinalState(t *testing.T) {
 	tx := testSignState(t, s.Accs, state)
 	req := channel.AdjudicatorReq{
 		Params: params,
-		Acc:    s.Accs[0],
+		Acc:    map[wallet.BackendID]wallet.Account{test.BackendID: s.Accs[0]},
 		Idx:    channel.Index(0),
 		Tx:     tx,
 	}
@@ -192,7 +196,8 @@ func TestRegister_CancelledContext(t *testing.T) {
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
 		channeltest.WithChallengeDuration(uint64(100*time.Second)),
-		channeltest.WithParts(s.Parts...),
+		channeltest.WithBackend(test.BackendID),
+		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
 		channeltest.WithIsFinal(false),
 		channeltest.WithLedgerChannel(true),
@@ -216,7 +221,7 @@ func TestRegister_CancelledContext(t *testing.T) {
 	tx := testSignState(t, s.Accs, state)
 	req := channel.AdjudicatorReq{
 		Params: params,
-		Acc:    s.Accs[0],
+		Acc:    map[wallet.BackendID]wallet.Account{test.BackendID: s.Accs[0]},
 		Idx:    channel.Index(0),
 		Tx:     tx,
 	}

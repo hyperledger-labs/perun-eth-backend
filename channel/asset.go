@@ -1,4 +1,4 @@
-// Copyright 2019 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,6 +49,14 @@ func MakeChainID(id *big.Int) ChainID {
 	return ChainID{id}
 }
 
+// MakeLedgerBackendID makes a AssetID for the given id.
+func MakeLedgerBackendID(id *big.Int) multi.LedgerBackendID {
+	if id.Sign() < 0 {
+		panic("must not be smaller than zero")
+	}
+	return AssetID{backendID: wallet.BackendID, ledgerID: MakeChainID(id)}
+}
+
 // UnmarshalBinary unmarshals the chainID from its binary representation.
 func (id *ChainID) UnmarshalBinary(data []byte) error {
 	id.Int = new(big.Int).SetBytes(data)
@@ -58,7 +66,7 @@ func (id *ChainID) UnmarshalBinary(data []byte) error {
 // MarshalBinary marshals the chainID into its binary representation.
 func (id ChainID) MarshalBinary() (data []byte, err error) {
 	if id.Sign() == -1 {
-		return nil, errors.New("cannot marshal negative ChainID")
+		return nil, errors.New("cannot marshal negative LedgerBackendID")
 	}
 	return id.Bytes(), nil
 }
@@ -71,13 +79,39 @@ func (id ChainID) MapKey() multi.LedgerIDMapKey {
 type (
 	// Asset is an Ethereum asset.
 	Asset struct {
-		ChainID     ChainID
+		assetID     AssetID
 		AssetHolder wallet.Address
+	}
+
+	// AssetID is the unique identifier of an asset.
+	AssetID struct {
+		backendID uint32
+		ledgerID  ChainID
 	}
 
 	// AssetMapKey is the map key representation of an asset.
 	AssetMapKey string
 )
+
+// BackendID returns the backend ID of the asset.
+func (id AssetID) BackendID() uint32 {
+	return id.backendID
+}
+
+// ChainID returns the chain ID of the asset.
+func (id AssetID) ChainID() *big.Int {
+	return id.ledgerID.Int
+}
+
+// LedgerID returns the ledger ID of the asset.
+func (id AssetID) LedgerID() multi.LedgerID {
+	return &id.ledgerID
+}
+
+// LedgerBackendID returns the asset ID of the asset.
+func (a Asset) LedgerBackendID() multi.LedgerBackendID {
+	return a.assetID
+}
 
 // MapKey returns the asset's map key representation.
 func (a Asset) MapKey() AssetMapKey {
@@ -92,7 +126,7 @@ func (a Asset) MapKey() AssetMapKey {
 // MarshalBinary marshals the asset into its binary representation.
 func (a Asset) MarshalBinary() ([]byte, error) {
 	var buf bytes.Buffer
-	err := perunio.Encode(&buf, a.ChainID, &a.AssetHolder)
+	err := perunio.Encode(&buf, a.assetID.ledgerID, a.assetID.backendID, &a.AssetHolder)
 	if err != nil {
 		return nil, err
 	}
@@ -102,18 +136,18 @@ func (a Asset) MarshalBinary() ([]byte, error) {
 // UnmarshalBinary unmarshals the asset from its binary representation.
 func (a *Asset) UnmarshalBinary(data []byte) error {
 	buf := bytes.NewBuffer(data)
-	return perunio.Decode(buf, &a.ChainID, &a.AssetHolder)
+	return perunio.Decode(buf, &a.assetID.ledgerID, &a.assetID.backendID, &a.AssetHolder)
 }
 
 // LedgerID returns the ledger ID the asset lives on.
 func (a Asset) LedgerID() multi.LedgerID {
-	return &a.ChainID
+	return a.LedgerBackendID().LedgerID()
 }
 
 // NewAsset creates a new asset from an chainID and the AssetHolder address.
 func NewAsset(chainID *big.Int, assetHolder common.Address) *Asset {
-	id := MakeChainID(chainID)
-	return &Asset{id, *wallet.AsWalletAddr(assetHolder)}
+	id := MakeLedgerBackendID(chainID).(AssetID) //nolint: forcetypeassert // LedgerBackendID implements multi.LedgerBackendID
+	return &Asset{assetID: id, AssetHolder: *wallet.AsWalletAddr(assetHolder)}
 }
 
 // EthAddress returns the Ethereum address of the asset.
@@ -127,14 +161,20 @@ func (a Asset) Equal(b channel.Asset) bool {
 	if !ok {
 		return false
 	}
-	return a.ChainID.MapKey() == ethAsset.ChainID.MapKey() && a.EthAddress() == ethAsset.EthAddress()
+	return a.assetID.LedgerID().MapKey() == ethAsset.assetID.LedgerID().MapKey() && a.EthAddress() == ethAsset.EthAddress()
+}
+
+// Address returns the address of the asset.
+func (a Asset) Address() []byte {
+	data, _ := a.AssetHolder.MarshalBinary()
+	return data
 }
 
 // filterAssets filters the assets for the given chainID.
 func filterAssets(assets []channel.Asset, chainID ChainID) []channel.Asset {
 	var filtered []channel.Asset
 	for _, asset := range assets {
-		if a := asset.(*Asset); a.ChainID.MapKey() == chainID.MapKey() { //nolint:forcetypeassert // We would have to panic anyways.
+		if a, ok := asset.(*Asset); ok && a.assetID.LedgerID().MapKey() == chainID.MapKey() {
 			filtered = append(filtered, a)
 		}
 	}

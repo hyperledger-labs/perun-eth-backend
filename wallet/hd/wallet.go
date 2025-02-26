@@ -1,4 +1,4 @@
-// Copyright 2020 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -115,8 +115,8 @@ func (w *Wallet) newAccount() (*Account, error) {
 func (w *Wallet) Unlock(addr wallet.Address) (wallet.Account, error) {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
-
-	acc := accounts.Account{Address: ethwallet.AsEthAddr(addr)}
+	ethAddr := addr
+	acc := accounts.Account{Address: ethwallet.AsEthAddr(ethAddr)}
 	if !w.wallet.Contains(acc) {
 		return nil, errors.New("account not found in wallet")
 	}

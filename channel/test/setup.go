@@ -1,4 +1,4 @@
-// Copyright 2020 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -50,12 +50,12 @@ type (
 	// Setup holds a complete test setup for channel backend testing.
 	Setup struct {
 		SimSetup
-		Accs    []*keystore.Account  // on-chain funders and channel participant accounts
-		Parts   []wallet.Address     // channel participants
-		Recvs   []*ethwallet.Address // on-chain receivers of withdrawn funds
-		Funders []*ethchannel.Funder // funders, bound to respective account
-		Adjs    []*SimAdjudicator    // adjudicator, withdrawal bound to respecive receivers
-		Asset   *ethchannel.Asset    // the asset
+		Accs    []*keystore.Account                       // on-chain funders and channel participant accounts
+		Parts   []map[wallet.BackendID]wallet.Address     // channel participants
+		Recvs   []map[wallet.BackendID]*ethwallet.Address // on-chain receivers of withdrawn funds
+		Funders []*ethchannel.Funder                      // funders, bound to respective account
+		Adjs    []*SimAdjudicator                         // adjudicator, withdrawal bound to respecive receivers
+		Asset   *ethchannel.Asset                         // the asset
 	}
 )
 
@@ -64,7 +64,7 @@ type (
 func NewSimSetup(t *testing.T, rng *rand.Rand, txFinalityDepth uint64, blockInterval time.Duration, opts ...SimBackendOpt) *SimSetup {
 	t.Helper()
 	simBackend := NewSimulatedBackend(opts...)
-	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(BackendID).(*keystore.Wallet)
 	txAccount := ksWallet.NewRandomAccount(rng).(*keystore.Account)
 	ctx, cancel := context.WithTimeout(context.Background(), defaultSetupTimeout)
 	defer cancel()
@@ -101,8 +101,8 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 	s := &Setup{
 		SimSetup: *NewSimSetup(t, rng, txFinalityDepth, blockInterval),
 		Accs:     make([]*keystore.Account, n),
-		Parts:    make([]wallet.Address, n),
-		Recvs:    make([]*ethwallet.Address, n),
+		Parts:    make([]map[wallet.BackendID]wallet.Address, n),
+		Recvs:    make([]map[wallet.BackendID]*ethwallet.Address, n),
 		Funders:  make([]*ethchannel.Funder, n),
 		Adjs:     make([]*SimAdjudicator, n),
 	}
@@ -115,12 +115,12 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 	require.NoError(t, err)
 	s.Asset = ethchannel.NewAsset(s.SimBackend.ChainID(), assetHolder)
 
-	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(BackendID).(*keystore.Wallet)
 	for i := 0; i < n; i++ {
 		s.Accs[i] = ksWallet.NewRandomAccount(rng).(*keystore.Account)
-		s.Parts[i] = s.Accs[i].Address()
+		s.Parts[i] = map[wallet.BackendID]wallet.Address{BackendID: s.Accs[i].Address()}
 		s.SimBackend.FundAddress(ctx, s.Accs[i].Account.Address)
-		s.Recvs[i] = ksWallet.NewRandomAccount(rng).Address().(*ethwallet.Address)
+		s.Recvs[i] = map[wallet.BackendID]*ethwallet.Address{BackendID: ksWallet.NewRandomAccount(rng).Address().(*ethwallet.Address)}
 		cb := ethchannel.NewContractBackend(
 			s.SimBackend,
 			ethchannel.MakeChainID(s.SimBackend.ChainID()),
@@ -129,7 +129,7 @@ func NewSetup(t *testing.T, rng *rand.Rand, n int, blockInterval time.Duration, 
 		)
 		s.Funders[i] = ethchannel.NewFunder(cb)
 		require.True(t, s.Funders[i].RegisterAsset(*s.Asset, ethchannel.NewETHDepositor(defaultETHGasLimit), s.Accs[i].Account))
-		s.Adjs[i] = NewSimAdjudicator(cb, adjudicator, common.Address(*s.Recvs[i]), s.Accs[i].Account)
+		s.Adjs[i] = NewSimAdjudicator(cb, adjudicator, common.Address(*s.Recvs[i][BackendID]), s.Accs[i].Account)
 	}
 
 	return s

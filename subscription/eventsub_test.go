@@ -1,4 +1,4 @@
-// Copyright 2021 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ func TestEventSub(t *testing.T) {
 
 	// Simulated chain setup.
 	sb := test.NewSimulatedBackend()
-	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(test.BackendID).(*keystore.Wallet)
 	account := &ksWallet.NewRandomAccount(rng).(*keystore.Account).Account
 	sb.FundAddress(ctx, account.Address)
 	cb := ethchannel.NewContractBackend(
@@ -121,7 +121,6 @@ func TestEventSub(t *testing.T) {
 				i--
 			}
 			lastTx = e.Log.TxHash
-
 			want := &peruntoken.PeruntokenApproval{
 				Owner:   account.Address,
 				Spender: account.Address,
@@ -146,7 +145,7 @@ func TestEventSub_Filter(t *testing.T) {
 
 	// Simulated chain setup.
 	sb := test.NewSimulatedBackend()
-	ksWallet := wallettest.RandomWallet().(*keystore.Wallet)
+	ksWallet := wallettest.RandomWallet(test.BackendID).(*keystore.Wallet)
 	account := &ksWallet.NewRandomAccount(rng).(*keystore.Account).Account
 	sb.FundAddress(ctx, account.Address)
 	cb := ethchannel.NewContractBackend(
@@ -166,7 +165,7 @@ func TestEventSub_Filter(t *testing.T) {
 	ct := pkgtest.NewConcurrent(t)
 
 	// Send the transaction.
-	fundingID := channeltest.NewRandomChannelID(rng)
+	fundingID := channeltest.NewRandomChannelID(rng, channeltest.WithBackend(test.BackendID))
 	opts, err := cb.NewTransactor(ctx, txGasLimit, *account)
 	require.NoError(t, err)
 	opts.Value = big.NewInt(1)

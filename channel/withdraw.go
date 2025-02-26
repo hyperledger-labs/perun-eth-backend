@@ -1,4 +1,4 @@
-// Copyright 2020 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,9 +17,11 @@ package channel
 import (
 	"context"
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
@@ -83,7 +85,6 @@ func (a *Adjudicator) ensureWithdrawn(ctx context.Context, req channel.Adjudicat
 				return nil
 			default:
 			}
-
 			// No withdrawn event found in the past, send transaction.
 			if err := a.callAssetWithdraw(ctx, req, contract); err != nil {
 				return errors.WithMessage(err, "withdrawing assets failed")
@@ -163,7 +164,7 @@ func (a *Adjudicator) callAssetWithdraw(ctx context.Context, request channel.Adj
 }
 
 func (a *Adjudicator) newWithdrawalAuth(request channel.AdjudicatorReq, asset assetHolder) (assetholder.AssetHolderWithdrawalAuth, []byte, error) {
-	fid := FundingID(request.Tx.ID, request.Params.Parts[request.Idx])
+	fid := FundingID(request.Tx.ID, request.Params.Parts[request.Idx][wallet.BackendID])
 	bal, err := asset.Assetholder.Holdings(nil, fid)
 	if err != nil {
 		return assetholder.AssetHolderWithdrawalAuth{}, nil, fmt.Errorf("getting balance: %w", err)
@@ -171,7 +172,7 @@ func (a *Adjudicator) newWithdrawalAuth(request channel.AdjudicatorReq, asset as
 
 	auth := assetholder.AssetHolderWithdrawalAuth{
 		ChannelID:   request.Params.ID(),
-		Participant: wallet.AsEthAddr(request.Acc.Address()),
+		Participant: wallet.AsChannelParticipant(wallet.AddressMapfromAccountMap(request.Acc)),
 		Receiver:    a.Receiver,
 		Amount:      bal,
 	}
@@ -180,23 +181,51 @@ func (a *Adjudicator) newWithdrawalAuth(request channel.AdjudicatorReq, asset as
 		return assetholder.AssetHolderWithdrawalAuth{}, nil, errors.WithMessage(err, "encoding withdrawal auth")
 	}
 
-	sig, err := request.Acc.SignData(enc)
+	sig, err := request.Acc[wallet.BackendID].SignData(enc)
 	return auth, sig, errors.WithMessage(err, "sign data")
 }
 
-func encodeAssetHolderWithdrawalAuth(auth assetholder.AssetHolderWithdrawalAuth) ([]byte, error) {
-	// encodeAssetHolderWithdrawalAuth encodes the AssetHolderWithdrawalAuth as with abi.encode() in the smart contracts.
-	args := abi.Arguments{
-		{Type: abiBytes32},
-		{Type: abiAddress},
-		{Type: abiAddress},
-		{Type: abiUint256},
+func encodeAssetHolderWithdrawalAuth(a assetholder.AssetHolderWithdrawalAuth) ([]byte, error) {
+	// Define the top-level ABI type for the Authorization struct.
+	authorizationType, err := abi.NewType("tuple", "tuple(bytes32 channelID, tuple(address ethAddress, bytes ccAddress) participant, address receiver, uint256 amount)", []abi.ArgumentMarshaling{
+		{Name: "channelID", Type: "bytes32"},
+		{Name: "participant", Type: "tuple", Components: []abi.ArgumentMarshaling{
+			{Name: "ethAddress", Type: "address"},
+			{Name: "ccAddress", Type: "bytes"},
+		}},
+		{Name: "receiver", Type: "address"},
+		{Name: "amount", Type: "uint256"},
+	})
+	if err != nil {
+		return nil, err
 	}
-	enc, err := args.Pack(
-		auth.ChannelID,
-		auth.Participant,
-		auth.Receiver,
-		auth.Amount,
+
+	// Define the Arguments.
+	args := abi.Arguments{
+		{Type: authorizationType},
+	}
+
+	// Pack the data for encoding.
+	return args.Pack(
+		struct {
+			ChannelID   [32]byte
+			Participant struct {
+				EthAddress common.Address
+				CcAddress  []byte
+			}
+			Receiver common.Address
+			Amount   *big.Int
+		}{
+			ChannelID: a.ChannelID,
+			Participant: struct {
+				EthAddress common.Address
+				CcAddress  []byte
+			}{
+				EthAddress: a.Participant.EthAddress,
+				CcAddress:  a.Participant.CcAddress,
+			},
+			Receiver: a.Receiver,
+			Amount:   a.Amount,
+		},
 	)
-	return enc, errors.WithStack(err)
 }

@@ -1,4 +1,4 @@
-// Copyright 2020 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,8 +42,10 @@ type ERC20Depositor struct {
 const erc20DepositorNumTx = 2
 
 // Keep track of the increase allowance and deposit processes.
-var depositLocksMtx sync.Mutex
-var depositLocks = make(map[string]*sync.Mutex)
+var (
+	depositLocksMtx sync.Mutex
+	depositLocks    = make(map[string]*sync.Mutex)
+)
 
 // DepositResult is created to keep track of the returned values.
 type DepositResult struct {
@@ -71,7 +73,7 @@ func (d *ERC20Depositor) Deposit(ctx context.Context, req DepositReq) (types.Tra
 	var depResult DepositResult
 	txApproval, approvalReceived, errApproval := d.Approve(ctx, lock, req, callOpts)
 	if errApproval != nil {
-		return nil, errors.WithMessagef(errApproval, "approving asset: %x", req.Asset)
+		return nil, errors.WithMessagef(errApproval, "approving asset: %v", req.Asset)
 	}
 	if approvalReceived {
 		txDeposit, err := d.DepositOnly(ctx, req)
@@ -89,12 +91,12 @@ func (d *ERC20Depositor) DepositOnly(ctx context.Context, req DepositReq) (*type
 	// Bind a `AssetHolderERC20` instance.
 	assetholder, err := assetholdererc20.NewAssetholdererc20(req.Asset.EthAddress(), req.CB)
 	if err != nil {
-		return nil, errors.Wrapf(err, "binding AssetHolderERC20 contract at: %x", req.Asset)
+		return nil, errors.Wrapf(err, "binding AssetHolderERC20 contract at: %v", req.Asset)
 	}
 	// Deposit.
 	opts, err := req.CB.NewTransactor(ctx, d.GasLimit, req.Account)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "creating transactor for asset: %x", req.Asset)
+		return nil, errors.WithMessagef(err, "creating transactor for asset: %v", req.Asset)
 	}
 
 	tx, err := assetholder.Deposit(opts, req.FundingID, req.Balance)
@@ -119,7 +121,7 @@ func (d *ERC20Depositor) Approve(ctx context.Context, lock *sync.Mutex, req Depo
 
 	allowance, err := token.Allowance(&callOpts, req.Account.Address, req.Asset.EthAddress())
 	if err != nil {
-		return nil, false, errors.WithMessagef(err, "could not get Allowance for asset: %x", req.Asset)
+		return nil, false, errors.WithMessagef(err, "could not get Allowance for asset: %v", req.Asset)
 	}
 
 	result := new(big.Int).Add(req.Balance, allowance)
@@ -127,7 +129,7 @@ func (d *ERC20Depositor) Approve(ctx context.Context, lock *sync.Mutex, req Depo
 	// Increase the allowance.
 	opts, err := req.CB.NewTransactor(ctx, d.GasLimit, req.Account)
 	if err != nil {
-		return nil, false, errors.WithMessagef(err, "creating transactor for asset: %x", req.Asset)
+		return nil, false, errors.WithMessagef(err, "creating transactor for asset: %v", req.Asset)
 	}
 	// Create a channel for receiving PeruntokenApproval events
 	eventSink := make(chan *peruntoken.PeruntokenApproval)
@@ -143,7 +145,7 @@ func (d *ERC20Depositor) Approve(ctx context.Context, lock *sync.Mutex, req Depo
 	tx, err := token.Approve(opts, req.Asset.EthAddress(), result)
 	if err != nil {
 		err = cherrors.CheckIsChainNotReachableError(err)
-		return nil, false, errors.WithMessagef(err, "increasing allowance for asset: %x", req.Asset)
+		return nil, false, errors.WithMessagef(err, "increasing allowance for asset: %v", req.Asset)
 	}
 
 	var approvalReceived bool

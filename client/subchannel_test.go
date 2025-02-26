@@ -1,4 +1,4 @@
-// Copyright 2022 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ import (
 	"context"
 	"math/big"
 	"testing"
+
+	"perun.network/go-perun/wallet"
 
 	ethchanneltest "github.com/perun-network/perun-eth-backend/channel/test"
 	ethclienttest "github.com/perun-network/perun-eth-backend/client/test"
@@ -44,8 +46,9 @@ func TestSubChannelHappy(t *testing.T) {
 
 	// Build configuration.
 	baseCfg := clienttest.MakeBaseExecConfig(
-		[2]wire.Address{setups[A].Identity.Address(), setups[B].Identity.Address()},
+		[2]map[wallet.BackendID]wire.Address{wire.AddressMapfromAccountMap(setups[A].Identity), wire.AddressMapfromAccountMap(setups[B].Identity)},
 		s.Asset,
+		ethchanneltest.BackendID,
 		[2]*big.Int{big.NewInt(100), big.NewInt(100)},
 		client.WithoutApp(),
 	)
@@ -72,7 +75,7 @@ func TestSubChannelHappy(t *testing.T) {
 		subChannelFunds,
 		subSubChannelFunds,
 		client.WithApp(
-			chtest.NewRandomAppAndData(rng, chtest.WithAppRandomizer(new(payment.Randomizer))),
+			chtest.NewRandomAppAndData(rng, chtest.WithAppRandomizer(new(payment.Randomizer)), chtest.WithBackend(ethchanneltest.BackendID)),
 		),
 		txAmount,
 	)
@@ -97,8 +100,9 @@ func TestSubChannelDispute(t *testing.T) {
 	roles[B].SetStages(stages)
 
 	baseCfg := clienttest.MakeBaseExecConfig(
-		[2]wire.Address{setups[A].Identity.Address(), setups[B].Identity.Address()},
+		[2]map[wallet.BackendID]wire.Address{wire.AddressMapfromAccountMap(setups[A].Identity), wire.AddressMapfromAccountMap(setups[B].Identity)},
 		s.Asset,
+		ethchanneltest.BackendID,
 		[2]*big.Int{big.NewInt(100), big.NewInt(100)},
 		client.WithoutApp(),
 	)

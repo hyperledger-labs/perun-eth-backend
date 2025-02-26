@@ -1,4 +1,4 @@
-// Copyright 2020 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -48,8 +48,9 @@ func testConcludeFinal(t *testing.T, numParts int) {
 	// create valid state and params
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
-		channeltest.WithParts(s.Parts...),
+		channeltest.WithParts(s.Parts),
 		channeltest.WithAssets(s.Asset),
+		channeltest.WithBackend(test.BackendID),
 		channeltest.WithIsFinal(true),
 		channeltest.WithLedgerChannel(true),
 	)
@@ -77,7 +78,7 @@ func testConcludeFinal(t *testing.T, numParts int) {
 		go ct.StageN("register", numParts, func(t pkgtest.ConcT) {
 			req := channel.AdjudicatorReq{
 				Params:    params,
-				Acc:       s.Accs[i],
+				Acc:       map[wallet.BackendID]wallet.Account{test.BackendID: s.Accs[i]},
 				Idx:       channel.Index(i),
 				Tx:        tx,
 				Secondary: (i != initiator),
@@ -198,11 +199,12 @@ type paramsAndState struct {
 	state  *channel.State
 }
 
-func makeRandomChannel(rng *rand.Rand, participants []wallet.Address, asset channel.Asset, challengeDuration uint64, ledger bool) paramsAndState {
+func makeRandomChannel(rng *rand.Rand, participants []map[wallet.BackendID]wallet.Address, asset channel.Asset, challengeDuration uint64, ledger bool) paramsAndState {
 	params, state := channeltest.NewRandomParamsAndState(
 		rng,
-		channeltest.WithParts(participants...),
+		channeltest.WithParts(participants),
 		channeltest.WithAssets(asset),
+		channeltest.WithBackend(test.BackendID),
 		channeltest.WithIsFinal(false),
 		channeltest.WithNumLocked(0),
 		channeltest.WithoutApp(),
@@ -255,7 +257,7 @@ func register(ctx context.Context, adj *test.SimAdjudicator, accounts []*keystor
 
 	req := channel.AdjudicatorReq{
 		Params:    ch.params,
-		Acc:       accounts[0],
+		Acc:       map[wallet.BackendID]wallet.Account{test.BackendID: accounts[0]},
 		Idx:       0,
 		Tx:        tx,
 		Secondary: false,
@@ -278,7 +280,7 @@ func withdraw(ctx context.Context, adj *test.SimAdjudicator, accounts []*keystor
 	for i, a := range accounts {
 		req := channel.AdjudicatorReq{
 			Params:    c.params,
-			Acc:       a,
+			Acc:       map[wallet.BackendID]wallet.Account{test.BackendID: a},
 			Idx:       channel.Index(i),
 			Tx:        tx,
 			Secondary: i != 0,
