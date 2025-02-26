@@ -1,4 +1,4 @@
-// Copyright 2024 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -107,7 +107,7 @@ func AsEthAddr(a wallet.Address) common.Address {
 func AsChannelParticipant(a map[wallet.BackendID]wallet.Address) assetholder.ChannelParticipant {
 	_a := assetholder.ChannelParticipant{}
 	for i, address := range a {
-		if i == 1 {
+		if i == BackendID {
 			addrTyped, ok := address.(*Address)
 			if !ok {
 				panic(fmt.Sprintf("wrong type: expected %T, got %T", &Address{}, a))

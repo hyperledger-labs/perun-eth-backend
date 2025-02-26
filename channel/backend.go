@@ -1,4 +1,4 @@
-// Copyright 2024 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -329,7 +329,7 @@ func assetsToEthAssets(assets []channel.Asset, bIDs []wallet.BackendID) []adjudi
 				log.Panicf("error encoding asset: %v", err)
 			}
 			cAddrs[i] = adjudicator.ChannelAsset{
-				ChainID:   big.NewInt(2), //nolint:gomnd
+				ChainID:   big.NewInt(int64(bIDs[i])),
 				EthHolder: common.HexToAddress("0x0000000000000000000000000000000000000000"),
 				CcHolder:  asset,
 			}
