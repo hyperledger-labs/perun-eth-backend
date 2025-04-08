@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] Bromo - 2025-04-08 [:boom:]
+Support for EVM to Non-EVM payment channels and other fixes.
+
+### Added
+- Egoistic Funding Test [#52]
+- Support for EVM to Non-EVM payment channels including go-perun version update and new contract binaries [#54] [:boom:]
+
+### Changed
+- Update action cache [#55]
+
+### Fixed
+- Fixed AppID handling [#53]
+
+[#52]: https://github.com/hyperledger-labs/perun-eth-backend/pull/52
+[#53]: https://github.com/hyperledger-labs/perun-eth-backend/pull/53
+[#54]: https://github.com/hyperledger-labs/perun-eth-backend/pull/54
+[#55]: https://github.com/hyperledger-labs/perun-eth-backend/pull/55
 
 ## [0.5.0] Athos - 2023-02-22 [:boom:]
 Improved Contract Compatibility, Swap Parallelization and other fixes.
