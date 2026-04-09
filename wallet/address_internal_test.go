@@ -28,7 +28,8 @@ func Test_GenericMarshaler(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	for n := 0; n < 10; n++ {
 		var commonAddr common.Address
-		rng.Read(commonAddr[:])
+		_, err := rng.Read(commonAddr[:])
+		require.NoError(t, err)
 		test.GenericMarshalerTest(t, AsWalletAddr(commonAddr))
 	}
 }
@@ -37,7 +38,8 @@ func TestAsWalletAddr(t *testing.T) {
 	t.Run("non-zero-value", func(t *testing.T) {
 		rng := pkgtest.Prng(t)
 		var commonAddr common.Address
-		rng.Read(commonAddr[:])
+		_, err := rng.Read(commonAddr[:])
+		require.NoError(t, err)
 
 		ethAddr := AsWalletAddr(commonAddr)
 		require.Equal(t, commonAddr.String(), ethAddr.String())

@@ -53,7 +53,14 @@ func TestSimBackend_Reorg(t *testing.T) {
 		// Both TX still valid.
 		s.ConfirmTx(tx1, true)
 		s.ConfirmTx(tx2, true)
-		// No events emitted.
+		// The new simulator emits removal events for the old canonical chain
+		// before re-emitting the same events on the new canonical branch.
+		s.AllowanceEvent(1, false)
+		s.TransferEvent(false)
+		s.AllowanceEvent(0, false)
+		s.AllowanceEvent(1, true)
+		s.TransferEvent(true)
+		s.AllowanceEvent(0, true)
 		s.NoMoreEvents()
 	})
 	t.Run("remove-approval", func(t *testing.T) {
@@ -92,9 +99,11 @@ func TestSimBackend_Reorg(t *testing.T) {
 		// Wait for approval, but not transfer.
 		s.ConfirmTx(tx1, true)
 		s.ConfirmTx(tx2, false)
-		// Check that the events are removed.
+		// The approval TX is also removed and re-included on the new branch.
+		s.AllowanceEvent(1, false)
 		s.TransferEvent(false)
-		s.AllowanceEvent(0, false) // allowance is 0 again
+		s.AllowanceEvent(0, false)
+		s.AllowanceEvent(1, true)
 		s.NoMoreEvents()
 	})
 	t.Run("remove-transfer-rebirth", func(t *testing.T) {

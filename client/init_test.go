@@ -1,4 +1,4 @@
-// Copyright 2019 - See NOTICE file for copyright holders.
+// Copyright 2025 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,16 +15,31 @@
 package client_test
 
 import (
+	"sync"
+	"testing"
+
 	"github.com/sirupsen/logrus"
 
-	"perun.network/go-perun/apps/payment"
-	"perun.network/go-perun/channel/test"
 	plogrus "perun.network/go-perun/log/logrus"
 )
 
-func init() {
-	plogrus.Set(logrus.DebugLevel, &logrus.TextFormatter{ForceColors: true})
+// Client tests are expensive, and under the full race suite two concurrent
+// simulated setups still overload the runner enough to cause package-level
+// timeouts. Keep them serialized for stable CI runtimes.
+var heavySimTestSlots = make(chan struct{}, 1)
 
-	// Eth client tests use the payment app.
-	test.SetAppRandomizer(new(payment.Randomizer))
+func acquireHeavySimTestSlot(t *testing.T) func() {
+	t.Helper()
+
+	heavySimTestSlots <- struct{}{}
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			<-heavySimTestSlots
+		})
+	}
+}
+
+func init() {
+	plogrus.Set(logrus.WarnLevel, &logrus.TextFormatter{ForceColors: true})
 }

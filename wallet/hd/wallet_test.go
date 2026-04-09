@@ -44,7 +44,8 @@ func TestNewWallet(t *testing.T) {
 	prng := pkgtest.Prng(t)
 
 	walletSeed := make([]byte, 20)
-	prng.Read(walletSeed)
+	_, err := prng.Read(walletSeed)
+	require.NoError(t, err)
 	mnemonic, err := hdwalletimpl.NewMnemonicFromEntropy(walletSeed)
 	require.NoError(t, err)
 
@@ -103,7 +104,8 @@ func TestContains(t *testing.T) {
 
 func newSetup(t require.TestingT, prng *rand.Rand) (*test.Setup, accounts.Wallet, *hd.Wallet) {
 	walletSeed := make([]byte, 20)
-	prng.Read(walletSeed)
+	_, err := prng.Read(walletSeed)
+	require.NoError(t, err)
 	mnemonic, err := hdwalletimpl.NewMnemonicFromEntropy(walletSeed)
 	require.NoError(t, err)
 

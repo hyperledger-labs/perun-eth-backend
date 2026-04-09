@@ -99,7 +99,8 @@ func TestTransactor(t *testing.T) {
 func newTransactorSetup(t *testing.T, prng *rand.Rand, hideSignHash bool, signer types.Signer, chainID int64, txType test.TxType) test.TransactorSetup {
 	t.Helper()
 	walletSeed := make([]byte, 20)
-	prng.Read(walletSeed)
+	_, err := prng.Read(walletSeed)
+	require.NoError(t, err)
 	mnemonic, err := hdwallet.NewMnemonicFromEntropy(walletSeed)
 	require.NoError(t, err)
 

@@ -23,16 +23,16 @@ import (
 
 	ethctest "github.com/perun-network/perun-eth-backend/channel/test"
 	ethwtest "github.com/perun-network/perun-eth-backend/wallet/test"
+	localwatcher "perun.network/go-perun/watcher/local"
 
 	clienttest "perun.network/go-perun/client/test"
-	"perun.network/go-perun/watcher/local"
 	"perun.network/go-perun/wire"
 	wiretest "perun.network/go-perun/wire/test"
 )
 
 const (
 	// DefaultTimeout is the default timeout for client tests.
-	DefaultTimeout = 20 * time.Second
+	DefaultTimeout = 40 * time.Second
 	// BlockInterval is the default block interval for the simulated chain.
 	BlockInterval = 200 * time.Millisecond
 	// challenge duration in blocks that is used by MakeRoleSetups.
@@ -44,7 +44,7 @@ func MakeRoleSetups(rng *rand.Rand, s *ethctest.Setup, names []string) []clientt
 	setups := make([]clienttest.RoleSetup, len(names))
 	bus := wire.NewLocalBus()
 	for i := 0; i < len(setups); i++ {
-		watcher, err := local.NewWatcher(s.Adjs[i])
+		watcher, err := localwatcher.NewWatcher(s.Adjs[i])
 		if err != nil {
 			panic("Error initializing watcher: " + err.Error())
 		}

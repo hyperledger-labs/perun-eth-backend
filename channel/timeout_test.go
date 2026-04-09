@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	ethchannel "github.com/perun-network/perun-eth-backend/channel"
 	"github.com/perun-network/perun-eth-backend/channel/test"
@@ -28,26 +29,33 @@ import (
 func TestBlockTimeout_IsElapsed(t *testing.T) {
 	assert := assert.New(t)
 	sb := test.NewSimulatedBackend()
-	bt := ethchannel.NewBlockTimeout(sb, 100)
+	t.Cleanup(func() {
+		require.NoError(t, sb.Close())
+	})
+	head, err := sb.HeaderByNumber(context.Background(), nil)
+	require.NoError(t, err)
+	bt := ethchannel.NewBlockTimeout(sb, head.Time+100)
 
-	// We use context.TODO() in the following because we're working with a simulated
-	// blockchain, which ignores the ctx.
-	for i := 0; i < 10; i++ {
-		assert.False(bt.IsElapsed(context.TODO()))
-		sb.Commit() // advances block time by 10 sec
-	}
-	assert.True(bt.IsElapsed(context.TODO()))
+	assert.False(bt.IsElapsed(context.Background()))
+	require.NoError(t, sb.AdjustTime(99*time.Second))
+	assert.False(bt.IsElapsed(context.Background()))
+	require.NoError(t, sb.AdjustTime(1*time.Second))
+	assert.True(bt.IsElapsed(context.Background()))
 }
 
 func TestBlockTimeout_Wait(t *testing.T) {
 	const (
-		ctxTimeout   = 1 * time.Second   // context timeout per commit
-		blockTimeout = 100               // in sec
-		numBlocks    = blockTimeout / 10 // Commit() advances by 10 sec
+		ctxTimeout   = 1 * time.Second
+		blockTimeout = 100 * time.Second
 	)
 
 	sb := test.NewSimulatedBackend()
-	bt := ethchannel.NewBlockTimeout(sb, blockTimeout)
+	t.Cleanup(func() {
+		require.NoError(t, sb.Close())
+	})
+	head, err := sb.HeaderByNumber(context.Background(), nil)
+	require.NoError(t, err)
+	bt := ethchannel.NewBlockTimeout(sb, head.Time+uint64(blockTimeout/time.Second))
 
 	t.Run("cancelWait", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -75,14 +83,12 @@ func TestBlockTimeout_Wait(t *testing.T) {
 
 		// Wait for the go-routine above to start.
 		time.Sleep(100 * time.Millisecond)
-		for i := 0; i < numBlocks; i++ {
-			select {
-			case err := <-wait:
-				t.Error("Wait returned before timeout with error", err)
-			default: // Wait shouldn't return before the timeout is reached
-			}
-			sb.Commit() // advances block time by 10 sec
+		select {
+		case err := <-wait:
+			t.Error("Wait returned before timeout with error", err)
+		default:
 		}
+		require.NoError(t, sb.AdjustTime(blockTimeout))
 		select {
 		case err := <-wait:
 			assert.NoError(t, err)

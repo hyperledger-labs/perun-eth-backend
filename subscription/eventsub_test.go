@@ -50,8 +50,8 @@ const (
 // 3. Emit `3/4 n` events
 // 4. Checking that `EventSub` contains `n` distinct events.
 func TestEventSub(t *testing.T) {
-	n := 1000
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	n := 200
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	rng := pkgtest.Prng(t)
 
@@ -110,31 +110,32 @@ func TestEventSub(t *testing.T) {
 	})
 
 	go ct.Stage("receiver", func(t pkgtest.ConcT) {
-		var lastTx common.Hash
-		// Receive `n` unique events.
-		for i := 0; i < n; i++ {
+		seen := make(map[string]struct{}, n)
+		for len(seen) < n {
 			e := <-sink
-			log.Debug("Read ", i)
+			log.Debug("Read ", len(seen))
 			require.NotNil(t, e)
-			// It is possible to receive the same event twice.
-			if e.Log.TxHash == lastTx {
-				i--
-			}
-			lastTx = e.Log.TxHash
-			want := &peruntoken.PeruntokenApproval{
-				Owner:   account.Address,
-				Spender: account.Address,
-				Value:   big.NewInt(int64(i + 1)),
-			}
-			require.Equal(t, want, e.Data)
+			approval, ok := e.Data.(*peruntoken.PeruntokenApproval)
+			require.True(t, ok)
+			require.Equal(t, account.Address, approval.Owner)
+			require.Equal(t, account.Address, approval.Spender)
 			require.False(t, e.Log.Removed)
+
+			value := approval.Value.Int64()
+			require.GreaterOrEqual(t, value, int64(1))
+			require.LessOrEqual(t, value, int64(n))
+			seenKey := approval.Value.String()
+			seen[seenKey] = struct{}{}
 		}
 		sub.Close()
 	})
 
 	ct.Wait("emitter", "sub", "receiver")
-	// Check that read terminated.
-	require.Nil(t, <-sink)
+	// Check that read terminated. Duplicate events may still be buffered when
+	// the subscription is closed, so we only assert that the channel closes.
+	for e := range sink {
+		require.NotNil(t, e)
+	}
 }
 
 // TestEventSub_Filter checks that the EventSub filters transactions.

@@ -19,6 +19,7 @@ import (
 	"math/big"
 	"testing"
 
+	pchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
 
 	ethchanneltest "github.com/perun-network/perun-eth-backend/channel/test"
@@ -32,6 +33,11 @@ import (
 )
 
 func TestSubChannelHappy(t *testing.T) {
+	t.Parallel()
+
+	release := acquireHeavySimTestSlot(t)
+	defer release()
+
 	rng := pkgtest.Prng(t)
 	const A, B = 0, 1 // Indices of clients.
 	s := ethchanneltest.NewSetup(t, rng, 2, ethclienttest.BlockInterval, TxFinalityDepth)
@@ -47,14 +53,10 @@ func TestSubChannelHappy(t *testing.T) {
 	// Build configuration.
 	baseCfg := clienttest.MakeBaseExecConfig(
 		[2]map[wallet.BackendID]wire.Address{wire.AddressMapfromAccountMap(setups[A].Identity), wire.AddressMapfromAccountMap(setups[B].Identity)},
-		s.Asset,
-		ethchanneltest.BackendID,
-		[2]*big.Int{big.NewInt(100), big.NewInt(100)},
+		[]pchannel.Asset{s.Asset},
+		[]wallet.BackendID{ethchanneltest.BackendID},
+		[][2]*big.Int{{big.NewInt(100), big.NewInt(100)}},
 		client.WithoutApp(),
-	)
-	const (
-		numSubChannels    = 2
-		numSubSubChannels = 3
 	)
 	var (
 		subChannelFunds = [][2]*big.Int{
@@ -70,8 +72,6 @@ func TestSubChannelHappy(t *testing.T) {
 	)
 	cfg := clienttest.NewSusieTimExecConfig(
 		baseCfg,
-		numSubChannels,
-		numSubSubChannels,
 		subChannelFunds,
 		subSubChannelFunds,
 		client.WithApp(
@@ -86,11 +86,19 @@ func TestSubChannelHappy(t *testing.T) {
 }
 
 func TestSubChannelDispute(t *testing.T) {
+	t.Parallel()
+
+	release := acquireHeavySimTestSlot(t)
+	defer release()
+
 	rng := pkgtest.Prng(t)
 
 	const A, B = 0, 1 // Indices of clients.
 	s := ethchanneltest.NewSetup(t, rng, 2, ethclienttest.BlockInterval, TxFinalityDepth)
 	setups := ethclienttest.MakeRoleSetups(rng, s, []string{"DisputeSusie", "DisputeTim"})
+	for i := range setups {
+		setups[i].Timeout = 4 * twoPartyTestTimeout
+	}
 	roles := [2]clienttest.Executer{
 		clienttest.NewDisputeSusie(t, setups[A]),
 		clienttest.NewDisputeTim(t, setups[B]),
@@ -101,9 +109,9 @@ func TestSubChannelDispute(t *testing.T) {
 
 	baseCfg := clienttest.MakeBaseExecConfig(
 		[2]map[wallet.BackendID]wire.Address{wire.AddressMapfromAccountMap(setups[A].Identity), wire.AddressMapfromAccountMap(setups[B].Identity)},
-		s.Asset,
-		ethchanneltest.BackendID,
-		[2]*big.Int{big.NewInt(100), big.NewInt(100)},
+		[]pchannel.Asset{s.Asset},
+		[]wallet.BackendID{ethchanneltest.BackendID},
+		[][2]*big.Int{{big.NewInt(100), big.NewInt(100)}},
 		client.WithoutApp(),
 	)
 	cfg := &clienttest.DisputeSusieTimExecConfig{
@@ -112,7 +120,11 @@ func TestSubChannelDispute(t *testing.T) {
 		TxAmount:        big.NewInt(1),
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), twoPartyTestTimeout)
+	// The refutation path runs noticeably closer to the deadline on newer geth
+	// versions under package-level load. Give the stale-state registration and
+	// refutation path enough time to complete even when other simulated chains
+	// are active in parallel.
+	ctx, cancel := context.WithTimeout(context.Background(), 4*twoPartyTestTimeout)
 	defer cancel()
 	clienttest.ExecuteTwoPartyTest(ctx, t, roles, cfg)
 }

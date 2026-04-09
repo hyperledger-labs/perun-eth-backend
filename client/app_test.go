@@ -34,6 +34,11 @@ import (
 )
 
 func TestProgression(t *testing.T) {
+	t.Parallel()
+
+	release := acquireHeavySimTestSlot(t)
+	defer release()
+
 	rng := pkgtest.Prng(t)
 
 	names := []string{"Paul", "Paula"}
@@ -53,9 +58,9 @@ func TestProgression(t *testing.T) {
 	execConfig := &clienttest.ProgressionExecConfig{
 		BaseExecConfig: clienttest.MakeBaseExecConfig(
 			clientAddresses(roleSetups),
-			backendSetup.Asset,
-			test.BackendID,
-			[2]*big.Int{big.NewInt(99), big.NewInt(1)},
+			[]channel.Asset{backendSetup.Asset},
+			[]wallet.BackendID{test.BackendID},
+			[][2]*big.Int{{big.NewInt(99), big.NewInt(1)}},
 			client.WithApp(app, channel.NewMockOp(channel.OpValid)),
 		),
 	}

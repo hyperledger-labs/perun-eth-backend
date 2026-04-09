@@ -42,6 +42,8 @@ func TestAdjudicator_ConcludeFinal(t *testing.T) {
 func testConcludeFinal(t *testing.T, numParts int) {
 	t.Helper()
 	t.Parallel()
+	release := acquireHeavySimTestSlot(t)
+	defer release()
 	rng := pkgtest.Prng(t)
 	// create test setup
 	s := test.NewSetup(t, rng, numParts, blockInterval, TxFinalityDepth)
@@ -55,7 +57,7 @@ func testConcludeFinal(t *testing.T, numParts int) {
 		channeltest.WithLedgerChannel(true),
 	)
 	// we need to properly fund the channel
-	fundingCtx, funCancel := context.WithTimeout(context.Background(), defaultTxTimeout)
+	fundingCtx, funCancel := context.WithTimeout(context.Background(), 2*defaultTxTimeout)
 	defer funCancel()
 	// fund the contract
 	ct := pkgtest.NewConcurrent(t)
@@ -147,6 +149,9 @@ func TestAdjudicator_ConcludeWithSubChannels(t *testing.T) {
 	}
 	// fund
 	require.NoError(fund(ctx, s.Funders, ledgerChannel))
+	sub, err := adj.Subscribe(ctx, ledgerChannel.params.ID())
+	require.NoError(err)
+	defer func() { require.NoError(sub.Close()) }()
 
 	// 1. register channels
 
@@ -156,13 +161,7 @@ func TestAdjudicator_ConcludeWithSubChannels(t *testing.T) {
 
 	subChannelsRecursive := toSubChannelsRecursive(ledgerChannel, subChannelMap)
 	require.NoError(register(ctx, adj, accounts, ledgerChannel, subChannelsRecursive))
-
-	// 2. wait until ready to conclude
-
-	sub, err := adj.Subscribe(ctx, ledgerChannel.params.ID())
-	require.NoError(err)
 	require.NoError(sub.Next().Timeout().Wait(ctx))
-	sub.Close()
 
 	// 3. withdraw channel with sub-channels
 

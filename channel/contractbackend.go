@@ -17,9 +17,6 @@ package channel
 import (
 	"context"
 	"math/big"
-	"sync"
-
-	"perun.network/go-perun/channel/multi"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -45,13 +42,6 @@ const (
 // create a TxTimedoutError with additional context.
 var errTxTimedOut = errors.New("")
 
-var (
-	// SharedExpectedNonces is a map of each expected next nonce of all clients.
-	SharedExpectedNonces map[multi.LedgerIDMapKey]map[common.Address]uint64
-	// SharedExpectedNoncesMutex is a mutex to protect the shared expected nonces map.
-	SharedExpectedNoncesMutex = &sync.Mutex{}
-)
-
 // ContractInterface provides all functions needed by an ethereum backend.
 // Both test.SimulatedBackend and ethclient.Client implement this interface.
 type ContractInterface interface {
@@ -69,31 +59,18 @@ type Transactor interface {
 // This is needed to send on-chain transaction to interact with the smart contracts.
 type ContractBackend struct {
 	ContractInterface
-	tr                Transactor
-	expectedNextNonce map[common.Address]uint64
-	txFinalityDepth   uint64
-	chainID           ChainID
+	tr              Transactor
+	txFinalityDepth uint64
+	chainID         ChainID
 }
 
 // NewContractBackend creates a new ContractBackend with the given parameters.
 // txFinalityDepth defines in how many consecutive blocks a TX has to be
 // included to be considered final. Must be at least 1.
 func NewContractBackend(cf ContractInterface, chainID ChainID, tr Transactor, txFinalityDepth uint64) ContractBackend {
-	SharedExpectedNoncesMutex.Lock()
-	defer SharedExpectedNoncesMutex.Unlock()
-	// Check if the shared maps are initialized, if not, initialize them.
-	if SharedExpectedNonces == nil {
-		SharedExpectedNonces = make(map[multi.LedgerIDMapKey]map[common.Address]uint64)
-	}
-
-	// Check if the specific chainID entry exists in the shared maps, if not, create it.
-	if _, exists := SharedExpectedNonces[chainID.MapKey()]; !exists {
-		SharedExpectedNonces[chainID.MapKey()] = make(map[common.Address]uint64)
-	}
 	return ContractBackend{
 		ContractInterface: cf,
 		tr:                tr,
-		expectedNextNonce: SharedExpectedNonces[chainID.MapKey()],
 		txFinalityDepth:   txFinalityDepth,
 		chainID:           chainID,
 	}
@@ -181,20 +158,6 @@ func (c *ContractBackend) nonce(ctx context.Context, sender common.Address) (uin
 		err = cherrors.CheckIsChainNotReachableError(err)
 		return 0, errors.WithMessage(err, "fetching nonce")
 	}
-	SharedExpectedNoncesMutex.Lock()
-	defer SharedExpectedNoncesMutex.Unlock()
-	expectedNextNonce, found := c.expectedNextNonce[sender]
-	if !found {
-		c.expectedNextNonce[sender] = 0
-	}
-
-	// Compare nonces and use larger.
-	if nonce < expectedNextNonce {
-		nonce = expectedNextNonce
-	}
-
-	// Update local expectation.
-	c.expectedNextNonce[sender] = nonce + 1
 	return nonce, nil
 }
 
@@ -220,10 +183,11 @@ func (c *ContractBackend) ConfirmTransaction(ctx context.Context, tx *types.Tran
 			if receipt.GasUsed+1000 > tx.Gas() {
 				log.WithFields(log.Fields{"Used": receipt.GasUsed, "Limit": tx.Gas()}).Warn("TX could be out of gas")
 			}
+			return receipt, errors.Wrapf(ErrTxFailed, "%v", err)
 		} else {
 			log.Warn("TX failed with reason: ", reason)
+			return receipt, errors.Wrapf(ErrTxFailed, "execution reverted: %s", reason)
 		}
-		return receipt, errors.WithStack(ErrTxFailed)
 	}
 	return receipt, nil
 }
@@ -254,13 +218,13 @@ func (c *ContractBackend) confirmNTimes(ctx context.Context, tx *types.Transacti
 		select {
 		case head := <-heads:
 			// Poll the receipt of the TX.
-			receipt, err := c.ContractInterface.TransactionReceipt(ctx, tx.Hash())
+			receipt, err := c.TransactionReceipt(ctx, tx.Hash())
 			if err != nil {
 				err = cherrors.CheckIsChainNotReachableError(err)
 				log.Warnf("Failed to get tx receipt: %v", err)
 				break
 			}
-			if receipt != nil && isFinal(receipt, head, finalityDepth) {
+			if receipt != nil && c.isCanonicalReceipt(ctx, receipt) && isFinal(receipt, head, finalityDepth) {
 				return receipt, nil
 			}
 			// TX is either not included in the canonical chain anymore
@@ -272,6 +236,14 @@ func (c *ContractBackend) confirmNTimes(ctx context.Context, tx *types.Transacti
 			return nil, ctx.Err()
 		}
 	}
+}
+
+func (c *ContractBackend) isCanonicalReceipt(ctx context.Context, receipt *types.Receipt) bool {
+	header, err := c.HeaderByNumber(ctx, receipt.BlockNumber)
+	if err != nil || header == nil {
+		return false
+	}
+	return header.Hash() == receipt.BlockHash
 }
 
 // waitMined waits for a TX to be mined and returns the latest head.

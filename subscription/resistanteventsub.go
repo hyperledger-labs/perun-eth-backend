@@ -37,6 +37,7 @@ type (
 	ResistantEventSub struct {
 		closer        pkgsync.Closer
 		sub           *EventSub
+		cr            ethereum.ChainReader
 		finalityDepth *big.Int
 
 		lastBlockNum *big.Int
@@ -89,7 +90,6 @@ func NewResistantEventSub(ctx context.Context, sub *EventSub, cr ethereum.ChainR
 	heads := make(chan *types.Header, resistantSubHeadBuffSize)
 	headSub, err := cr.SubscribeNewHead(ctx, heads)
 	if err != nil {
-		headSub.Unsubscribe()
 		err = cherrors.CheckIsChainNotReachableError(err)
 		return nil, errors.WithMessage(err, "subscribing to headers")
 	}
@@ -98,6 +98,7 @@ func NewResistantEventSub(ctx context.Context, sub *EventSub, cr ethereum.ChainR
 	fd.SetUint64(finalityDepth)
 	ret := &ResistantEventSub{
 		sub:           sub,
+		cr:            cr,
 		lastBlockNum:  new(big.Int).Set(last.Number),
 		heads:         heads,
 		headSub:       headSub,
@@ -130,7 +131,7 @@ func (s *ResistantEventSub) Read(_ctx context.Context, sink chan<- *Event) error
 			if head == nil {
 				return errors.New("head sub returned nil")
 			}
-			s.processHead(head, sink)
+			s.processHead(ctx, head, sink)
 		case event := <-rawEvents:
 			s.processEvent(event, sink)
 		case e := <-s.headSub.Err():
@@ -168,11 +169,11 @@ func (s *ResistantEventSub) ReadPast(_ctx context.Context, sink chan<- *Event) e
 			if head == nil {
 				return errors.New("head sub returned nil")
 			}
-			s.processHead(head, sink)
+			s.processHead(ctx, head, sink)
 		case event, ok := <-rawEvents:
 			if !ok {
-				s.drainHeadSub(sink)
-				return errors.WithMessage(<-subErr, "underlying EventSub.Read")
+				s.drainHeadSub(ctx, sink)
+				return errors.WithMessage(<-subErr, "underlying EventSub.ReadPast")
 			}
 			s.processEvent(event, sink)
 		case e := <-s.headSub.Err():
@@ -186,11 +187,11 @@ func (s *ResistantEventSub) ReadPast(_ctx context.Context, sink chan<- *Event) e
 }
 
 // drainHeadSub ensures that all queued block headers are processed.
-func (s *ResistantEventSub) drainHeadSub(sink chan<- *Event) {
+func (s *ResistantEventSub) drainHeadSub(ctx context.Context, sink chan<- *Event) {
 	for {
 		select {
 		case head := <-s.heads:
-			s.processHead(head, sink)
+			s.processHead(ctx, head, sink)
 		default:
 			return
 		}
@@ -205,7 +206,7 @@ func (s *ResistantEventSub) processEvent(event *Event, sink chan<- *Event) {
 
 	if event.Log.Removed { //nolint:nestif
 		if _, found := s.events[hash]; !found {
-			log.Error("Race detected between event and header sub")
+			log.Trace("Removed event already pruned")
 		} else {
 			log.Trace("Event preliminary excluded")
 			delete(s.events, hash)
@@ -223,16 +224,36 @@ func (s *ResistantEventSub) processEvent(event *Event, sink chan<- *Event) {
 
 // handles headers that are received from the geth node and checks if events
 // become final.
-func (s *ResistantEventSub) processHead(head *types.Header, sink chan<- *Event) {
+func (s *ResistantEventSub) processHead(ctx context.Context, head *types.Header, sink chan<- *Event) {
 	log.Tracef("Received new block. From %v to %v", s.lastBlockNum, head.Number)
 	s.lastBlockNum.Set(head.Number)
 
 	for _, event := range s.events {
+		canonical, err := s.isCanonical(ctx, event)
+		if err != nil {
+			log.WithError(err).WithField("hash", event.Log.TxHash.Hex()).Warn("Skipping canonicality check until next head")
+			continue
+		}
+		if !canonical {
+			delete(s.events, event.Log.TxHash)
+			continue
+		}
 		if s.isFinal(event) {
 			sink <- event
 			delete(s.events, event.Log.TxHash)
 		}
 	}
+}
+
+func (s *ResistantEventSub) isCanonical(ctx context.Context, event *Event) (bool, error) {
+	header, err := s.cr.HeaderByNumber(ctx, new(big.Int).SetUint64(event.Log.BlockNumber))
+	if err != nil {
+		return false, err
+	}
+	if header == nil {
+		return false, errors.New("canonical header not found")
+	}
+	return header.Hash() == event.Log.BlockHash, nil
 }
 
 func (s *ResistantEventSub) isFinal(event *Event) bool {
@@ -257,6 +278,6 @@ func (s *ResistantEventSub) isFinal(event *Event) bool {
 // Close closes the sub and the underlying `EventSub`.
 // Can be called more than once. Is thread safe.
 func (s *ResistantEventSub) Close() {
-	s.closer.Close() // Silently ignore repeated close calls, as it is allowed in this function's specification.
+	_ = s.closer.Close() // Silently ignore repeated close calls, as it is allowed in this function's specification.
 	// NOTE: The underlying `EventSub` is closed in the `OnCloseAlways` hook.
 }

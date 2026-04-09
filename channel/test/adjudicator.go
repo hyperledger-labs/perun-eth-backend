@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -43,13 +44,26 @@ const adjudicatorGasLimit = uint64(1000000)
 // NewSimAdjudicator returns a new SimAdjudicator for the given backend. The
 // backend must be a SimulatedBackend or it panics.
 func NewSimAdjudicator(backend ethchannel.ContractBackend, contract common.Address, receiver common.Address, acc accounts.Account) *SimAdjudicator {
-	sb, ok := backend.ContractInterface.(*SimulatedBackend)
+	sb, ok := unwrapSimulatedBackend(backend.ContractInterface)
 	if !ok {
 		panic("SimAdjudicator can only be created with a SimulatedBackend.")
 	}
 	return &SimAdjudicator{
 		Adjudicator: *ethchannel.NewAdjudicator(backend, contract, receiver, acc, adjudicatorGasLimit),
 		sb:          sb,
+	}
+}
+
+func unwrapSimulatedBackend(backend ethchannel.ContractInterface) (*SimulatedBackend, bool) {
+	for {
+		switch b := backend.(type) {
+		case *SimulatedBackend:
+			return b, true
+		case *ethchannel.ContractBackend:
+			backend = b.ContractInterface
+		default:
+			return nil, false
+		}
 	}
 }
 
@@ -124,32 +138,54 @@ func (t *SimTimeout) IsElapsed(ctx context.Context) bool {
 	}
 	defer t.sb.clockMu.Unlock()
 
-	return t.timeLeft(ctx) <= 0
+	timeLeft, err := t.timeLeft(ctx)
+	if err != nil {
+		return false // subsequent Wait call will expose error to caller
+	}
+	return timeLeft <= 0
 }
 
 // Wait advances the clock of the simulated blockchain past the timeout.
 // Access to the blockchain by different SimTimeouts is guarded by a shared mutex.
 func (t *SimTimeout) Wait(ctx context.Context) error {
+	const maxAdjustTimeAttempts = 10
+
 	if !t.sb.clockMu.TryLockCtx(ctx) {
 		return errors.New("clock mutex could not be locked")
 	}
 	defer t.sb.clockMu.Unlock()
 
-	if d := t.timeLeft(ctx); d > 0 {
-		if err := t.sb.AdjustTime(time.Duration(d) * time.Second); err != nil {
-			return errors.Wrap(err, "adjusting time")
+	d, err := t.timeLeft(ctx)
+	if err != nil {
+		return err
+	}
+	if d > 0 {
+		for attempt := 1; attempt <= maxAdjustTimeAttempts; attempt++ {
+			if err := t.sb.AdjustTime(time.Duration(d) * time.Second); err != nil {
+				if strings.Contains(err.Error(), "non-empty block") {
+					if attempt == maxAdjustTimeAttempts {
+						return errors.Wrap(err, "adjusting time after repeated non-empty blocks")
+					}
+					t.sb.Commit()
+					if ctx.Err() != nil {
+						return errors.Wrap(ctx.Err(), "context cancelled")
+					}
+					continue
+				}
+				return errors.Wrap(err, "adjusting time")
+			}
+			return nil
 		}
-		t.sb.Commit()
 	}
 	return nil
 }
 
-func (t *SimTimeout) timeLeft(ctx context.Context) int64 {
+func (t *SimTimeout) timeLeft(ctx context.Context) (int64, error) {
 	h, err := t.sb.HeaderByNumber(ctx, nil)
-	if err != nil { // should never happen with a sim blockchain
-		panic(fmt.Sprint("Error getting latest block: ", err))
+	if err != nil {
+		return 0, errors.WithMessage(err, "getting latest block")
 	}
-	return int64(t.Time) - int64(h.Time)
+	return int64(t.Time) - int64(h.Time), nil
 }
 
 // String returns the timeout in absolute seconds as a string.

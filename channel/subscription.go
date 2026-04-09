@@ -43,11 +43,19 @@ func (a *Adjudicator) Subscribe(ctx context.Context, chID channel.ID) (channel.A
 			Filter: [][]interface{}{{chID}},
 		}
 	}
-	sub, err := subscription.Subscribe(ctx, a.ContractBackend, a.bound, eFact, startBlockOffset, a.txFinalityDepth)
+	pastBlocks := uint64(0)
+	if dispute, err := a.dispute(ctx, chID); err != nil {
+		return nil, errors.WithMessage(err, "querying dispute")
+	} else if hasRecordedDispute(dispute) {
+		pastBlocks = startBlockOffset
+	}
+	sub, err := subscription.Subscribe(ctx, a.ContractBackend, a.bound, eFact, pastBlocks, a.txFinalityDepth)
 	if err != nil {
 		return nil, errors.WithMessage(err, "creating filter-watch event subscription")
 	}
-	// Find new events
+	// The resistant event subscription already replays past events before it
+	// streams future ones, and RegisteredSub keeps only the newest matching event
+	// for the caller.
 	go func() {
 		subErr <- sub.Read(ctx, events)
 	}()
@@ -269,7 +277,7 @@ func (a *Adjudicator) fetchRegisterCallData(ctx context.Context, txHash common.H
 }
 
 func (a *Adjudicator) fetchCallData(ctx context.Context, txHash common.Hash, method abi.Method, args interface{}) error {
-	tx, _, err := a.ContractBackend.TransactionByHash(ctx, txHash)
+	tx, _, err := a.TransactionByHash(ctx, txHash)
 	if err != nil {
 		err = cherrors.CheckIsChainNotReachableError(err)
 		return errors.WithMessage(err, "getting transaction")

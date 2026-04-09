@@ -29,6 +29,11 @@ import (
 )
 
 func TestVirtualChannelOptimistic(t *testing.T) {
+	t.Parallel()
+
+	release := acquireHeavySimTestSlot(t)
+	defer release()
+
 	rng := test.Prng(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -41,8 +46,13 @@ func TestVirtualChannelOptimistic(t *testing.T) {
 }
 
 func TestVirtualChannelDispute(t *testing.T) {
+	t.Parallel()
+
+	release := acquireHeavySimTestSlot(t)
+	defer release()
+
 	rng := test.Prng(t)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testDuration)
 	defer cancel()
 
 	ctest.TestVirtualChannelDispute(

@@ -15,9 +15,9 @@
 package test
 
 import (
-	"io/ioutil"
 	"log"
 	"math/rand"
+	"os"
 
 	accsKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -52,7 +52,9 @@ func (r *randomizer) NewRandomAccount(rnd *rand.Rand) wallet.Account {
 // NewRandomAddress creates a new random ethereum address.
 func NewRandomAddress(rnd *rand.Rand) ethwallet.Address {
 	var a common.Address
-	rnd.Read(a[:])
+	if _, err := rnd.Read(a[:]); err != nil {
+		panic(err)
+	}
 	return ethwallet.Address(a)
 }
 
@@ -72,7 +74,7 @@ func (r *randomizer) NewWallet() wtest.Wallet {
 // store its keys.
 func NewTmpWallet() *keystore.Wallet {
 	const prefix = "go-perun-test-eth-keystore-"
-	tmpDir, err := ioutil.TempDir("", prefix)
+	tmpDir, err := os.MkdirTemp("", prefix)
 	if err != nil {
 		log.Panicf("Could not create TempDir: %v", err)
 	}

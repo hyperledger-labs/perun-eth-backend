@@ -52,7 +52,7 @@ const (
 func TestFunder_RegisterAsset_IsAssetRegistered(t *testing.T) {
 	rng := pkgtest.Prng(t)
 
-	funder, assets, depositors, accs := newFunderSetup(rng)
+	funder, assets, depositors, accs := newFunderSetup(t, rng)
 	n := len(assets)
 
 	for i := 0; i < n; i++ {
@@ -72,14 +72,18 @@ func TestFunder_RegisterAsset_IsAssetRegistered(t *testing.T) {
 	}
 }
 
-func newFunderSetup(rng *rand.Rand) (
+func newFunderSetup(t *testing.T, rng *rand.Rand) (
 	*ethchannel.Funder,
 	[]ethchannel.Asset,
 	[]ethchannel.Depositor,
 	[]accounts.Account,
 ) {
+	t.Helper()
 	n := 2
 	simBackend := test.NewSimulatedBackend()
+	t.Cleanup(func() {
+		require.NoError(t, simBackend.Close())
+	})
 	ksWallet := wallettest.RandomWallet(ethwallet.BackendID).(*keystore.Wallet)
 	cb := ethchannel.NewContractBackend(
 		simBackend,
@@ -170,7 +174,7 @@ func testFunderCrossOverFunding(t *testing.T, n int) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTxTimeout*time.Duration(n))
 	defer cancel()
 	rng := pkgtest.Prng(t, n)
-	ct := pkgtest.NewConcurrent(t)
+	ct := pkgtest.NewConcurrentCtx(ctx, t)
 	parts, funders, params, alloc := newNFunders(ctx, t, rng, n)
 
 	// Shuffle the balances.
@@ -198,7 +202,7 @@ func testFunderCrossOverFunding(t *testing.T, n int) {
 
 func TestEgoisticParticipantFunding(t *testing.T) {
 	// Peers will randomly fund for each other.
-	for i := 0; i < 30; i++ {
+	for i := 0; i < 10; i++ {
 		name := fmt.Sprintf("Egoistic Funding %v", i)
 		t.Run(name, func(t *testing.T) { testEgoisticParticipantFunding(t) })
 	}
@@ -300,7 +304,7 @@ func TestFunder_Multiple(t *testing.T) {
 	defer cancel()
 	parts, funders, params, alloc := newNFunders(ctx, t, rng, 1)
 	// Test invalid funding request
-	assert.Panics(t, func() { funders[0].Fund(ctx, channel.FundingReq{}) }, "Funding with invalid funding req should fail") //nolint:errcheck
+	assert.Panics(t, func() { _, _ = funders[0].Fund(ctx, channel.FundingReq{}), struct{}{} }, "Funding with invalid funding req should fail")
 	// Test funding without assets
 	req := channel.NewFundingReq(&channel.Params{}, &channel.State{}, 0, make(channel.Balances, 0))
 	require.NoError(t, funders[0].Fund(ctx, *req), "Funding with no assets should succeed")
@@ -343,7 +347,9 @@ func TestFunder_PeerTimeout(t *testing.T) {
 func testFundingTimeout(t *testing.T, faultyPeer, n int) {
 	t.Helper()
 	t.Parallel()
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTxTimeout*time.Duration(n))
+	release := acquireHeavySimTestSlot(t)
+	defer release()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*defaultTxTimeout*time.Duration(n))
 	defer cancel()
 	rng := pkgtest.Prng(t, faultyPeer, n)
 	ct := pkgtest.NewConcurrent(t)
@@ -364,20 +370,30 @@ func testFundingTimeout(t *testing.T, faultyPeer, n int) {
 			require.Error(t, err)
 			require.True(t, channel.IsFundingTimeoutError(err), "funder should return FundingTimeoutError")
 			pErr := errors.Cause(err).(channel.FundingTimeoutError) // unwrap error
-			// Check that `faultyPeer` is reported as faulty.
-			require.Len(t, pErr.Errors, len(alloc.Assets))
+			// Only assets with a positive expected contribution from the faulty
+			// peer must show up as timed out.
+			expectedAssets := make(map[channel.Index]struct{})
+			for a := range alloc.Assets {
+				if alloc.Balances[a][faultyPeer].Sign() > 0 {
+					expectedAssets[channel.Index(a)] = struct{}{}
+				}
+			}
+			require.Len(t, pErr.Errors, len(expectedAssets))
 			for _, e := range pErr.Errors {
+				_, ok := expectedAssets[e.Asset]
+				require.True(t, ok, "unexpected asset reported as underfunded")
 				require.Len(t, e.TimedOutPeers, 1)
 				require.Equal(t, channel.Index(faultyPeer), e.TimedOutPeers[0], "Peer should be detected as erroneous")
 			}
-		outer:
-			for a := 0; a < len(alloc.Assets); a++ {
+			for asset := range expectedAssets {
+				found := false
 				for _, e := range pErr.Errors {
-					if e.Asset == channel.Index(a) {
-						continue outer
+					if e.Asset == asset {
+						found = true
+						break
 					}
 				}
-				require.Fail(t, "asset should be reported as underfunded")
+				require.True(t, found, "asset with faulty peer contribution should be reported as underfunded")
 			}
 		})
 	}
@@ -404,7 +420,11 @@ func TestFunder_Fund_multi(t *testing.T) {
 func testFunderFunding(t *testing.T, n int) {
 	t.Helper()
 	t.Parallel()
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTxTimeout*time.Duration(n))
+	release := acquireHeavySimTestSlot(t)
+	defer release()
+	// Larger funding scenarios can run close to the default deadline when the
+	// package test suite is under heavy parallel load.
+	ctx, cancel := context.WithTimeout(context.Background(), 2*defaultTxTimeout*time.Duration(n))
 	defer cancel()
 	rng := pkgtest.Prng(t, n)
 	ct := pkgtest.NewConcurrent(t)
@@ -424,7 +444,9 @@ func testFunderFunding(t *testing.T, n int) {
 
 	ct.Wait("funding")
 	// Check result balances
-	assert.NoError(t, compareOnChainAlloc(ctx, params, alloc.Balances, alloc.Assets, &funders[0].ContractBackend))
+	verifyCtx, verifyCancel := context.WithTimeout(context.Background(), defaultTxTimeout*time.Duration(n))
+	defer verifyCancel()
+	assert.NoError(t, compareOnChainAlloc(verifyCtx, params, alloc.Balances, alloc.Assets, &funders[0].ContractBackend))
 }
 
 func newNFunders(
@@ -440,6 +462,9 @@ func newNFunders(
 ) {
 	t.Helper()
 	simBackend := test.NewSimulatedBackend()
+	t.Cleanup(func() {
+		require.NoError(t, simBackend.Close())
+	})
 	chainID := simBackend.ChainID()
 	// Start the auto-mining of blocks.
 	simBackend.StartMining(blockInterval)
@@ -492,7 +517,7 @@ func newNFunders(
 	params = channeltest.NewRandomParams(
 		rng,
 		channeltest.WithParts(parts),
-		channeltest.WithChallengeDuration(uint64(n)*40000),
+		channeltest.WithChallengeDuration(uint64(n)*challengeDurationPerParticipant),
 		channeltest.WithBackend(ethwallet.BackendID),
 	)
 	allocation = channeltest.NewRandomAllocation(

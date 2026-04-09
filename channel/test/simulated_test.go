@@ -29,6 +29,9 @@ import (
 // `StartMining` and before `StopMining` was called.
 func TestSimBackend_AutoMine(t *testing.T) {
 	sb := test.NewSimulatedBackend()
+	t.Cleanup(func() {
+		require.NoError(t, sb.Close())
+	})
 
 	// Start mining with 10 blocks/second.
 	sb.StartMining(100 * time.Millisecond)

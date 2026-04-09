@@ -158,13 +158,10 @@ func Verify(addr wallet.Address, s *channel.State, sig wallet.Sig) (bool, error)
 func ToEthParams(p *channel.Params) adjudicator.ChannelParams {
 	var app common.Address
 	if p.App != nil && !channel.IsNoApp(p.App) {
-		appDef, ok := p.App.Def().(channel.AppID)
+		appDef := p.App.Def()
 		ethAddress, err := ExtractEthereumAddress(appDef)
 		if err != nil {
 			log.Panicf("error extracting Ethereum address: %v", err)
-		}
-		if !ok {
-			panic("appDef is not of type channel.AppID")
 		}
 		app = ethAddress
 	}
@@ -199,9 +196,9 @@ func ExtractEthereumAddress(appID channel.AppID) (common.Address, error) {
 
 // ToEthState converts a channel.State to a ChannelState struct.
 func ToEthState(s *channel.State) adjudicator.ChannelState {
-	backends := make([]*big.Int, len(s.Allocation.Assets))
-	for i := range s.Allocation.Assets { // we assume that for each asset there is an element in backends corresponding to the backendID the asset belongs to.
-		backends[i] = big.NewInt(int64(s.Allocation.Backends[i]))
+	backends := make([]*big.Int, len(s.Assets))
+	for i := range s.Assets { // we assume that for each asset there is an element in backends corresponding to the backendID the asset belongs to.
+		backends[i] = big.NewInt(int64(s.Backends[i]))
 	}
 	locked := make([]adjudicator.ChannelSubAlloc, len(s.Locked))
 	for i, sub := range s.Locked {
@@ -220,7 +217,7 @@ func ToEthState(s *channel.State) adjudicator.ChannelState {
 		locked[i] = adjudicator.ChannelSubAlloc{ID: sub.ID, Balances: sub.Bals, IndexMap: indexMap}
 	}
 	outcome := adjudicator.ChannelAllocation{
-		Assets:   assetsToEthAssets(s.Allocation.Assets, s.Allocation.Backends),
+		Assets:   assetsToEthAssets(s.Assets, s.Backends),
 		Backends: backends,
 		Balances: s.Balances,
 		Locked:   locked,
@@ -280,7 +277,7 @@ func pwToCommonAddresses(addr []map[wallet.BackendID]wallet.Address) []adjudicat
 
 		// If no other addresses exist, initialize CcAddress with 32 zero bytes
 		if cAddrs[i].CcAddress == nil {
-			cAddrs[i].CcAddress = make([]byte, 32) //nolint:gomnd
+			cAddrs[i].CcAddress = make([]byte, 32) //nolint:mnd
 		}
 	}
 	return cAddrs
@@ -344,7 +341,7 @@ func assetsToEthAssets(assets []channel.Asset, bIDs []wallet.BackendID) []adjudi
 			cAddrs[i] = adjudicator.ChannelAsset{
 				ChainID:   asset.assetID.ChainID(),
 				EthHolder: asset.EthAddress(),
-				CcHolder:  make([]byte, 32), //nolint:gomnd
+				CcHolder:  make([]byte, 32), //nolint:mnd
 			}
 		} else {
 			asset, err := a.MarshalBinary()

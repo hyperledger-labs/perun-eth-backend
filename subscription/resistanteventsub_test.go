@@ -194,7 +194,7 @@ func TestResistantEventSub_ReorgRemove(t *testing.T) {
 // `finalityDepth` < 1.
 func TestResistantEventSub_New(t *testing.T) {
 	require.PanicsWithValue(t, "finalityDepth needs to be at least 1", func() {
-		subscription.NewResistantEventSub(context.Background(), nil, nil, 0) //nolint:errcheck
+		_, _ = subscription.NewResistantEventSub(context.Background(), nil, nil, 0)
 	})
 }
 

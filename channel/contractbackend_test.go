@@ -126,10 +126,16 @@ func Test_ConfirmTransaction(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTestTimeout)
 	defer cancel()
 
+	// Re-fund the sender explicitly so the confirmation test stays independent
+	// of stricter txpool balance checks in the newer simulated backend stack.
+	s.SimBackend.FundAddress(ctx, s.TxSender.Account.Address)
+
 	// Create the Transaction.
 	rawTx := types.NewTx(&types.DynamicFeeTx{
+		ChainID:   s.SimBackend.ChainID(),
 		Nonce:     0,
-		GasFeeCap: big.NewInt(test.InitialGasBaseFee),
+		GasTipCap: big.NewInt(params.GWei),
+		GasFeeCap: new(big.Int).Add(big.NewInt(test.InitialGasBaseFee), big.NewInt(params.GWei)),
 		Gas:       params.TxGas,
 		To:        &common.Address{},
 		Value:     big.NewInt(1),
@@ -140,7 +146,7 @@ func Test_ConfirmTransaction(t *testing.T) {
 	require.NoError(t, err)
 
 	// Send the TX.
-	require.NoError(t, s.SimBackend.SimulatedBackend.SendTransaction(ctx, signed))
+	require.NoError(t, s.SimBackend.SendTransaction(ctx, signed))
 
 	// Write receipt into `confirmed` when the TX is confirmed.
 	confirmed := make(chan *types.Receipt)
@@ -152,7 +158,9 @@ func Test_ConfirmTransaction(t *testing.T) {
 	}()
 
 	// Create new blocks.
-	for i := 0; i < int(TxFinalityDepth); i++ {
+	// The inclusion block counts as the first confirmation on the new backend,
+	// so only TxFinalityDepth-1 additional blocks are needed here.
+	for i := 0; i < int(TxFinalityDepth-1); i++ {
 		// Check that it is not yet confirmed.
 		select {
 		case <-time.After(100 * time.Millisecond):

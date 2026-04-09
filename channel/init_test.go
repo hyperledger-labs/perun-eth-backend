@@ -15,6 +15,8 @@
 package channel_test
 
 import (
+	"sync"
+	"testing"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -22,12 +24,27 @@ import (
 	plogrus "perun.network/go-perun/log/logrus"
 )
 
+// Channel tests can tolerate two concurrent simulated-backend heavy cases.
+var heavySimTestSlots = make(chan struct{}, 2)
+
+const challengeDurationPerParticipant = 40000
+
+func acquireHeavySimTestSlot(t *testing.T) func() {
+	t.Helper()
+
+	heavySimTestSlots <- struct{}{}
+	var once sync.Once
+	return func() {
+		once.Do(func() { <-heavySimTestSlots })
+	}
+}
+
 const (
 	TxFinalityDepth    = 3 // For tests that use a constant finality depth.
 	TxFinalityDepthMin = 1
 	TxFinalityDepthMax = 10
 
-	defaultTestTimeout = 10 * time.Second
+	defaultTestTimeout = 30 * time.Second
 	blockInterval      = 50 * time.Millisecond
 )
 

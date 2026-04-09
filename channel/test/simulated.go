@@ -19,14 +19,17 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
+	stdsync "sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/eth/ethconfig"
+	"github.com/ethereum/go-ethereum/ethclient/simulated"
+	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/perun-network/perun-eth-backend/channel"
 	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
@@ -49,20 +52,24 @@ const (
 	InitialGasBaseFee = 875_000_000
 	// internal gas limit of the simulated backend.
 	simBackendGasLimit = 8_000_000
+	defaultSimChainID  = 1337
 )
 
 // SimulatedBackend provides a simulated ethereum blockchain for tests.
 type SimulatedBackend struct {
-	backends.SimulatedBackend
-	sbMtx sync.Mutex // protects SimulatedBackend
+	backend *simulated.Backend
+	client  simulated.Client
+	sbMtx   sync.Mutex // protects backend operations
 
-	Signer types.Signer
+	chainID *big.Int
+	Signer  types.Signer
 
 	faucetKey     *ecdsa.PrivateKey
 	faucetAddr    common.Address
 	clockMu       sync.Mutex    // Mutex for clock adjustments. Locked by SimTimeouts.
 	mining        chan struct{} // Used for auto-mining blocks.
 	stoppedMining chan struct{} // For making sure that mining stopped.
+	stopMiningOnce stdsync.Once
 	commitTx      bool          // Whether each transaction is committed.
 }
 
@@ -99,17 +106,40 @@ type (
 	Reorder func([]types.Transactions) []types.Transactions
 
 	// SimBackendOpt represents an optional argument for the sim backend.
-	SimBackendOpt func(*SimulatedBackend)
+	SimBackendOpt func(*simBackendConfig)
 )
+
+type simBackendConfig struct {
+	chainID  *big.Int
+	commitTx bool
+	options  []func(nodeConf *node.Config, ethConf *ethconfig.Config)
+}
+
+func normalizeCtx(ctx context.Context) context.Context {
+	if ctx == nil {
+		// Keep older tests working even though callers should prefer explicit
+		// contexts so cancellation bugs are easier to spot.
+		return context.Background()
+	}
+	return ctx
+}
 
 // NewSimulatedBackend creates a new Simulated Backend.
 func NewSimulatedBackend(opts ...SimBackendOpt) *SimulatedBackend {
+	cfg := simBackendConfig{
+		chainID:  big.NewInt(defaultSimChainID),
+		commitTx: true,
+	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
 	sk, err := crypto.GenerateKey()
 	if err != nil {
 		panic(err)
 	}
 	faucetAddr := crypto.PubkeyToAddress(sk.PublicKey)
-	addr := map[common.Address]core.GenesisAccount{
+	alloc := types.GenesisAlloc{
 		common.BytesToAddress([]byte{1}): {Balance: big.NewInt(1)}, // ECRecover
 		common.BytesToAddress([]byte{2}): {Balance: big.NewInt(1)}, // SHA256
 		common.BytesToAddress([]byte{3}): {Balance: big.NewInt(1)}, // RIPEMD
@@ -118,44 +148,61 @@ func NewSimulatedBackend(opts ...SimBackendOpt) *SimulatedBackend {
 		common.BytesToAddress([]byte{6}): {Balance: big.NewInt(1)}, // ECAdd
 		common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)}, // ECScalarMul
 		common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)}, // ECPairing
+		faucetAddr:                       {Balance: new(big.Int).Sub(channel.MaxBalance, big.NewInt(8))},
 	}
-	addr[faucetAddr] = core.GenesisAccount{Balance: new(big.Int).Sub(channel.MaxBalance, big.NewInt(int64(len(addr))))}
-
-	alloc := core.GenesisAlloc(addr)
+	backendOpts := []func(nodeConf *node.Config, ethConf *ethconfig.Config){
+		simulated.WithBlockGasLimit(simBackendGasLimit),
+		func(nodeConf *node.Config, ethConf *ethconfig.Config) {
+			chainConfig := *params.AllDevChainProtocolChanges
+			chainConfig.ChainID = new(big.Int).Set(cfg.chainID)
+			ethConf.Genesis.Config = &chainConfig
+		},
+	}
+	backendOpts = append(backendOpts, cfg.options...)
+	b := simulated.NewBackend(alloc, backendOpts...)
 	sb := &SimulatedBackend{
-		SimulatedBackend: *backends.NewSimulatedBackend(alloc, simBackendGasLimit),
-		faucetKey:        sk,
-		faucetAddr:       faucetAddr,
-		commitTx:         true,
+		backend:    b,
+		client:     b.Client(),
+		chainID:    new(big.Int).Set(cfg.chainID),
+		faucetKey:  sk,
+		faucetAddr: faucetAddr,
+		commitTx:   cfg.commitTx,
 	}
 	sb.Signer = types.LatestSignerForChainID(sb.ChainID())
-
-	for _, opt := range opts {
-		opt(sb)
-	}
 	return sb
 }
 
 // SendTransaction executes a transaction.
 func (s *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	if err := s.SimulatedBackend.SendTransaction(ctx, tx); err != nil {
+	ctx = normalizeCtx(ctx)
+	s.sbMtx.Lock()
+	defer s.sbMtx.Unlock()
+
+	if err := s.client.SendTransaction(ctx, tx); err != nil {
 		return errors.WithStack(err)
 	}
 	if s.commitTx {
-		s.Commit()
+		s.backend.Commit()
 	}
 	return nil
 }
 
 // FundAddress funds a given address with `test.MaxBalance` eth from a faucet.
 func (s *SimulatedBackend) FundAddress(ctx context.Context, addr common.Address) {
+	ctx = normalizeCtx(ctx)
+	s.sbMtx.Lock()
+	defer s.sbMtx.Unlock()
+
 	nonce, err := s.PendingNonceAt(ctx, s.faucetAddr)
 	if err != nil {
 		panic(err)
 	}
+	gasFeeCap := new(big.Int).Add(big.NewInt(InitialGasBaseFee), big.NewInt(params.GWei))
 	txdata := &types.DynamicFeeTx{
+		ChainID:   s.ChainID(),
 		Nonce:     nonce,
-		GasFeeCap: big.NewInt(InitialGasBaseFee),
+		GasTipCap: big.NewInt(params.GWei),
+		GasFeeCap: gasFeeCap,
 		Gas:       params.TxGas,
 		To:        &addr,
 		Value:     test.MaxBalance,
@@ -164,10 +211,10 @@ func (s *SimulatedBackend) FundAddress(ctx context.Context, addr common.Address)
 	if err != nil {
 		panic(err)
 	}
-	if err := s.SimulatedBackend.SendTransaction(ctx, tx); err != nil {
+	if err := s.client.SendTransaction(ctx, tx); err != nil {
 		panic(err)
 	}
-	s.Commit()
+	s.backend.Commit()
 	if _, err := bind.WaitMined(ctx, s, tx); err != nil {
 		panic(err)
 	}
@@ -183,6 +230,7 @@ func (s *SimulatedBackend) StartMining(interval time.Duration) {
 
 	s.mining = make(chan struct{})
 	s.stoppedMining = make(chan struct{})
+	s.stopMiningOnce = stdsync.Once{}
 	go func() {
 		log.Trace("Started mining")
 		defer log.Trace("Stopped mining")
@@ -205,30 +253,32 @@ func (s *SimulatedBackend) StartMining(interval time.Duration) {
 // Must be called exactly once to free resources iff `StartMining` was called.
 // Waits until the auto-mining routine terminates.
 func (s *SimulatedBackend) StopMining() {
-	close(s.mining)
-	<-s.stoppedMining
+	if s.mining == nil || s.stoppedMining == nil {
+		return
+	}
+	s.stopMiningOnce.Do(func() {
+		close(s.mining)
+		<-s.stoppedMining
+	})
 }
 
 // Reorg applies a chain reorg.
-// `depth` is the number of blocks to be removed.
-// `reorder` is a function that gets as input the removed blocks and outputs a list of blocks that are to be added after the removal.
-// It is required that the number of added blocks is greater than `depth` for a reorg to be accepted.
-// The nonce prevents transactions of the same account from being re-ordered. Trying to do this will panic.
 func (s *SimulatedBackend) Reorg(ctx context.Context, depth uint64, reorder Reorder) error {
-	// Lock
 	if !s.sbMtx.TryLockCtx(ctx) {
 		return errors.Errorf("locking mutex: %v", ctx.Err())
 	}
 	defer s.sbMtx.Unlock()
 
-	// parent at current - depth.
-	parentN := new(big.Int).Sub(s.Blockchain().CurrentBlock().Number(), big.NewInt(int64(depth)))
+	currentBlock, err := s.BlockByNumber(ctx, nil)
+	if err != nil {
+		return errors.Wrap(err, "retrieving current block")
+	}
+	parentN := new(big.Int).Sub(currentBlock.Number(), big.NewInt(int64(depth)))
 	parent, err := s.BlockByNumber(ctx, parentN)
 	if err != nil {
 		return errors.Wrap(err, "retrieving reorg parent")
 	}
 
-	// Collect orphaned blocks.
 	blocks := make([]types.Transactions, depth)
 	for i := uint64(0); i < depth; i++ {
 		blockN := new(big.Int).Add(parentN, big.NewInt(int64(i+1)))
@@ -236,40 +286,194 @@ func (s *SimulatedBackend) Reorg(ctx context.Context, depth uint64, reorder Reor
 		if err != nil {
 			return errors.Wrap(err, "retrieving block")
 		}
-		// Add the TXs from block parent + 1 + i.
 		blocks[i] = block.Transactions()
 	}
 
-	// Modify the blocks with the reorder callback.
 	newBlocks := reorder(blocks)
 	if uint64(len(newBlocks)) <= depth {
 		return fmt.Errorf("number of blocks added %d must be greater than number of blocks removed %d", len(newBlocks), depth)
 	}
 
-	// Reset the chain to the parent block.
-	if err := s.Fork(ctx, parent.Hash()); err != nil {
+	if err := s.backend.Fork(parent.Hash()); err != nil {
 		return errors.Wrap(err, "forking")
 	}
+	s.backend.Rollback()
 
-	// Add modified blocks.
 	for _, txs := range newBlocks {
 		for _, tx := range txs {
-			if err := s.SimulatedBackend.SendTransaction(ctx, tx); err != nil {
+			if err := s.client.SendTransaction(ctx, tx); err != nil {
 				return errors.Wrap(err, "re-sending transaction")
 			}
 		}
-		s.Commit()
+		s.backend.Commit()
 	}
 	return nil
 }
 
+// Commit seals a block and moves the chain forward.
+func (s *SimulatedBackend) Commit() common.Hash {
+	s.sbMtx.Lock()
+	defer s.sbMtx.Unlock()
+
+	return s.backend.Commit()
+}
+
+// Rollback removes all pending transactions.
+func (s *SimulatedBackend) Rollback() {
+	s.sbMtx.Lock()
+	defer s.sbMtx.Unlock()
+
+	s.backend.Rollback()
+}
+
+// Close shuts down the simulated backend.
+func (s *SimulatedBackend) Close() error {
+	s.StopMining()
+	return s.backend.Close()
+}
+
 // ChainID returns the chainID of the underlying blockchain.
 func (s *SimulatedBackend) ChainID() *big.Int {
-	return s.Blockchain().Config().ChainID
+	return new(big.Int).Set(s.chainID)
 }
 
 // WithCommitTx controls whether the simulated backend should automatically
 // mine a block after a transaction was sent.
 func WithCommitTx(b bool) SimBackendOpt {
-	return func(sb *SimulatedBackend) { sb.commitTx = b }
+	return func(cfg *simBackendConfig) { cfg.commitTx = b }
+}
+
+// WithChainID configures the simulated backend to use the specified chain ID.
+func WithChainID(chainID *big.Int) SimBackendOpt {
+	if chainID == nil || chainID.Sign() < 0 {
+		panic("invalid chain ID")
+	}
+	return func(cfg *simBackendConfig) {
+		cfg.chainID = new(big.Int).Set(chainID)
+	}
+}
+
+// AdjustTime changes the block timestamp and creates a new block.
+func (s *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
+	s.sbMtx.Lock()
+	defer s.sbMtx.Unlock()
+
+	return s.backend.AdjustTime(adjustment)
+}
+
+// Delegated methods from simulated.Client to satisfy ethclient interfaces.
+
+func (s *SimulatedBackend) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.BalanceAt(ctx, account, blockNumber)
+}
+
+func (s *SimulatedBackend) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.BlockByHash(ctx, hash)
+}
+
+func (s *SimulatedBackend) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.BlockByNumber(ctx, number)
+}
+
+func (s *SimulatedBackend) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.HeaderByHash(ctx, hash)
+}
+
+func (s *SimulatedBackend) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.HeaderByNumber(ctx, number)
+}
+
+func (s *SimulatedBackend) TransactionCount(ctx context.Context, blockHash common.Hash) (uint, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.TransactionCount(ctx, blockHash)
+}
+
+func (s *SimulatedBackend) TransactionInBlock(ctx context.Context, blockHash common.Hash, index uint) (*types.Transaction, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.TransactionInBlock(ctx, blockHash, index)
+}
+
+func (s *SimulatedBackend) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.CodeAt(ctx, contract, blockNumber)
+}
+
+func (s *SimulatedBackend) CallContract(ctx context.Context, call ethereum.CallMsg, blockNumber *big.Int) ([]byte, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.CallContract(ctx, call, blockNumber)
+}
+
+func (s *SimulatedBackend) PendingCodeAt(ctx context.Context, account common.Address) ([]byte, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.PendingCodeAt(ctx, account)
+}
+
+func (s *SimulatedBackend) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.PendingNonceAt(ctx, account)
+}
+
+func (s *SimulatedBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.SuggestGasPrice(ctx)
+}
+
+func (s *SimulatedBackend) SuggestGasTipCap(ctx context.Context) (*big.Int, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.SuggestGasTipCap(ctx)
+}
+
+func (s *SimulatedBackend) EstimateGas(ctx context.Context, call ethereum.CallMsg) (uint64, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.EstimateGas(ctx, call)
+}
+
+func (s *SimulatedBackend) FilterLogs(ctx context.Context, query ethereum.FilterQuery) ([]types.Log, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.FilterLogs(ctx, query)
+}
+
+func (s *SimulatedBackend) SubscribeFilterLogs(ctx context.Context, query ethereum.FilterQuery, ch chan<- types.Log) (ethereum.Subscription, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.SubscribeFilterLogs(ctx, query, ch)
+}
+
+func (s *SimulatedBackend) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.TransactionReceipt(ctx, txHash)
+}
+
+func (s *SimulatedBackend) SubscribeNewHead(ctx context.Context, ch chan<- *types.Header) (ethereum.Subscription, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.SubscribeNewHead(ctx, ch)
+}
+
+func (s *SimulatedBackend) TransactionByHash(ctx context.Context, txHash common.Hash) (*types.Transaction, bool, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.TransactionByHash(ctx, txHash)
+}
+
+func (s *SimulatedBackend) BlockNumber(ctx context.Context) (uint64, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.BlockNumber(ctx)
+}
+
+func (s *SimulatedBackend) NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.NonceAt(ctx, account, blockNumber)
+}
+
+func (s *SimulatedBackend) PendingCallContract(ctx context.Context, call ethereum.CallMsg) ([]byte, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.PendingCallContract(ctx, call)
+}
+
+func (s *SimulatedBackend) SubscribeTransactionReceipts(ctx context.Context, q *ethereum.TransactionReceiptsQuery, ch chan<- []*types.Receipt) (ethereum.Subscription, error) {
+	ctx = normalizeCtx(ctx)
+	return s.client.SubscribeTransactionReceipts(ctx, q, ch)
 }

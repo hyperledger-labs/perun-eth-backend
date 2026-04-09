@@ -61,7 +61,9 @@ func GenericSignerTest(t *testing.T, rng *rand.Rand, setup TransactorSetup) {
 
 	newTx := func() *types.Transaction {
 		data := make([]byte, rng.Int31n(signerTestDataMaxLength)+1)
-		rng.Read(data)
+		if _, err := rng.Read(data); err != nil {
+			panic(err)
+		}
 		switch setup.TxType {
 		case LegacyTx, EIP155Tx:
 			return types.NewTx(&types.LegacyTx{
