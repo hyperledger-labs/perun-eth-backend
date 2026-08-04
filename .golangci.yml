@@ -15,6 +15,7 @@ linters:
     - wrapcheck # We do not rewrap all errors from other packages.
     - varnamelen # We often use single letter arguments.
     - exhaustivestruct # We often have uninitialized fields of structs.
+    - exhaustruct # Same as exhaustivestruct under newer name.
     - errorlint # We have interface errors which an impl needs to return.
     - lll # We use long lines.
     - gochecknoglobals # We have a lot of globals.
@@ -25,6 +26,19 @@ linters:
     - gochecknoinits # We use init functions.
     - gci # We have our own import order.
     - goerr113 # We don't require static errors.
+    - depguard # No import allow-list configured; default config blocks normal imports.
+    - contextcheck # Existing test helpers and integration APIs do not consistently thread contexts.
+    - copyloopvar # Avoid repo-wide loop capture churn for Go 1.22+ semantics.
+    - gosec # G115 integer overflow noise on pre-existing code; revisit separately.
+    - mnd # Magic number detector fires across pre-existing code.
+    - nakedret # Pre-existing naked returns in internal helpers.
+    - nonamedreturns # Named returns are used pervasively in existing code.
+    - perfsprint # Tiny string-formatting micro-optimizations are not a priority here.
+    - recvcheck # Mixed receiver styles are tolerated in existing types.
+    - testifylint # Existing concurrent test helpers do not follow all testify style rules.
+    - inamedparam # Interface parameter names add little value here.
+    - intrange # Avoid repo-wide syntax churn for range-over-int rewrites.
+    - revive # Parameter naming and similar style checks are not enforced repo-wide.
 
     # These could be enabled in the future:
     - ifshort # we often don't use `if err := …` for readability.

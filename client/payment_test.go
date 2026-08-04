@@ -31,6 +31,7 @@ import (
 	ctest "github.com/perun-network/perun-eth-backend/client/test"
 	"github.com/perun-network/perun-eth-backend/wallet"
 
+	pchannel "perun.network/go-perun/channel"
 	chtest "perun.network/go-perun/channel/test"
 	"perun.network/go-perun/client"
 	clienttest "perun.network/go-perun/client/test"
@@ -66,9 +67,9 @@ func TestPaymentHappy(t *testing.T) {
 	execConfig := &clienttest.AliceBobExecConfig{
 		BaseExecConfig: clienttest.MakeBaseExecConfig(
 			[2]map[perunwallet.BackendID]wire.Address{wire.AddressMapfromAccountMap(setup[A].Identity), wire.AddressMapfromAccountMap(setup[B].Identity)},
-			s.Asset,
-			test.BackendID,
-			[2]*big.Int{big.NewInt(100), big.NewInt(100)},
+			[]pchannel.Asset{s.Asset},
+			[]perunwallet.BackendID{test.BackendID},
+			[][2]*big.Int{{big.NewInt(100), big.NewInt(100)}},
 			client.WithApp(chtest.NewRandomAppAndData(rng, chtest.WithBackend(test.BackendID))),
 		),
 		NumPayments: [2]int{2, 2},
@@ -90,8 +91,8 @@ func TestPaymentHappy(t *testing.T) {
 	// Assert correct final balances
 	aliceToBob := big.NewInt(int64(execConfig.NumPayments[A])*execConfig.TxAmounts[A].Int64() -
 		int64(execConfig.NumPayments[B])*execConfig.TxAmounts[B].Int64())
-	finalBalAlice := new(big.Int).Sub(execConfig.InitBals()[A], aliceToBob)
-	finalBalBob := new(big.Int).Add(execConfig.InitBals()[B], aliceToBob)
+	finalBalAlice := new(big.Int).Sub(execConfig.InitBals()[0][A], aliceToBob)
+	finalBalBob := new(big.Int).Add(execConfig.InitBals()[0][B], aliceToBob)
 	// reset context timeout
 	ctx, cancel := context.WithTimeout(context.Background(), ctest.DefaultTimeout)
 	defer cancel()
@@ -126,9 +127,9 @@ func TestPaymentDispute(t *testing.T) {
 	execConfig := &clienttest.MalloryCarolExecConfig{
 		BaseExecConfig: clienttest.MakeBaseExecConfig(
 			[2]map[perunwallet.BackendID]wire.Address{wire.AddressMapfromAccountMap(setup[A].Identity), wire.AddressMapfromAccountMap(setup[B].Identity)},
-			s.Asset,
-			test.BackendID,
-			[2]*big.Int{big.NewInt(100), big.NewInt(1)},
+			[]pchannel.Asset{s.Asset},
+			[]perunwallet.BackendID{test.BackendID},
+			[][2]*big.Int{{big.NewInt(100), big.NewInt(1)}},
 			client.WithoutApp(),
 		),
 		NumPayments: [2]int{5, 0},
@@ -143,8 +144,8 @@ func TestPaymentDispute(t *testing.T) {
 	netTransfer := big.NewInt(int64(execConfig.NumPayments[A])*execConfig.TxAmounts[A].Int64() -
 		int64(execConfig.NumPayments[B])*execConfig.TxAmounts[B].Int64())
 	finalBal := [2]*big.Int{
-		new(big.Int).Sub(execConfig.InitBals()[A], netTransfer),
-		new(big.Int).Add(execConfig.InitBals()[B], netTransfer),
+		new(big.Int).Sub(execConfig.InitBals()[0][A], netTransfer),
+		new(big.Int).Add(execConfig.InitBals()[0][B], netTransfer),
 	}
 	// reset context timeout
 	ctx, cancel = context.WithTimeout(context.Background(), ctest.DefaultTimeout)

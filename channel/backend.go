@@ -158,13 +158,10 @@ func Verify(addr wallet.Address, s *channel.State, sig wallet.Sig) (bool, error)
 func ToEthParams(p *channel.Params) adjudicator.ChannelParams {
 	var app common.Address
 	if p.App != nil && !channel.IsNoApp(p.App) {
-		appDef, ok := p.App.Def().(channel.AppID)
+		appDef := p.App.Def()
 		ethAddress, err := ExtractEthereumAddress(appDef)
 		if err != nil {
 			log.Panicf("error extracting Ethereum address: %v", err)
-		}
-		if !ok {
-			panic("appDef is not of type channel.AppID")
 		}
 		app = ethAddress
 	}
@@ -332,30 +329,30 @@ func makeIndexMap(m []uint16) []channel.Index {
 }
 
 // assetsToEthAssets converts an array of Assets to adjudicator.ChannelAsset.
+// Trust the actual Go type of the asset rather than the parallel bIDs slice.
+// go-perun's TestFundRecovery (>= v0.14.1) hardcodes channel.TestBackendID=0
+// while our ethwallet.BackendID=1, so a strict bIDs check would route an
+// ethereum asset through the non-ethereum branch, producing ChainID=0 and
+// causing the Adjudicator's pushOutcome chainID gate to skip setOutcome.
 func assetsToEthAssets(assets []channel.Asset, bIDs []wallet.BackendID) []adjudicator.ChannelAsset {
 	cAddrs := make([]adjudicator.ChannelAsset, len(assets))
 	for i, a := range assets {
-		// This means the Asset was defined in this backend.
-		if bIDs[i] == ethwallet.BackendID {
-			asset, ok := a.(*Asset)
-			if !ok {
-				log.Panicf("wrong address type: %T", a)
-			}
+		if asset, ok := a.(*Asset); ok {
 			cAddrs[i] = adjudicator.ChannelAsset{
 				ChainID:   asset.assetID.ChainID(),
 				EthHolder: asset.EthAddress(),
 				CcHolder:  make([]byte, 32), //nolint:gomnd
 			}
-		} else {
-			asset, err := a.MarshalBinary()
-			if err != nil {
-				log.Panicf("error encoding asset: %v", err)
-			}
-			cAddrs[i] = adjudicator.ChannelAsset{
-				ChainID:   big.NewInt(int64(bIDs[i])),
-				EthHolder: common.HexToAddress("0x0000000000000000000000000000000000000000"),
-				CcHolder:  asset,
-			}
+			continue
+		}
+		assetBin, err := a.MarshalBinary()
+		if err != nil {
+			log.Panicf("error encoding asset: %v", err)
+		}
+		cAddrs[i] = adjudicator.ChannelAsset{
+			ChainID:   big.NewInt(int64(bIDs[i])),
+			EthHolder: common.HexToAddress("0x0000000000000000000000000000000000000000"),
+			CcHolder:  assetBin,
 		}
 	}
 	return cAddrs

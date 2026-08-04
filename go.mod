@@ -1,15 +1,15 @@
 module github.com/perun-network/perun-eth-backend
 
-go 1.22
+go 1.23.0
 
 require (
 	github.com/ethereum/go-ethereum v1.10.12
 	github.com/miguelmota/go-ethereum-hdwallet v0.1.1
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.8.1
-	github.com/stretchr/testify v1.7.0
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	perun.network/go-perun v0.12.1-0.20250128081648-21d0af4e234b
+	github.com/sirupsen/logrus v1.9.3
+	github.com/stretchr/testify v1.10.0
+	golang.org/x/sync v0.13.0
+	perun.network/go-perun v0.15.0
 	polycry.pt/poly-go v0.0.0-20220301085937-fb9d71b45a37
 )
 
@@ -18,7 +18,7 @@ require (
 	github.com/VictoriaMetrics/fastcache v1.6.0 // indirect
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce // indirect
-	github.com/cespare/xxhash/v2 v2.1.1 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set v0.0.0-20180603214616-504e848d77ea // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
@@ -26,7 +26,7 @@ require (
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gorilla/websocket v1.4.2 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
 	github.com/holiman/uint256 v1.2.0 // indirect
@@ -40,8 +40,8 @@ require (
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/tklauser/numcpus v0.2.2 // indirect
 	github.com/tyler-smith/go-bip39 v1.0.1-0.20181017060643-dbb3b84ba2ef // indirect
-	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2 // indirect
-	golang.org/x/sys v0.0.0-20210816183151-1e6c022a8912 // indirect
+	golang.org/x/crypto v0.37.0 // indirect
+	golang.org/x/sys v0.32.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
-	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
