@@ -189,7 +189,11 @@ func (f *Funder) Fund(ctx context.Context, request channel.FundingReq) error {
 	nonFundingErrg := perror.NewGatherer()
 	for _, err := range perror.Causes(errg.Wait()) {
 		if channel.IsAssetFundingError(err) && err != nil {
-			fundingErr, ok := err.(*channel.AssetFundingError)
+			// Unwrap exactly like IsAssetFundingError does: the error may be
+			// wrapped (errors.WithMessage), so a bare type assertion on err
+			// would fail and mask the real funding error behind
+			// "wrong type: expected *channel.AssetFundingError".
+			fundingErr, ok := errors.Cause(err).(*channel.AssetFundingError)
 			if !ok {
 				return fmt.Errorf("wrong type: expected %T, got %T", &channel.AssetFundingError{}, err)
 			}
@@ -450,7 +454,7 @@ loop:
 // all peers except oneself (request.Idx) successfully funded the channel for all assets
 // according to the funding agreement.
 func (f *Funder) WaitForOthersFundingConfirmation(ctx context.Context, request channel.FundingReq, assets []assetHolder, fundingIDs [][32]byte) error {
-	totalBalanceForOther := calculateTotalBalances(request)
+	totalBalanceForOther := f.calculateTotalBalances(request, assets)
 	for _, asset := range assets {
 		// If asset on different ledger, return.
 		a := request.State.Assets[asset.assetIndex]
@@ -600,16 +604,23 @@ func checkEgoisticPart(egoisticPart []bool) error {
 	return nil
 }
 
-// calculateTotalBalances calculates the total balance for other participants.
-func calculateTotalBalances(request channel.FundingReq) *big.Int {
+// calculateTotalBalances calculates the total balance the other participants
+// still have to fund, restricted to the given asset holders on this funder's
+// chain. The restriction matters for multi-ledger channels: balances of assets
+// on other ledgers (e.g. a CKB asset in a cross-chain channel) can never emit
+// Deposited events on an ETH asset holder, so counting them would make the
+// wait target unreachable and block WaitForOthersFundingConfirmation until the
+// funding timeout — the peer's cross-ledger balance must not gate ETH funding.
+func (f *Funder) calculateTotalBalances(request channel.FundingReq, assets []assetHolder) *big.Int {
 	totalBalanceForOther := big.NewInt(0)
-	// Iterate over each asset to sum up the total balance for other participants.
-	for _, asset := range request.Agreement {
-		for i, bal := range asset {
-			if channel.Index(i) != request.Idx {
-				totalBalanceForOther.Add(totalBalanceForOther, bal)
-			}
+	// Sum up what the other participants fund on each observable asset.
+	for _, asset := range assets {
+		ethAsset, ok := request.State.Assets[asset.assetIndex].(*Asset)
+		if !ok || ethAsset.LedgerID().MapKey() != f.chainID.MapKey() {
+			continue
 		}
+		remainingTotal, _ := compareBalances(request, asset.assetIndex)
+		totalBalanceForOther.Add(totalBalanceForOther, remainingTotal)
 	}
 	return totalBalanceForOther
 }

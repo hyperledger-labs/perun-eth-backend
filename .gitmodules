@@ -1,3 +1,4 @@
 [submodule "bindings/contracts"]
 	path = bindings/contracts
-	url = https://github.com/hyperledger-labs/perun-eth-contracts
+	url = https://github.com/perun-network/perun-eth-contracts
+	branch = perun-x-yield-pool

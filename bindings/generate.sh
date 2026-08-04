@@ -19,6 +19,9 @@ set -e
 # Define ABIGEN and SOLC default values.
 ABIGEN="${ABIGEN-abigen}"
 SOLC="${SOLC-solc}"
+# "london" is the newest EVM version the pinned solc 0.8.15 accepts; "paris"
+# was only added in solc 0.8.18 and makes the pinned toolchain abort.
+SOLC_EVM_VERSION="${SOLC_EVM_VERSION-london}"
 
 echo 'Please ensure that solc v0.8.15+ and abigen v1.10.18+ are installed.'
 
@@ -47,7 +50,7 @@ generate() {
     mkdir $PKG
 
     # Compile and generate binary runtime.
-    $SOLC --abi --bin --bin-runtime --optimize --optimize-runs 200 --allow-paths contracts/vendor, contracts/contracts/$FILE.sol -o $PKG/
+    $SOLC --overwrite --abi --bin --bin-runtime --evm-version "$SOLC_EVM_VERSION" --optimize --optimize-runs 200 --allow-paths contracts/vendor, contracts/contracts/$FILE.sol -o $PKG/
     BIN_RUNTIME=$(cat ${PKG}/${CONTRACT}.bin-runtime)
     OUT_FILE="$PKG/${CONTRACT}BinRuntime.go"
     echo "package $PKG // import \"github.com/perun-network/perun-eth-backend/bindings/$PKG\"" > $OUT_FILE
@@ -72,5 +75,8 @@ generate "PerunToken" "peruntoken"
 
 # Applications
 generate "TrivialApp" "trivialapp"
+
+# Liquidity
+generate "LiquidityPool" "liquiditypool"
 
 echo "Bindings generated successfully."
