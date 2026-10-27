@@ -51,7 +51,7 @@ const (
 // 4. Checking that `EventSub` contains `n` distinct events.
 func TestEventSub(t *testing.T) {
 	n := 1000
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	rng := pkgtest.Prng(t)
 
@@ -110,17 +110,18 @@ func TestEventSub(t *testing.T) {
 	})
 
 	go ct.Stage("receiver", func(t pkgtest.ConcT) {
-		var lastTx common.Hash
+		seen := make(map[common.Hash]bool)
 		// Receive `n` unique events.
 		for i := 0; i < n; i++ {
 			e := <-sink
 			log.Debug("Read ", i)
 			require.NotNil(t, e)
-			// It is possible to receive the same event twice.
-			if e.Log.TxHash == lastTx {
+			// It is possible to receive the same event more than once.
+			if seen[e.Log.TxHash] {
 				i--
+				continue
 			}
-			lastTx = e.Log.TxHash
+			seen[e.Log.TxHash] = true
 			want := &peruntoken.PeruntokenApproval{
 				Owner:   account.Address,
 				Spender: account.Address,

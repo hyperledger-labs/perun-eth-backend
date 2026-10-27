@@ -21,8 +21,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/params"
 	"github.com/stretchr/testify/require"
 
 	ethchannel "github.com/perun-network/perun-eth-backend/channel"
@@ -75,7 +73,7 @@ func NewSimSetup(t *testing.T, rng *rand.Rand, txFinalityDepth uint64, blockInte
 		t.Cleanup(simBackend.StopMining)
 	}
 
-	signer := types.LatestSigner(params.AllEthashProtocolChanges)
+	signer := simBackend.Signer
 	contractBackend := ethchannel.NewContractBackend(
 		simBackend,
 		ethchannel.MakeChainID(simBackend.ChainID()),
