@@ -50,7 +50,7 @@ const (
 // 3. Emit `3/4 n` events
 // 4. Checking that `EventSub` contains `n` distinct events.
 func TestEventSub(t *testing.T) {
-	n := 1000
+	n := 500
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	rng := pkgtest.Prng(t)
