@@ -100,6 +100,9 @@ func (d *ERC20Depositor) DepositOnly(ctx context.Context, req DepositReq) (*type
 	}
 
 	tx, err := assetholder.Deposit(opts, req.FundingID, req.Balance)
+	if err != nil {
+		req.CB.ReleaseNonce(opts)
+	}
 	return tx, err
 }
 
@@ -140,10 +143,12 @@ func (d *ERC20Depositor) Approve(ctx context.Context, lock *sync.Mutex, req Depo
 	// Watch for Approval events and send them to the eventSink
 	subscription, err := token.WatchApproval(&bind.WatchOpts{Start: nil, Context: ctx}, eventSink, []common.Address{req.Account.Address}, []common.Address{req.Asset.EthAddress()})
 	if err != nil {
+		req.CB.ReleaseNonce(opts)
 		return nil, false, errors.WithMessagef(err, "Cannot listen for event")
 	}
 	tx, err := token.Approve(opts, req.Asset.EthAddress(), result)
 	if err != nil {
+		req.CB.ReleaseNonce(opts)
 		err = cherrors.CheckIsChainNotReachableError(err)
 		return nil, false, errors.WithMessagef(err, "increasing allowance for asset: %v", req.Asset)
 	}

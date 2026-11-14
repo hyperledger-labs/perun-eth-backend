@@ -103,6 +103,7 @@ func deployContract(ctx context.Context, cb ContractBackend, deployer accounts.A
 	}
 	addr, tx, err := f(auth, cb)
 	if err != nil {
+		cb.ReleaseNonce(auth)
 		err = cherrors.CheckIsChainNotReachableError(err)
 		return common.Address{}, errors.WithMessage(err, "creating transaction")
 	}

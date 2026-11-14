@@ -89,7 +89,6 @@ func NewResistantEventSub(ctx context.Context, sub *EventSub, cr ethereum.ChainR
 	heads := make(chan *types.Header, resistantSubHeadBuffSize)
 	headSub, err := cr.SubscribeNewHead(ctx, heads)
 	if err != nil {
-		headSub.Unsubscribe()
 		err = cherrors.CheckIsChainNotReachableError(err)
 		return nil, errors.WithMessage(err, "subscribing to headers")
 	}
