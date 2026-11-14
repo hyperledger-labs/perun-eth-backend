@@ -53,6 +53,9 @@ func (d *ETHDepositor) Deposit(ctx context.Context, req DepositReq) (types.Trans
 	opts.Value = req.Balance
 
 	tx, err := contract.Deposit(opts, req.FundingID, req.Balance)
+	if err != nil {
+		req.CB.ReleaseNonce(opts)
+	}
 	err = cherrors.CheckIsChainNotReachableError(err)
 	return []*types.Transaction{tx}, errors.WithMessage(err, "AssetHolderETH depositing")
 }
