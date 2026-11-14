@@ -198,6 +198,23 @@ func (c *ContractBackend) nonce(ctx context.Context, sender common.Address) (uin
 	return nonce, nil
 }
 
+// ReleaseNonce releases the nonce that NewTransactor reserved for opts. It must
+// be called if the transaction was not sent, as otherwise all following
+// transactions of the sender have a nonce gap and are never mined. The nonce is
+// only released if no later nonce was reserved for the sender in the meantime.
+func (c *ContractBackend) ReleaseNonce(opts *bind.TransactOpts) {
+	if opts == nil || opts.Nonce == nil {
+		return
+	}
+	nonce := opts.Nonce.Uint64()
+
+	SharedExpectedNoncesMutex.Lock()
+	defer SharedExpectedNoncesMutex.Unlock()
+	if c.expectedNextNonce[opts.From] == nonce+1 {
+		c.expectedNextNonce[opts.From] = nonce
+	}
+}
+
 // ConfirmTransaction returns the receipt of the transaction if it was
 // included in at least `TxFinalityDepth` many blocks at one point in time.
 // Returns `txTimedOutError` on context timeout or cancel.

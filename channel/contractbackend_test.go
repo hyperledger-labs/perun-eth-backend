@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
@@ -100,6 +101,28 @@ func Test_NewTransactor(t *testing.T) {
 			assert.Equal(t, tt.gasLimit, transactor.GasLimit, "Gas limit not set properly")
 		})
 	}
+}
+
+func Test_ReleaseNonce(t *testing.T) {
+	rng := pkgtest.Prng(t)
+	s := test.NewSimSetup(t, rng, TxFinalityDepth, blockInterval)
+	ctx := context.Background()
+	newNonce := func() *bind.TransactOpts {
+		opts, err := s.CB.NewTransactor(ctx, params.TxGas, s.TxSender.Account)
+		require.NoError(t, err)
+		return opts
+	}
+
+	first, second := newNonce(), newNonce()
+	require.Equal(t, first.Nonce.Uint64()+1, second.Nonce.Uint64())
+
+	// Releasing the latest nonce makes it available again.
+	s.CB.ReleaseNonce(second)
+	assert.Equal(t, second.Nonce, newNonce().Nonce, "released nonce should be reused")
+
+	// Releasing an earlier nonce has no effect, as a later one is reserved.
+	s.CB.ReleaseNonce(first)
+	assert.Equal(t, second.Nonce.Uint64()+1, newNonce().Nonce.Uint64(), "earlier nonce should not be released")
 }
 
 func Test_NewWatchOpts(t *testing.T) {
