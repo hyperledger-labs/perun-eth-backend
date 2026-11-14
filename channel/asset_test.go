@@ -82,28 +82,28 @@ func testValidateAssetHolder(t *testing.T,
 	defer cancel()
 
 	t.Run("no_asset_code", func(t *testing.T) {
-		randomAddr1 := (common.Address)(ethwallettest.NewRandomAddress(rng))
-		randomAddr2 := (common.Address)(ethwallettest.NewRandomAddress(rng))
+		randomAddr1 := common.Address(ethwallettest.NewRandomAddress(rng))
+		randomAddr2 := common.Address(ethwallettest.NewRandomAddress(rng))
 		require.True(t, ethchannel.IsErrInvalidContractCode(validator(ctx, s.CB, randomAddr1, randomAddr2)))
 	})
 
 	t.Run("incorrect_asset_code", func(t *testing.T) {
-		randomAddr1 := (common.Address)(ethwallettest.NewRandomAddress(rng))
+		randomAddr1 := common.Address(ethwallettest.NewRandomAddress(rng))
 		incorrectCodeAddr, err := ethchannel.DeployAdjudicator(ctx, *s.CB, s.TxSender.Account)
 		require.NoError(t, err)
 		require.True(t, ethchannel.IsErrInvalidContractCode(validator(ctx, s.CB, incorrectCodeAddr, randomAddr1)))
 	})
 
 	t.Run("incorrect_adj_addr", func(t *testing.T) {
-		adjAddrToSet := (common.Address)(ethwallettest.NewRandomAddress(rng))
-		adjAddrToExpect := (common.Address)(ethwallettest.NewRandomAddress(rng))
+		adjAddrToSet := common.Address(ethwallettest.NewRandomAddress(rng))
+		adjAddrToExpect := common.Address(ethwallettest.NewRandomAddress(rng))
 		assetHolderAddr, err := deployer(ctx, *s.CB, adjAddrToSet, s.TxSender.Account)
 		require.NoError(t, err)
 		require.True(t, ethchannel.IsErrInvalidContractCode(validator(ctx, s.CB, assetHolderAddr, adjAddrToExpect)))
 	})
 
 	t.Run("correct_adj_addr_with_invalid_contract", func(t *testing.T) {
-		adjudicatorAddr := (common.Address)(ethwallettest.NewRandomAddress(rng))
+		adjudicatorAddr := common.Address(ethwallettest.NewRandomAddress(rng))
 		assetHolderAddr, err := deployer(ctx, *s.CB, adjudicatorAddr, s.TxSender.Account)
 		require.NoError(t, err)
 		require.NoError(t, validator(ctx, s.CB, assetHolderAddr, adjudicatorAddr))

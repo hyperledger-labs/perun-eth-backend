@@ -41,8 +41,8 @@ func TestDeployReorgResistance(t *testing.T) {
 	time.Sleep(100 * time.Millisecond) // Ensure that deployment transaction is dispatched.
 	for i := 0; i < int(txFinalityDepth); i++ {
 		select {
-		case <-deploy:
-			t.Fatal("deploy done before commit")
+		case err := <-deploy:
+			t.Fatal("deploy done before commit: ", err)
 		case <-time.After(300 * time.Millisecond): // Ensure that last commit is processed.
 		}
 		s.SimBackend.Commit()

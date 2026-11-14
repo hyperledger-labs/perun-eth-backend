@@ -119,13 +119,13 @@ func TestValidateAdjudicator(t *testing.T) {
 	s := test.NewSimSetup(t, rng, TxFinalityDepth, blockInterval)
 
 	t.Run("no_adj_code", func(t *testing.T) {
-		randomAddr := (common.Address)(ethwallettest.NewRandomAddress(rng))
+		randomAddr := common.Address(ethwallettest.NewRandomAddress(rng))
 		ctx, cancel := context.WithTimeout(context.Background(), defaultTxTimeout)
 		defer cancel()
 		require.True(t, ethchannel.IsErrInvalidContractCode(ethchannel.ValidateAdjudicator(ctx, *s.CB, randomAddr)))
 	})
 	t.Run("incorrect_adj_code", func(t *testing.T) {
-		randomAddr := (common.Address)(ethwallettest.NewRandomAddress(rng))
+		randomAddr := common.Address(ethwallettest.NewRandomAddress(rng))
 		ctx, cancel := context.WithTimeout(context.Background(), defaultTxTimeout)
 		defer cancel()
 		incorrectCodeAddr, err := ethchannel.DeployETHAssetholder(ctx, *s.CB, randomAddr, s.TxSender.Account)
