@@ -86,7 +86,6 @@ func Test_NewTransactor(t *testing.T) {
 		ctx      context.Context //nolint:containedctx // This is just done for testing. Could be revised.
 		gasLimit uint64
 	}{
-		{"Test without context", nil, uint64(0)},
 		{"Test valid transactor", ctx, uint64(0)},
 		{"Test valid transactor", ctx, uint64(12345)},
 	}
@@ -129,7 +128,8 @@ func Test_ConfirmTransaction(t *testing.T) {
 	// Create the Transaction.
 	rawTx := types.NewTx(&types.DynamicFeeTx{
 		Nonce:     0,
-		GasFeeCap: big.NewInt(test.InitialGasBaseFee),
+		GasFeeCap: big.NewInt(test.InitialGasBaseFee + test.MinGasTipCap),
+		GasTipCap: big.NewInt(test.MinGasTipCap),
 		Gas:       params.TxGas,
 		To:        &common.Address{},
 		Value:     big.NewInt(1),

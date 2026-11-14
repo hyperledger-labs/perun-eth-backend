@@ -19,14 +19,17 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
+	"slices"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/eth/ethconfig"
+	"github.com/ethereum/go-ethereum/ethclient/simulated"
+	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/perun-network/perun-eth-backend/channel"
 	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
@@ -45,16 +48,27 @@ const (
 	// are taking place.
 	//
 	// When constructing a transaction manually, GasFeeCap can be set to this
-	// value to avoid the error 'max fee per gas less than block base fee'.
-	InitialGasBaseFee = 875_000_000
+	// value plus MinGasTipCap to avoid the error 'max fee per gas less than
+	// block base fee'.
+	InitialGasBaseFee = params.InitialBaseFee
+	// MinGasTipCap is the minimal gas tip that the simulated backend's miner
+	// accepts. Transactions with a lower tip are never mined.
+	MinGasTipCap = params.GWei / 1000
 	// internal gas limit of the simulated backend.
 	simBackendGasLimit = 8_000_000
+	// block time increase of auto-mined blocks.
+	minedBlockTime = 10 * time.Second
+	// number of retries of AdjustTime when transactions are pending.
+	adjustTimeRetries = 3
 )
 
 // SimulatedBackend provides a simulated ethereum blockchain for tests.
 type SimulatedBackend struct {
 	backends.SimulatedBackend
 	sbMtx sync.Mutex // protects SimulatedBackend
+	// sealMtx serializes block sealing, which the simulated backend does not
+	// support concurrently.
+	sealMtx sync.Mutex
 
 	Signer types.Signer
 
@@ -64,6 +78,7 @@ type SimulatedBackend struct {
 	mining        chan struct{} // Used for auto-mining blocks.
 	stoppedMining chan struct{} // For making sure that mining stopped.
 	commitTx      bool          // Whether each transaction is committed.
+	chainID       *big.Int      // Chain ID of the simulated chain, nil for the default.
 }
 
 // BalanceReader is a balance reader used for testing. It is associated with a
@@ -109,7 +124,7 @@ func NewSimulatedBackend(opts ...SimBackendOpt) *SimulatedBackend {
 		panic(err)
 	}
 	faucetAddr := crypto.PubkeyToAddress(sk.PublicKey)
-	addr := map[common.Address]core.GenesisAccount{
+	addr := map[common.Address]types.Account{
 		common.BytesToAddress([]byte{1}): {Balance: big.NewInt(1)}, // ECRecover
 		common.BytesToAddress([]byte{2}): {Balance: big.NewInt(1)}, // SHA256
 		common.BytesToAddress([]byte{3}): {Balance: big.NewInt(1)}, // RIPEMD
@@ -119,21 +134,38 @@ func NewSimulatedBackend(opts ...SimBackendOpt) *SimulatedBackend {
 		common.BytesToAddress([]byte{7}): {Balance: big.NewInt(1)}, // ECScalarMul
 		common.BytesToAddress([]byte{8}): {Balance: big.NewInt(1)}, // ECPairing
 	}
-	addr[faucetAddr] = core.GenesisAccount{Balance: new(big.Int).Sub(channel.MaxBalance, big.NewInt(int64(len(addr))))}
+	addr[faucetAddr] = types.Account{Balance: new(big.Int).Sub(channel.MaxBalance, big.NewInt(int64(len(addr))))}
 
-	alloc := core.GenesisAlloc(addr)
 	sb := &SimulatedBackend{
-		SimulatedBackend: *backends.NewSimulatedBackend(alloc, simBackendGasLimit),
-		faucetKey:        sk,
-		faucetAddr:       faucetAddr,
-		commitTx:         true,
+		faucetKey:  sk,
+		faucetAddr: faucetAddr,
+		commitTx:   true,
 	}
-	sb.Signer = types.LatestSignerForChainID(sb.ChainID())
-
 	for _, opt := range opts {
 		opt(sb)
 	}
+
+	b := simulated.NewBackend(types.GenesisAlloc(addr),
+		simulated.WithBlockGasLimit(simBackendGasLimit),
+		withChainConfig(sb.chainID),
+	)
+	sb.SimulatedBackend = backends.SimulatedBackend{Backend: b, Client: b.Client()}
+	sb.Signer = types.LatestSignerForChainID(sb.ChainID())
 	return sb
+}
+
+// withChainConfig adjusts the chain config of the simulated backend. Forks that
+// are not yet scheduled on mainnet are disabled, as they change gas costs. If
+// chainID is not nil, it replaces the default chain ID.
+func withChainConfig(chainID *big.Int) func(*node.Config, *ethconfig.Config) {
+	return func(_ *node.Config, ethConf *ethconfig.Config) {
+		cfg := *ethConf.Genesis.Config
+		cfg.BogotaTime = nil
+		if chainID != nil {
+			cfg.ChainID = new(big.Int).Set(chainID)
+		}
+		ethConf.Genesis.Config = &cfg
+	}
 }
 
 // SendTransaction executes a transaction.
@@ -147,6 +179,40 @@ func (s *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 	return nil
 }
 
+// Commit seals a block containing the pending transactions.
+func (s *SimulatedBackend) Commit() common.Hash {
+	s.sealMtx.Lock()
+	defer s.sealMtx.Unlock()
+	return s.SimulatedBackend.Commit()
+}
+
+// AdjustTime mines a new block whose time is advanced by the given duration.
+// The simulated backend can only adjust the time on empty blocks, so pending
+// transactions are committed and the adjustment is retried.
+func (s *SimulatedBackend) AdjustTime(adjustment time.Duration) error {
+	s.sealMtx.Lock()
+	defer s.sealMtx.Unlock()
+	for i := 0; ; i++ {
+		err := s.SimulatedBackend.AdjustTime(adjustment)
+		if err == nil || i == adjustTimeRetries {
+			return errors.WithStack(err)
+		}
+		s.SimulatedBackend.Commit()
+	}
+}
+
+// Fork sets the head to the given parent block. Transactions of the orphaned
+// blocks are not re-added to the transaction pool.
+func (s *SimulatedBackend) Fork(ctx context.Context, parentHash common.Hash) error {
+	s.sealMtx.Lock()
+	defer s.sealMtx.Unlock()
+	if err := s.SimulatedBackend.Fork(ctx, parentHash); err != nil {
+		return errors.WithStack(err)
+	}
+	s.Rollback()
+	return nil
+}
+
 // FundAddress funds a given address with `test.MaxBalance` eth from a faucet.
 func (s *SimulatedBackend) FundAddress(ctx context.Context, addr common.Address) {
 	nonce, err := s.PendingNonceAt(ctx, s.faucetAddr)
@@ -155,7 +221,8 @@ func (s *SimulatedBackend) FundAddress(ctx context.Context, addr common.Address)
 	}
 	txdata := &types.DynamicFeeTx{
 		Nonce:     nonce,
-		GasFeeCap: big.NewInt(InitialGasBaseFee),
+		GasFeeCap: big.NewInt(InitialGasBaseFee + MinGasTipCap),
+		GasTipCap: big.NewInt(MinGasTipCap),
 		Gas:       params.TxGas,
 		To:        &addr,
 		Value:     test.MaxBalance,
@@ -189,8 +256,11 @@ func (s *SimulatedBackend) StartMining(interval time.Duration) {
 		defer close(s.stoppedMining)
 
 		for {
-			s.Commit()
-			log.Trace("Mined simulated block")
+			if err := s.AdjustTime(minedBlockTime); err != nil {
+				log.Warn("Mining simulated block: ", err)
+			} else {
+				log.Trace("Mined simulated block")
+			}
 
 			select {
 			case <-time.After(interval):
@@ -222,7 +292,11 @@ func (s *SimulatedBackend) Reorg(ctx context.Context, depth uint64, reorder Reor
 	defer s.sbMtx.Unlock()
 
 	// parent at current - depth.
-	parentN := new(big.Int).Sub(s.Blockchain().CurrentBlock().Number(), big.NewInt(int64(depth)))
+	head, err := s.HeaderByNumber(ctx, nil)
+	if err != nil {
+		return errors.Wrap(err, "retrieving head")
+	}
+	parentN := new(big.Int).Sub(head.Number, big.NewInt(int64(depth)))
 	parent, err := s.BlockByNumber(ctx, parentN)
 	if err != nil {
 		return errors.Wrap(err, "retrieving reorg parent")
@@ -230,6 +304,7 @@ func (s *SimulatedBackend) Reorg(ctx context.Context, depth uint64, reorder Reor
 
 	// Collect orphaned blocks.
 	blocks := make([]types.Transactions, depth)
+	hashes := []common.Hash{parent.Hash()}
 	for i := uint64(0); i < depth; i++ {
 		blockN := new(big.Int).Add(parentN, big.NewInt(int64(i+1)))
 		block, err := s.BlockByNumber(ctx, blockN)
@@ -238,17 +313,28 @@ func (s *SimulatedBackend) Reorg(ctx context.Context, depth uint64, reorder Reor
 		}
 		// Add the TXs from block parent + 1 + i.
 		blocks[i] = block.Transactions()
+		hashes = append(hashes, block.Hash())
 	}
 
 	// Modify the blocks with the reorder callback.
-	newBlocks := reorder(blocks)
+	newBlocks := reorder(slices.Clone(blocks)) // Clone, as blocks is compared below.
 	if uint64(len(newBlocks)) <= depth {
 		return fmt.Errorf("number of blocks added %d must be greater than number of blocks removed %d", len(newBlocks), depth)
 	}
 
-	// Reset the chain to the parent block.
-	if err := s.Fork(ctx, parent.Hash()); err != nil {
-		return errors.Wrap(err, "forking")
+	// Keep the unchanged blocks, so that the chain is only reorganized from
+	// the first changed block on.
+	keep := 0
+	for keep < len(blocks) && sameTxs(blocks[keep], newBlocks[keep]) {
+		keep++
+	}
+	newBlocks = newBlocks[keep:]
+
+	// Reset the chain to the last kept block.
+	if keep < len(blocks) {
+		if err := s.Fork(ctx, hashes[keep]); err != nil {
+			return errors.Wrap(err, "forking")
+		}
 	}
 
 	// Add modified blocks.
@@ -263,9 +349,32 @@ func (s *SimulatedBackend) Reorg(ctx context.Context, depth uint64, reorder Reor
 	return nil
 }
 
+// sameTxs returns whether both lists contain the same transactions in the
+// same order.
+func sameTxs(a, b types.Transactions) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].Hash() != b[i].Hash() {
+			return false
+		}
+	}
+	return true
+}
+
 // ChainID returns the chainID of the underlying blockchain.
 func (s *SimulatedBackend) ChainID() *big.Int {
-	return s.Blockchain().Config().ChainID
+	chainID, err := s.Client.ChainID(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	return chainID
+}
+
+// WithChainID sets the chain ID of the simulated blockchain.
+func WithChainID(chainID *big.Int) SimBackendOpt {
+	return func(sb *SimulatedBackend) { sb.chainID = chainID }
 }
 
 // WithCommitTx controls whether the simulated backend should automatically

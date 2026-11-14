@@ -108,11 +108,7 @@ func (l testLedger) AssetID() multi.LedgerBackendID {
 func setupLedger(ctx context.Context, t *testing.T, rng *rand.Rand, chainID *big.Int) testLedger {
 	t.Helper()
 
-	// Set chainID for SimulatedBackend.
-	cfg := *params.AllEthashProtocolChanges
-	cfg.ChainID = new(big.Int).Set(chainID)
-	params.AllEthashProtocolChanges = &cfg
-	simSetup := chtest.NewSimSetup(t, rng, txFinalityDepth, blockInterval)
+	simSetup := chtest.NewSimSetup(t, rng, txFinalityDepth, blockInterval, chtest.WithChainID(chainID))
 
 	adjudicator, err := ethchannel.DeployAdjudicator(ctx, *simSetup.CB, simSetup.TxSender.Account)
 	require.NoError(t, err)
