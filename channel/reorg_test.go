@@ -26,7 +26,8 @@ import (
 	pkgtest "polycry.pt/poly-go/test"
 )
 
-// sendTXsBlockLen describes how many blocks the function `sendTXs` will create.
+// sendTXsBlockLen describes how many blocks with TXs the function `sendTXs`
+// will create.
 const sendTXsBlockLen = 2
 
 // TestSimBackend_Reorg tests the reorg capability of the SimBackend.
@@ -95,6 +96,8 @@ func TestSimBackend_Reorg(t *testing.T) {
 		// Check that the events are removed.
 		s.TransferEvent(false)
 		s.AllowanceEvent(0, false) // allowance is 0 again
+		// Forking to the approval block re-emits its event.
+		s.AllowanceEvent(1, true)
 		s.NoMoreEvents()
 	})
 	t.Run("remove-transfer-rebirth", func(t *testing.T) {
@@ -169,6 +172,9 @@ func TestSimBackend_Reorg(t *testing.T) {
 // sendTXs sends an IncreaseAllowance and a Transfer TX and asserts that both
 // and their events are confirmed.
 func sendTXs(ctx context.Context, s *test.TokenSetup) (tx1, tx2 *types.Transaction) {
+	// Mine an empty block as reorg parent. Forking to a block re-emits its
+	// events, which would interfere with the event assertions.
+	s.SB.Commit()
 	// Send TXs.
 	tx1 = s.IncAllowance(ctx)
 	tx2 = s.Transfer(ctx)

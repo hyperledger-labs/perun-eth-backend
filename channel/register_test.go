@@ -210,13 +210,13 @@ func TestRegister_CancelledContext(t *testing.T) {
 	require.NoError(t, s.Funders[0].Fund(fundingCtx, *reqFund), "funding should succeed")
 	// Now test the register function
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTxTimeout)
-	// directly cancel timeout
-	cancel()
 	// create subscription
 	adj := s.Adjs[0]
 	sub, err := adj.Subscribe(ctx, params.ID())
 	require.NoError(t, err)
 	defer sub.Close()
+	// directly cancel timeout
+	cancel()
 	// register
 	tx := testSignState(t, s.Accs, state)
 	req := channel.AdjudicatorReq{

@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	ethchannel "github.com/perun-network/perun-eth-backend/channel"
 	"github.com/perun-network/perun-eth-backend/channel/test"
@@ -28,26 +29,27 @@ import (
 func TestBlockTimeout_IsElapsed(t *testing.T) {
 	assert := assert.New(t)
 	sb := test.NewSimulatedBackend()
-	bt := ethchannel.NewBlockTimeout(sb, 100)
+	bt := ethchannel.NewBlockTimeout(sb, headTime(t, sb)+100)
 
 	// We use context.TODO() in the following because we're working with a simulated
 	// blockchain, which ignores the ctx.
 	for i := 0; i < 10; i++ {
 		assert.False(bt.IsElapsed(context.TODO()))
-		sb.Commit() // advances block time by 10 sec
+		require.NoError(t, sb.AdjustTime(10*time.Second))
 	}
 	assert.True(bt.IsElapsed(context.TODO()))
 }
 
 func TestBlockTimeout_Wait(t *testing.T) {
 	const (
-		ctxTimeout   = 1 * time.Second   // context timeout per commit
-		blockTimeout = 100               // in sec
-		numBlocks    = blockTimeout / 10 // Commit() advances by 10 sec
+		ctxTimeout   = 1 * time.Second // context timeout per commit
+		blockTimeout = 100             // in sec
+		blockTime    = 10 * time.Second
+		numBlocks    = blockTimeout / 10 // each block advances by blockTime
 	)
 
 	sb := test.NewSimulatedBackend()
-	bt := ethchannel.NewBlockTimeout(sb, blockTimeout)
+	bt := ethchannel.NewBlockTimeout(sb, headTime(t, sb)+blockTimeout)
 
 	t.Run("cancelWait", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -81,7 +83,7 @@ func TestBlockTimeout_Wait(t *testing.T) {
 				t.Error("Wait returned before timeout with error", err)
 			default: // Wait shouldn't return before the timeout is reached
 			}
-			sb.Commit() // advances block time by 10 sec
+			require.NoError(t, sb.AdjustTime(blockTime))
 		}
 		select {
 		case err := <-wait:
@@ -90,4 +92,11 @@ func TestBlockTimeout_Wait(t *testing.T) {
 			t.Error("expected Wait to return after timeout is reached")
 		}
 	})
+}
+
+func headTime(t *testing.T, sb *test.SimulatedBackend) uint64 {
+	t.Helper()
+	h, err := sb.HeaderByNumber(context.Background(), nil)
+	require.NoError(t, err)
+	return h.Time
 }

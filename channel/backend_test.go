@@ -18,7 +18,6 @@ import (
 	"context"
 	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/stretchr/testify/assert"
@@ -69,7 +68,7 @@ func testToAndFromEthState(t *testing.T, state *perunchannel.State) {
 func TestAdjudicator_PureFunctions(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	s := ethchanneltest.NewSimSetup(t, rng, TxFinalityDepth, blockInterval)
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTestTimeout)
 	defer cancel()
 	adj, err := channel.DeployAdjudicator(ctx, *s.CB, s.TxSender.Account)
 	require.NoError(t, err)
