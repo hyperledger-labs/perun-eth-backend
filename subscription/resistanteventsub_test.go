@@ -16,9 +16,12 @@ package subscription_test
 
 import (
 	"context"
+	"errors"
+	"math/big"
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/require"
 
@@ -226,4 +229,27 @@ func nEvents(require *require.Assertions, n int, sub *subscription.ResistantEven
 		require.Nil(event)
 	default:
 	}
+}
+
+// failingHeadSubReader is a ChainReader whose `SubscribeNewHead` fails.
+type failingHeadSubReader struct {
+	ethereum.ChainReader
+}
+
+func (failingHeadSubReader) HeaderByNumber(context.Context, *big.Int) (*types.Header, error) {
+	return &types.Header{Number: big.NewInt(1)}, nil
+}
+
+func (failingHeadSubReader) SubscribeNewHead(context.Context, chan<- *types.Header) (ethereum.Subscription, error) {
+	return nil, errors.New("subscribe failed")
+}
+
+// TestNewResistantEventSub_SubscribeNewHeadError tests that a failing head
+// subscription results in an error and not in a panic.
+func TestNewResistantEventSub_SubscribeNewHeadError(t *testing.T) {
+	require.NotPanics(t, func() {
+		sub, err := subscription.NewResistantEventSub(context.Background(), nil, failingHeadSubReader{}, 1)
+		require.Error(t, err)
+		require.Nil(t, sub)
+	})
 }
