@@ -16,10 +16,13 @@ package channel_test
 
 import (
 	"context"
+	"errors"
 	"math/big"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
@@ -29,8 +32,10 @@ import (
 	ethchannel "github.com/perun-network/perun-eth-backend/channel"
 	"github.com/perun-network/perun-eth-backend/channel/test"
 	ethwallet "github.com/perun-network/perun-eth-backend/wallet"
+	"github.com/perun-network/perun-eth-backend/wallet/keystore"
 
 	"perun.network/go-perun/wallet"
+	wallettest "perun.network/go-perun/wallet/test"
 	pkgtest "polycry.pt/poly-go/test"
 )
 
@@ -99,6 +104,118 @@ func Test_NewTransactor(t *testing.T) {
 			assert.Equal(t, tt.gasLimit, transactor.GasLimit, "Gas limit not set properly")
 		})
 	}
+}
+
+func Test_ReleaseNonce(t *testing.T) {
+	rng := pkgtest.Prng(t)
+	s := test.NewSimSetup(t, rng, TxFinalityDepth, blockInterval)
+	ctx := context.Background()
+	newNonce := func() *bind.TransactOpts {
+		opts, err := s.CB.NewTransactor(ctx, params.TxGas, s.TxSender.Account)
+		require.NoError(t, err)
+		return opts
+	}
+
+	first, second := newNonce(), newNonce()
+	require.Equal(t, first.Nonce.Uint64()+1, second.Nonce.Uint64())
+
+	// Releasing the latest nonce makes it available again.
+	s.CB.ReleaseNonce(second)
+	assert.Equal(t, second.Nonce, newNonce().Nonce, "released nonce should be reused")
+
+	// Releasing an earlier nonce has no effect, as a later one is reserved.
+	s.CB.ReleaseNonce(first)
+	assert.Equal(t, second.Nonce.Uint64()+1, newNonce().Nonce.Uint64(), "earlier nonce should not be released")
+}
+
+// flakySendBackend can reject transactions or add them to the pool but report
+// an error, as if the response got lost. It can also stall a PendingNonceAt
+// call after reading the nonce, to simulate a stale read.
+type flakySendBackend struct {
+	*test.SimulatedBackend
+	rejectSend atomic.Bool
+	failSend   atomic.Bool
+	stall      chan struct{} // if filled, the next PendingNonceAt stalls
+	stalled    chan struct{} // closed when PendingNonceAt stalls
+	resume     chan struct{} // closing it resumes the stalled PendingNonceAt
+}
+
+func (b *flakySendBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+	if b.rejectSend.Load() {
+		return errors.New("rejected")
+	}
+	if err := b.SimulatedBackend.SimulatedBackend.SendTransaction(ctx, tx); err != nil {
+		return err
+	}
+	if b.failSend.Load() {
+		return errors.New("response lost")
+	}
+	return nil
+}
+
+func (b *flakySendBackend) PendingNonceAt(ctx context.Context, acc common.Address) (uint64, error) {
+	nonce, err := b.SimulatedBackend.PendingNonceAt(ctx, acc)
+	select {
+	case <-b.stall:
+		close(b.stalled)
+		<-b.resume
+	default:
+	}
+	return nonce, err
+}
+
+func Test_ReleaseNonce_SendAttempt(t *testing.T) {
+	rng := pkgtest.Prng(t)
+	ctx := context.Background()
+	sb := test.NewSimulatedBackend(test.WithCommitTx(false))
+	ksWallet := wallettest.RandomWallet(test.BackendID).(*keystore.Wallet)
+	acc := ksWallet.NewRandomAccount(rng).(*keystore.Account).Account
+	sb.FundAddress(ctx, acc.Address)
+	b := &flakySendBackend{
+		SimulatedBackend: sb,
+		stall:            make(chan struct{}, 1),
+		stalled:          make(chan struct{}),
+		resume:           make(chan struct{}),
+	}
+	cb := ethchannel.NewContractBackend(b, ethchannel.MakeChainID(sb.ChainID()), keystore.NewTransactor(*ksWallet, sb.Signer), 1)
+
+	t.Run("not sent", func(t *testing.T) {
+		before, err := sb.PendingNonceAt(ctx, acc.Address)
+		require.NoError(t, err)
+		b.rejectSend.Store(true)
+		_, err = ethchannel.DeployAdjudicator(ctx, cb, acc)
+		require.Error(t, err)
+		b.rejectSend.Store(false)
+
+		opts, err := cb.NewTransactor(ctx, 0, acc)
+		require.NoError(t, err)
+		assert.Equal(t, before, opts.Nonce.Uint64(), "nonce of unsent transaction should be released")
+		cb.ReleaseNonce(opts)
+	})
+
+	t.Run("send failed", func(t *testing.T) {
+		// Reserve a nonce based on a pending nonce that was read before the
+		// other transaction was sent.
+		b.stall <- struct{}{}
+		staleNonce := make(chan uint64)
+		go func() {
+			opts, err := cb.NewTransactor(ctx, 0, acc)
+			assert.NoError(t, err)
+			staleNonce <- opts.Nonce.Uint64()
+		}()
+		<-b.stalled
+
+		// The transaction reaches the pool, but sending reports an error.
+		b.failSend.Store(true)
+		_, err := ethchannel.DeployAdjudicator(ctx, cb, acc)
+		require.Error(t, err)
+		b.failSend.Store(false)
+		pending, err := sb.PendingNonceAt(ctx, acc.Address)
+		require.NoError(t, err)
+
+		close(b.resume)
+		assert.Equal(t, pending, <-staleNonce, "nonce of pooled transaction should not be reused")
+	})
 }
 
 func Test_NewWatchOpts(t *testing.T) {

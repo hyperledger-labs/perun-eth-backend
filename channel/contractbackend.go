@@ -18,6 +18,7 @@ import (
 	"context"
 	"math/big"
 	"sync"
+	"time"
 
 	"perun.network/go-perun/channel/multi"
 
@@ -38,6 +39,9 @@ const (
 	// How many blocks we query into the past for events.
 	startBlockOffset            = 100
 	contractBackendHeadBuffSize = 10
+	// How long to wait for the node when checking whether it knows a
+	// transaction whose sending failed.
+	txLookupTimeout = 2 * time.Second
 )
 
 // errTxTimedOut is an internal named error that with an empty message.
@@ -50,6 +54,10 @@ var (
 	SharedExpectedNonces map[multi.LedgerIDMapKey]map[common.Address]uint64
 	// SharedExpectedNoncesMutex is a mutex to protect the shared expected nonces map.
 	SharedExpectedNoncesMutex = &sync.Mutex{}
+	// sharedSentNonces is a map of each sender's nonce following the highest
+	// nonce that was used in a send attempt. It is protected by
+	// SharedExpectedNoncesMutex.
+	sharedSentNonces map[multi.LedgerIDMapKey]map[common.Address]uint64
 )
 
 // ContractInterface provides all functions needed by an ethereum backend.
@@ -71,6 +79,7 @@ type ContractBackend struct {
 	ContractInterface
 	tr                Transactor
 	expectedNextNonce map[common.Address]uint64
+	sentNextNonce     map[common.Address]uint64
 	txFinalityDepth   uint64
 	chainID           ChainID
 }
@@ -85,15 +94,22 @@ func NewContractBackend(cf ContractInterface, chainID ChainID, tr Transactor, tx
 	if SharedExpectedNonces == nil {
 		SharedExpectedNonces = make(map[multi.LedgerIDMapKey]map[common.Address]uint64)
 	}
+	if sharedSentNonces == nil {
+		sharedSentNonces = make(map[multi.LedgerIDMapKey]map[common.Address]uint64)
+	}
 
 	// Check if the specific chainID entry exists in the shared maps, if not, create it.
 	if _, exists := SharedExpectedNonces[chainID.MapKey()]; !exists {
 		SharedExpectedNonces[chainID.MapKey()] = make(map[common.Address]uint64)
 	}
+	if _, exists := sharedSentNonces[chainID.MapKey()]; !exists {
+		sharedSentNonces[chainID.MapKey()] = make(map[common.Address]uint64)
+	}
 	return ContractBackend{
 		ContractInterface: cf,
 		tr:                tr,
 		expectedNextNonce: SharedExpectedNonces[chainID.MapKey()],
+		sentNextNonce:     sharedSentNonces[chainID.MapKey()],
 		txFinalityDepth:   txFinalityDepth,
 		chainID:           chainID,
 	}
@@ -196,6 +212,52 @@ func (c *ContractBackend) nonce(ctx context.Context, sender common.Address) (uin
 	// Update local expectation.
 	c.expectedNextNonce[sender] = nonce + 1
 	return nonce, nil
+}
+
+// SendTransaction sends tx and records its nonce as used if the node accepted
+// it. If sending fails, the transaction may still have reached the node, e.g.
+// if the response got lost. In that case, the node is asked whether it knows
+// the transaction, so that ReleaseNonce does not release its nonce.
+func (c ContractBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+	err := c.ContractInterface.SendTransaction(ctx, tx)
+	if err != nil && !c.knowsTransaction(tx) {
+		return err
+	}
+	if sender, serr := types.Sender(types.LatestSignerForChainID(tx.ChainId()), tx); serr == nil && c.sentNextNonce != nil {
+		SharedExpectedNoncesMutex.Lock()
+		if tx.Nonce() >= c.sentNextNonce[sender] {
+			c.sentNextNonce[sender] = tx.Nonce() + 1
+		}
+		SharedExpectedNoncesMutex.Unlock()
+	}
+	return err
+}
+
+// knowsTransaction returns whether the node knows tx, i.e. tx is pending or
+// already included in a block.
+func (c ContractBackend) knowsTransaction(tx *types.Transaction) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), txLookupTimeout)
+	defer cancel()
+	_, _, err := c.TransactionByHash(ctx, tx.Hash())
+	return err == nil
+}
+
+// ReleaseNonce releases the nonce that NewTransactor reserved for opts. It must
+// be called if creating or sending the transaction failed, as otherwise all
+// following transactions of the sender have a nonce gap and are never mined.
+// The nonce is only released if the node did not accept a transaction with it
+// and no later nonce was reserved for the sender in the meantime.
+func (c *ContractBackend) ReleaseNonce(opts *bind.TransactOpts) {
+	if opts == nil || opts.Nonce == nil {
+		return
+	}
+	nonce := opts.Nonce.Uint64()
+
+	SharedExpectedNoncesMutex.Lock()
+	defer SharedExpectedNoncesMutex.Unlock()
+	if c.expectedNextNonce[opts.From] == nonce+1 && c.sentNextNonce[opts.From] <= nonce {
+		c.expectedNextNonce[opts.From] = nonce
+	}
 }
 
 // ConfirmTransaction returns the receipt of the transaction if it was

@@ -162,6 +162,7 @@ func (a *Adjudicator) call(ctx context.Context, req channel.AdjudicatorReq, fn a
 		}
 		tx, err := fn(trans, ethParams, ethState, req.Tx.Sigs)
 		if err != nil {
+			a.ReleaseNonce(trans)
 			err = cherrors.CheckIsChainNotReachableError(err)
 			return nil, errors.WithMessage(err, "calling adjudicator function")
 		}
